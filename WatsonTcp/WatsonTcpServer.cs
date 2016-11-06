@@ -64,7 +64,8 @@ namespace WatsonTcp
             }
             else
             {
-                ListenerIpAddress = IPAddress.Parse(ListenerIp);
+                ListenerIpAddress = IPAddress.Parse(listenerIp);
+                ListenerIp = listenerIp;
             }
 
             ListenerPort = listenerPort;
@@ -212,12 +213,8 @@ namespace WatsonTcp
                 {
                     if (client.Client.Poll(0, SelectMode.SelectRead))
                     {
-                        byte[] buff = new byte[1];
-                        if (client.Client.Receive(buff, SocketFlags.Peek) == 0) success = false;
-                        else success = true;
+                        success = !(client.Client.Poll(1, SelectMode.SelectRead) && client.Client.Available == 0);
                     }
-
-                    success = true;
                 }
                 else
                 {
