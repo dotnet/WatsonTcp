@@ -137,16 +137,12 @@ namespace WatsonTcp
             // see http://stackoverflow.com/questions/6993295/how-to-determine-if-the-tcp-is-connected-or-not
 
             bool success = false;
-            string sourceIp = "";
-            int sourcePort = 0;
 
             try
             {
                 #region Check-if-Client-Connected
 
                 success = false;
-                sourceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
 
                 if (client != null
                     && client.Client != null
@@ -189,9 +185,7 @@ namespace WatsonTcp
                     Log("*** DataReceiver server " + ServerIp + ":" + ServerPort + " is no longer connected");
                     return;
                 }
-
-                NetworkStream ClientStream = Client.GetStream();
-
+                
                 #endregion
 
                 #region Wait-for-Data

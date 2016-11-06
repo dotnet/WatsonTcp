@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("TestClient")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Personal")]
+[assembly: AssemblyCompany("Marauder Software, Inc.")]
 [assembly: AssemblyProduct("TestClient")]
-[assembly: AssemblyCopyright("Copyright © Personal 2016")]
+[assembly: AssemblyCopyright("(c) 2016 Marauder Software, Inc.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

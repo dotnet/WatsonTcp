@@ -252,9 +252,7 @@ namespace WatsonTcp
                     Log("*** DataReceiver client " + clientIp + ":" + clientPort + " is no longer connected");
                     return;
                 }
-
-                NetworkStream ClientStream = client.GetStream();
-
+                
                 while (true)
                 {
                     #region Check-if-Client-Connected
