@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WatsonTcp", "WatsonTcp\WatsonTcp.csproj", "{D5B0D163-0754-45AB-B143-CBB2C0E708B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServer", "TestServer\TestServer.csproj", "{CC93A47C-B2DF-4883-ABD1-4F288E2E75C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClient", "TestClient\TestClient.csproj", "{7A555BD9-2708-461A-BAA1-C9A6188CAA53}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D5B0D163-0754-45AB-B143-CBB2C0E708B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5B0D163-0754-45AB-B143-CBB2C0E708B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5B0D163-0754-45AB-B143-CBB2C0E708B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5B0D163-0754-45AB-B143-CBB2C0E708B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC93A47C-B2DF-4883-ABD1-4F288E2E75C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC93A47C-B2DF-4883-ABD1-4F288E2E75C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC93A47C-B2DF-4883-ABD1-4F288E2E75C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC93A47C-B2DF-4883-ABD1-4F288E2E75C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A555BD9-2708-461A-BAA1-C9A6188CAA53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A555BD9-2708-461A-BAA1-C9A6188CAA53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A555BD9-2708-461A-BAA1-C9A6188CAA53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A555BD9-2708-461A-BAA1-C9A6188CAA53}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
