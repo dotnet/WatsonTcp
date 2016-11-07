@@ -208,13 +208,12 @@ namespace WatsonTcp
                 success = false;
                 
                 if (client != null
-                    && client.Client != null
-                    && client.Client.Connected)
+                    && client.Client != null)
                 {
-                    if (client.Client.Poll(0, SelectMode.SelectRead))
-                    {
-                        success = !(client.Client.Poll(1, SelectMode.SelectRead) && client.Client.Available == 0);
-                    }
+                    bool part1 = client.Client.Poll(1000, SelectMode.SelectRead);
+                    bool part2 = (client.Client.Available == 0);
+                    if (part1 && part2) success = false;
+                    else success = true;
                 }
                 else
                 {
@@ -249,8 +248,8 @@ namespace WatsonTcp
                 while (true)
                 {
                     #region Check-if-Client-Connected
-
-                    if (!client.Connected || !IsPeerConnected(client))
+                    
+                    if (!IsPeerConnected(client))
                     {
                         Log("DataReceiver client " + clientIp + ":" + clientPort + " disconnected");
                         if (!RemoveClient(client))
