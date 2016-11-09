@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 
 namespace WatsonTcp
 {
+    /// <summary>
+    /// Watson TCP server.
+    /// </summary>
     public class WatsonTcpServer
     {
         #region Public-Members
@@ -37,6 +40,15 @@ namespace WatsonTcp
 
         #region Constructors-and-Factories
 
+        /// <summary>
+        /// Initialize the Watson TCP client.
+        /// </summary>
+        /// <param name="listenerIp">The IP address on which the server should listen, nullable.</param>
+        /// <param name="listenerPort">The TCP port on which the server should listen.</param>
+        /// <param name="clientConnected">Function to be called when a client connects.</param>
+        /// <param name="clientDisconnected">Function to be called when a client disconnects.</param>
+        /// <param name="messageReceived">Function to be called when a message is received.</param>
+        /// <param name="debug">Enable or debug logging messages.</param>
         public WatsonTcpServer(
             string listenerIp, 
             int listenerPort, 
@@ -84,6 +96,20 @@ namespace WatsonTcp
 
         #region Public-Methods
 
+        /// <summary>
+        /// Tear down the server and dispose of background workers.
+        /// </summary>
+        public void Dispose()
+        {
+            TokenSource.Cancel();
+        }
+
+        /// <summary>
+        /// Send data to the specified client.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="data">Byte array containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, byte[] data)
         {
             TcpClient client;
@@ -96,6 +122,20 @@ namespace WatsonTcp
             return MessageWrite(client, data);
         }
 
+        /// <summary>
+        /// Determine whether or not the specified client is connected to the server.
+        /// </summary>
+        /// <returns>Boolean indicating if the client is connected to the server.</returns>
+        public bool IsClientConnected(string ipPort)
+        {
+            TcpClient client;
+            return (Clients.TryGetValue(ipPort, out client));
+        }
+
+        /// <summary>
+        /// List the IP:port of each connected client.
+        /// </summary>
+        /// <returns>A string list containing each client IP:port.</returns>
         public List<string> ListClients()
         {
             Dictionary<string, TcpClient> clients = Clients.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -105,12 +145,6 @@ namespace WatsonTcp
                 ret.Add(curr.Key);
             }
             return ret;
-        }
-
-        public bool IsClientConnected(string ipPort)
-        {
-            TcpClient client;
-            return (Clients.TryGetValue(ipPort, out client));
         }
 
         #endregion

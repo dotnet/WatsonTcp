@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace WatsonTcp
 {
+    /// <summary>
+    /// Watson TCP client.
+    /// </summary>
     public class WatsonTcpClient
     {
         #region Public-Members
@@ -37,13 +40,22 @@ namespace WatsonTcp
 
         #region Constructors-and-Factories
 
+        /// <summary>
+        /// Initialize the Watson TCP client.
+        /// </summary>
+        /// <param name="serverIp">The IP address or hostname of the server.</param>
+        /// <param name="serverPort">The TCP port on which the server is listening.</param>
+        /// <param name="serverConnected">Function to be called when the server connects.</param>
+        /// <param name="serverDisconnected">Function to be called when the connection is severed.</param>
+        /// <param name="messageReceived">Function to be called when a message is received.</param>
+        /// <param name="debug">Enable or debug logging messages.</param>
         public WatsonTcpClient(
             string serverIp, 
-            int serverPort, 
-            bool debug, 
-            Func<byte[], bool> messageReceived,
+            int serverPort,
             Func<bool> serverConnected,
-            Func<bool> serverDisconnected)
+            Func<bool> serverDisconnected,
+            Func<byte[], bool> messageReceived,
+            bool debug)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
@@ -97,16 +109,33 @@ namespace WatsonTcp
 
         #region Public-Methods
 
-        public bool IsConnected()
+        /// <summary>
+        /// Tear down the client and dispose of background workers.
+        /// </summary>
+        public void Dispose()
         {
-            return Connected;
+            DataReceiverTokenSource.Cancel();
         }
-        
+
+        /// <summary>
+        /// Send data to the server.
+        /// </summary>
+        /// <param name="data">Byte array containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(byte[] data)
         {
             return MessageWrite(data);
         }
 
+        /// <summary>
+        /// Determine whether or not the client is connected to the server.
+        /// </summary>
+        /// <returns>Boolean indicating if the client is connected to the server.</returns>
+        public bool IsConnected()
+        {
+            return Connected;
+        }
+        
         #endregion
 
         #region Private-Methods

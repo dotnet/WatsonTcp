@@ -20,7 +20,7 @@ namespace TestClient
             Console.Write("Server Port  : ");
             serverPort = Convert.ToInt32(Console.ReadLine());
 
-            WatsonTcpClient client = new WatsonTcpClient(serverIp, serverPort, true, MessageReceived, ServerConnected, ServerDisconnected);
+            WatsonTcpClient client = new WatsonTcpClient(serverIp, serverPort, ServerConnected, ServerDisconnected, MessageReceived, true);
 
             bool runForever = true;
             while (runForever)
