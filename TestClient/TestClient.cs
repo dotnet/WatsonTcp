@@ -33,10 +33,14 @@ namespace TestClient
                 {
                     case "?":
                         Console.WriteLine("Available commands:");
-                        Console.WriteLine("  ?      help (this menu)");
-                        Console.WriteLine("  q      quit");
-                        Console.WriteLine("  cls    clear screen");
-                        Console.WriteLine("  send   send message to server");
+                        Console.WriteLine("  ?          help (this menu)");
+                        Console.WriteLine("  q          quit");
+                        Console.WriteLine("  cls        clear screen");
+                        Console.WriteLine("  send       send message to server");
+                        Console.WriteLine("  status     show if client connected");
+                        Console.WriteLine("  dispose    dispose of the connection");
+                        Console.WriteLine("  connect    connect to the server if not connected");
+                        Console.WriteLine("  reconnect  disconnect if connected, then reconnect");
                         break;
                         
                     case "q":
@@ -52,6 +56,31 @@ namespace TestClient
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
                         client.Send(Encoding.UTF8.GetBytes(userInput));
+                        break;
+
+                    case "status":
+                        if (client == null) Console.WriteLine("Connected: False (null)");
+                        else Console.WriteLine("Connected: " + client.IsConnected());
+                        break;
+
+                    case "dispose":
+                        client.Dispose();
+                        break;
+
+                    case "connect":
+                        if (client != null && client.IsConnected())
+                        {
+                            Console.WriteLine("Already connected");
+                        }
+                        else
+                        {
+                            client = new WatsonTcpClient(serverIp, serverPort, ServerConnected, ServerDisconnected, MessageReceived, true);
+                        }
+                        break;
+
+                    case "reconnect":
+                        if (client != null) client.Dispose();
+                        client = new WatsonTcpClient(serverIp, serverPort, ServerConnected, ServerDisconnected, MessageReceived, true);
                         break;
 
                     default:

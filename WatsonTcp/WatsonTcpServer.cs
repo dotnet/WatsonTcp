@@ -229,36 +229,28 @@ namespace WatsonTcp
             }
         }
 
-        private bool IsPeerConnected(TcpClient client)
+        private bool IsConnected(TcpClient client)
         {
-            // see http://stackoverflow.com/questions/6993295/how-to-determine-if-the-tcp-is-connected-or-not
-
-            bool success = false;
-
-            try
+            if (client.Connected)
             {
-                #region Check-if-Client-Connected
-
-                success = false;
-                
-                if (client != null
-                    && client.Client != null)
+                if ((client.Client.Poll(0, SelectMode.SelectWrite)) && (!client.Client.Poll(0, SelectMode.SelectError)))
                 {
-                    bool part1 = client.Client.Poll(1000, SelectMode.SelectRead);
-                    bool part2 = (client.Client.Available == 0);
-                    if (part1 && part2) success = false;
-                    else success = true;
+                    byte[] buffer = new byte[1];
+                    if (client.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
                 }
                 else
                 {
-                    success = false;
+                    return false;
                 }
-
-                return success;
-
-                #endregion
             }
-            catch
+            else
             {
                 return false;
             }
@@ -272,64 +264,38 @@ namespace WatsonTcp
             try
             {
                 #region Wait-for-Data
-                
-                if (!client.Connected)
-                {
-                    Log("*** DataReceiver client " + clientIp + ":" + clientPort + " is no longer connected");
-                    return;
-                }
-                
+
                 while (true)
                 {
-                    #region Check-if-Client-Connected
-                    
-                    if (!IsPeerConnected(client))
+                    try
                     {
-                        Log("DataReceiver client " + clientIp + ":" + clientPort + " disconnected");
-                        if (!RemoveClient(client))
+                        if (!IsConnected(client)) break;
+
+                        byte[] data = MessageRead(client);
+                        if (data == null)
                         {
-                            Log("*** DataReceiver unable to remove client " + clientIp + ":" + clientPort);
+                            // no message available
+                            Thread.Sleep(30);
+                            continue;
                         }
 
-                        if (ClientDisconnected != null) Task.Run(() => ClientDisconnected(clientIp + ":" + clientPort));
+                        if (MessageReceived != null) Task.Run(() => MessageReceived(clientIp + ":" + clientPort, data));
+                    }
+                    catch (Exception)
+                    {
                         break;
                     }
-
-                    #endregion
-
-                    #region Retrieve-and-Process-Data
-
-                    byte[] data = MessageRead(client);
-                    if (data == null)
-                    {
-                        // no message available
-                        Thread.Sleep(30);
-                        continue;
-                    }
-                    
-                    if (MessageReceived != null) Task.Run(() => MessageReceived(clientIp + ":" + clientPort, data));
-
-                    #endregion
-                }
-
-                #endregion
-            }
-            catch (Exception EOuter)
-            {
-                if (client != null)
-                {
-                    LogException("DataReceiver (" + clientIp + ":" + clientPort + ")", EOuter);
-                }
-                else
-                {
-                    LogException("DataReceiver (null)", EOuter);
                 }
             }
             finally
             {
                 ActiveClients--;
-                Log("DataReceiver closed data receiver for " + clientIp + ":" + clientPort + " (now " + ActiveClients + " clients active)");
+                RemoveClient(client);
+                if (ClientDisconnected != null) Task.Run(() => ClientDisconnected(clientIp + ":" + clientPort));
+                Log("DataReceiver client " + clientIp + ":" + clientPort + " disconnected (now " + ActiveClients + " clients active)");
             }
+
+            #endregion
         }
 
         private bool AddClient(TcpClient client)
@@ -368,275 +334,212 @@ namespace WatsonTcp
 
         private byte[] MessageRead(TcpClient client)
         {
-            string sourceIp = "";
-            int sourcePort = 0;
+            /*
+             *
+             * Do not catch exceptions, let them get caught by the data reader
+             * to destroy the connection
+             *
+             */
 
-            try
+            #region Variables
+
+            int bytesRead = 0;
+            int sleepInterval = 25;
+            int maxTimeout = 500;
+            int currentTimeout = 0;
+            bool timeout = false;
+
+            string sourceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+            int sourcePort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
+            NetworkStream ClientStream = client.GetStream();
+
+            byte[] headerBytes;
+            string header = "";
+            long contentLength;
+            byte[] contentBytes;
+
+            if (!ClientStream.CanRead) return null;
+            if (!ClientStream.DataAvailable) return null;
+
+            #endregion
+
+            #region Read-Header
+
+            using (MemoryStream headerMs = new MemoryStream())
             {
-                #region Check-for-Null-Values
-                
-                if (!client.Connected)
+                #region Read-Header-Bytes
+
+                byte[] headerBuffer = new byte[1];
+                timeout = false;
+                currentTimeout = 0;
+                int read = 0;
+
+                while ((read = ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
                 {
-                    Log("*** MessageRead supplied client is not connected");
-                    return null;
-                }
-
-                #endregion
-
-                #region Variables
-
-                int bytesRead = 0;
-                int sleepInterval = 25;
-                int maxTimeout = 500;
-                int currentTimeout = 0;
-                bool timeout = false;
-
-                sourceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
-                NetworkStream ClientStream = null;
-
-                try
-                {
-                    ClientStream = client.GetStream();
-                }
-                catch (Exception e)
-                {
-                    Log("*** MessageRead disconnected while attaching to stream for " + sourceIp + ":" + sourcePort + ": " + e.Message);
-                    return null;
-                }
-
-                byte[] headerBytes;
-                string header = "";
-                long contentLength;
-                byte[] contentBytes;
-
-                #endregion
-
-                #region Read-Header
-
-                if (!IsPeerConnected(client))
-                {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected while attempting to read header");
-                    return null;
-                }
-
-                if (!ClientStream.CanRead)
-                {
-                    return null;
-                }
-
-                if (!ClientStream.DataAvailable)
-                {
-                    return null;
-                }
-                
-                using (MemoryStream headerMs = new MemoryStream())
-                {
-                    #region Read-Header-Bytes
-
-                    byte[] headerBuffer = new byte[1];
-                    timeout = false;
-                    currentTimeout = 0;
-                    int read = 0;
-
-                    while ((read = ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
+                    if (read > 0)
                     {
-                        if (read > 0)
-                        {
-                            headerMs.Write(headerBuffer, 0, read);
-                            bytesRead += read;
+                        headerMs.Write(headerBuffer, 0, read);
+                        bytesRead += read;
 
-                            //
-                            // reset timeout since there was a successful read
-                            //
-                            currentTimeout = 0;
-                        }
+                        //
+                        // reset timeout since there was a successful read
+                        //
+                        currentTimeout = 0;
+                    }
                         
-                        if (bytesRead > 1)
+                    if (bytesRead > 1)
+                    {
+                        //
+                        // check if end of headers reached
+                        //
+                        if ((int)headerBuffer[0] == 58)
                         {
-                            //
-                            // check if end of headers reached
-                            //
-                            if ((int)headerBuffer[0] == 58)
+                            // Log("MessageRead reached end of header after " + BytesRead + " bytes");
+                            break;
+                        }
+                    }
+
+                    if (!ClientStream.DataAvailable)
+                    {
+                        while (true)
+                        {
+                            if (currentTimeout >= maxTimeout)
                             {
-                                // Log("MessageRead reached end of header after " + BytesRead + " bytes");
+                                timeout = true;
                                 break;
                             }
-                        }
-
-                        if (!ClientStream.DataAvailable)
-                        {
-                            while (true)
+                            else
                             {
-                                if (currentTimeout >= maxTimeout)
-                                {
-                                    timeout = true;
-                                    break;
-                                }
-                                else
-                                {
-                                    currentTimeout += sleepInterval;
-                                    Thread.Sleep(sleepInterval);
-                                }
+                                currentTimeout += sleepInterval;
+                                Thread.Sleep(sleepInterval);
                             }
-
-                            if (timeout) break;
                         }
+
+                        if (timeout) break;
                     }
-
-                    if (timeout)
-                    {
-                        Log("*** MessageRead timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading header after reading " + bytesRead + " bytes");
-                        return null;
-                    }
-
-                    headerBytes = headerMs.ToArray();
-                    if (headerBytes == null || headerBytes.Length < 1)
-                    {
-                        // Log("*** MessageRead " + sourceIp + ":" + sourcePort + " no byte data read from peer");
-                        return null;
-                    }
-
-                    #endregion
-
-                    #region Process-Header
-
-                    header = Encoding.UTF8.GetString(headerBytes);
-                    header = header.Replace(":", "");
-
-                    if (!Int64.TryParse(header, out contentLength))
-                    {
-                        Log("*** MessageRead malformed message from " + sourceIp + ":" + sourcePort + " (message header not an integer)");
-                        return null;
-                    }
-                    
-                    #endregion
                 }
-                
+
+                if (timeout)
+                {
+                    Log("*** MessageRead timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading header after reading " + bytesRead + " bytes");
+                    return null;
+                }
+
+                headerBytes = headerMs.ToArray();
+                if (headerBytes == null || headerBytes.Length < 1)
+                {
+                    // Log("*** MessageRead " + sourceIp + ":" + sourcePort + " no byte data read from peer");
+                    return null;
+                }
+
                 #endregion
 
-                #region Read-Data
+                #region Process-Header
 
-                using (MemoryStream dataMs = new MemoryStream())
+                header = Encoding.UTF8.GetString(headerBytes);
+                header = header.Replace(":", "");
+
+                if (!Int64.TryParse(header, out contentLength))
                 {
-                    long bytesRemaining = contentLength;
-                    timeout = false;
-                    currentTimeout = 0;
+                    Log("*** MessageRead malformed message from " + sourceIp + ":" + sourcePort + " (message header not an integer)");
+                    return null;
+                }
+                    
+                #endregion
+            }
+                
+            #endregion
 
-                    int read = 0;
-                    byte[] buffer;
-                    long bufferSize = 2048;
-                    if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+            #region Read-Data
+
+            using (MemoryStream dataMs = new MemoryStream())
+            {
+                long bytesRemaining = contentLength;
+                timeout = false;
+                currentTimeout = 0;
+
+                int read = 0;
+                byte[] buffer;
+                long bufferSize = 2048;
+                if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+                buffer = new byte[bufferSize];
+
+                while ((read = ClientStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                {
+                    if (read > 0)
+                    {
+                        dataMs.Write(buffer, 0, read);
+                        bytesRead = bytesRead + read;
+                        bytesRemaining = bytesRemaining - read;
+                    }
+
+                    //
+                    // reduce buffer size if number of bytes remaining is
+                    // less than the pre-defined buffer size of 2KB
+                    //
+                    // Console.WriteLine("Bytes remaining " + bytesRemaining + ", buffer size " + bufferSize);
+                    if (bytesRemaining < bufferSize)
+                    {
+                        bufferSize = bytesRemaining;
+                        // Console.WriteLine("Adjusting buffer size to " + bytesRemaining);
+                    }
+
                     buffer = new byte[bufferSize];
 
-                    while ((read = ClientStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                    //
+                    // check if read fully
+                    //
+                    if (bytesRemaining == 0) break;
+                    if (bytesRead == contentLength) break;
+
+                    if (!ClientStream.DataAvailable)
                     {
-                        if (read > 0)
+                        while (true)
                         {
-                            dataMs.Write(buffer, 0, read);
-                            bytesRead = bytesRead + read;
-                            bytesRemaining = bytesRemaining - read;
-                        }
-
-                        //
-                        // reduce buffer size if number of bytes remaining is
-                        // less than the pre-defined buffer size of 2KB
-                        //
-                        // Console.WriteLine("Bytes remaining " + bytesRemaining + ", buffer size " + bufferSize);
-                        if (bytesRemaining < bufferSize)
-                        {
-                            bufferSize = bytesRemaining;
-                            // Console.WriteLine("Adjusting buffer size to " + bytesRemaining);
-                        }
-
-                        buffer = new byte[bufferSize];
-
-                        //
-                        // check if read fully
-                        //
-                        if (bytesRemaining == 0) break;
-                        if (bytesRead == contentLength) break;
-
-                        if (!ClientStream.DataAvailable)
-                        {
-                            while (true)
+                            if (currentTimeout >= maxTimeout)
                             {
-                                if (currentTimeout >= maxTimeout)
-                                {
-                                    timeout = true;
-                                    break;
-                                }
-                                else
-                                {
-                                    currentTimeout += sleepInterval;
-                                    Thread.Sleep(sleepInterval);
-                                }
+                                timeout = true;
+                                break;
                             }
-
-                            if (timeout) break;
+                            else
+                            {
+                                currentTimeout += sleepInterval;
+                                Thread.Sleep(sleepInterval);
+                            }
                         }
-                    }
 
-                    if (timeout)
-                    {
-                        Log("*** MessageRead timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading content after reading " + bytesRead + " bytes");
-                        return null;
+                        if (timeout) break;
                     }
+                }
+
+                if (timeout)
+                {
+                    Log("*** MessageRead timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading content after reading " + bytesRead + " bytes");
+                    return null;
+                }
                     
-                    contentBytes = dataMs.ToArray();
-                }
-
-                #endregion
-
-                #region Check-Content-Bytes
-
-                if (contentBytes == null || contentBytes.Length < 1)
-                {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " no content read");
-                    return null;
-                }
-
-                if (contentBytes.Length != contentLength)
-                {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " content length " + contentBytes.Length + " bytes does not match header value of " + contentLength);
-                    return null;
-                }
-
-                #endregion
-
-                return contentBytes;
+                contentBytes = dataMs.ToArray();
             }
-            catch (ObjectDisposedException ObjDispInner)
+
+            #endregion
+
+            #region Check-Content-Bytes
+
+            if (contentBytes == null || contentBytes.Length < 1)
             {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (obj disposed exception): " + ObjDispInner.Message);
+                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " no content read");
                 return null;
             }
-            catch (SocketException SockInner)
+
+            if (contentBytes.Length != contentLength)
             {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (socket exception): " + SockInner.Message);
+                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " content length " + contentBytes.Length + " bytes does not match header value " + contentLength + ", discarding");
                 return null;
             }
-            catch (InvalidOperationException InvOpInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (invalid operation exception): " + InvOpInner.Message);
-                return null;
-            }
-            catch (AggregateException AEInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (aggregate exception): " + AEInner.Message);
-                return null;
-            }
-            catch (IOException IOInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (IO exception): " + IOInner.Message);
-                return null;
-            }
-            catch (Exception EInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (general exception): " + EInner.Message);
-                LogException("MessageRead " + sourceIp + ":" + sourcePort, EInner);
-                return null;
-            }
+
+            #endregion
+
+            return contentBytes;
         }
 
         private bool MessageWrite(TcpClient client, byte[] data)
@@ -646,16 +549,6 @@ namespace WatsonTcp
 
             try
             {
-                #region Check-if-Connected
-
-                if (!IsPeerConnected(client))
-                {
-                    Log("MessageWrite client " + clientIp + ":" + clientPort + " not connected");
-                    return false;
-                }
-
-                #endregion
-
                 #region Format-Message
 
                 string header = "";
@@ -684,29 +577,9 @@ namespace WatsonTcp
 
                 #endregion
             }
-            catch (ObjectDisposedException ObjDispInner)
+            catch (Exception)
             {
-                Log("*** MessageWrite " + clientIp + ":" + clientPort + " disconnected (obj disposed exception): " + ObjDispInner.Message);
-                return false;
-            }
-            catch (SocketException SockInner)
-            {
-                Log("*** MessageWrite " + clientIp + ":" + clientPort + " disconnected (socket exception): " + SockInner.Message);
-                return false;
-            }
-            catch (InvalidOperationException InvOpInner)
-            {
-                Log("*** MessageWrite " + clientIp + ":" + clientPort + " disconnected (invalid operation exception): " + InvOpInner.Message);
-                return false;
-            }
-            catch (IOException IOInner)
-            {
-                Log("*** MessageWrite " + clientIp + ":" + clientPort + " disconnected (IO exception): " + IOInner.Message);
-                return false;
-            }
-            catch (Exception e)
-            {
-                LogException("MessageWrite", e);
+                Log("*** MessageWrite " + clientIp + ":" + clientPort + " disconnected due to exception");
                 return false;
             }
         }

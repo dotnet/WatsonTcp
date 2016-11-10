@@ -88,6 +88,7 @@ namespace WatsonTcp
 
                 SourceIp = ((IPEndPoint)Client.Client.LocalEndPoint).Address.ToString();
                 SourcePort = ((IPEndPoint)Client.Client.LocalEndPoint).Port;
+                Connected = true;
             }
             catch (Exception e)
             {
@@ -114,7 +115,22 @@ namespace WatsonTcp
         /// </summary>
         public void Dispose()
         {
+            if (Client != null)
+            {
+                if (Client.Connected)
+                {
+                    NetworkStream ns = Client.GetStream();
+                    if (ns != null)
+                    {
+                        ns.Close();
+                    }
+                }
+
+                Client.Close();
+            }
+
             DataReceiverTokenSource.Cancel();
+            Connected = false;
         }
 
         /// <summary>
@@ -160,58 +176,16 @@ namespace WatsonTcp
             Log(" = Exception StackTrace: " + e.StackTrace);
             Log("================================================================================");
         }
-
-        private bool IsPeerConnected(TcpClient client)
-        {
-            // see http://stackoverflow.com/questions/6993295/how-to-determine-if-the-tcp-is-connected-or-not
-
-            bool success = false;
-
-            try
-            {
-                #region Check-if-Client-Connected
-
-                success = false;
-
-                if (client != null
-                    && client.Client != null
-                    && client.Client.Connected)
-                {
-                    if (client.Client.Poll(0, SelectMode.SelectRead))
-                    {
-                        byte[] buff = new byte[1];
-                        if (client.Client.Receive(buff, SocketFlags.Peek) == 0) success = false;
-                        else success = true;
-                    }
-
-                    success = true;
-                }
-                else
-                {
-                    success = false;
-                }
-
-                return success;
-
-                #endregion
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
+        
         private void DataReceiver()
         {
-            bool disconnectDetected = false;
-
             try
             {
                 #region Attach-to-Stream
 
                 if (!Client.Connected)
                 {
-                    Log("*** DataReceiver server " + ServerIp + ":" + ServerPort + " is no longer connected");
+                    Log("*** DataReceiver server " + ServerIp + ":" + ServerPort + " disconnected");
                     return;
                 }
                 
@@ -226,16 +200,12 @@ namespace WatsonTcp
                     if (Client == null)
                     {
                         Log("*** DataReceiver null TCP interface detected, disconnection or close assumed");
-                        Connected = false;
-                        disconnectDetected = true;
                         break;
                     }
 
-                    if (!Client.Connected || !IsPeerConnected(Client))
+                    if (!Client.Connected)
                     {
                         Log("*** DataReceiver server " + ServerIp + ":" + ServerPort + " disconnected");
-                        Connected = false;
-                        disconnectDetected = true;
                         break;
                     }
 
@@ -258,21 +228,13 @@ namespace WatsonTcp
 
                 #endregion
             }
-            catch (ObjectDisposedException)
+            catch (Exception)
             {
-                Log("*** DataReceiver no longer connected (object disposed exception)");
-            }
-            catch (Exception EOuter)
-            {
-                Log("*** DataReceiver outer exception detected");
-                LogException("DataReceiver", EOuter);
+                Log("*** DataReceiver server " + ServerIp + ":" + ServerPort + " disconnected");
             }
             finally
             {
-                if (disconnectDetected || !Connected)
-                {
-                    if (ServerDisconnected != null) Task.Run(() => ServerDisconnected());
-                }
+                Connected = false;
             }
         }
 
@@ -280,10 +242,16 @@ namespace WatsonTcp
         {
             string sourceIp = "";
             int sourcePort = 0;
-
+            
             try
             {
                 #region Check-for-Null-Values
+
+                if (Client == null)
+                {
+                    Log("*** MessageRead null client supplied");
+                    return null;
+                }
 
                 if (!Client.Connected)
                 {
@@ -323,23 +291,12 @@ namespace WatsonTcp
                 #endregion
 
                 #region Read-Header
-
-                if (!IsPeerConnected(Client))
-                {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected while attempting to read header");
-                    return null;
-                }
-
-                if (!ClientStream.CanRead)
+                
+                if (!ClientStream.CanRead && !ClientStream.DataAvailable)
                 {
                     return null;
                 }
-
-                if (!ClientStream.DataAvailable)
-                {
-                    return null;
-                }
-
+                
                 using (MemoryStream headerMs = new MemoryStream())
                 {
                     #region Read-Header-Bytes
@@ -516,49 +473,25 @@ namespace WatsonTcp
 
                 return contentBytes;
             }
-            catch (ObjectDisposedException ObjDispInner)
+            catch (Exception)
             {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (obj disposed exception): " + ObjDispInner.Message);
-                return null;
-            }
-            catch (SocketException SockInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (socket exception): " + SockInner.Message);
-                return null;
-            }
-            catch (InvalidOperationException InvOpInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (invalid operation exception): " + InvOpInner.Message);
-                return null;
-            }
-            catch (AggregateException AEInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (aggregate exception): " + AEInner.Message);
-                return null;
-            }
-            catch (IOException IOInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (IO exception): " + IOInner.Message);
-                return null;
-            }
-            catch (Exception EInner)
-            {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected (general exception): " + EInner.Message);
-                LogException("MessageRead " + sourceIp + ":" + sourcePort, EInner);
+                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected");
                 return null;
             }
         }
         
         private bool MessageWrite(byte[] data)
         {
+            bool disconnectDetected = false;
+
             try
             {
                 #region Check-if-Connected
 
-                if (!IsPeerConnected(Client))
+                if (Client == null)
                 {
-                    Log("MessageWrite server " + ServerIp + ":" + ServerPort + " not connected");
-                    Connected = false;
+                    Log("MessageWrite client is null");
+                    disconnectDetected = true;
                     return false;
                 }
 
@@ -595,27 +528,41 @@ namespace WatsonTcp
             catch (ObjectDisposedException ObjDispInner)
             {
                 Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (obj disposed exception): " + ObjDispInner.Message);
+                disconnectDetected = true;
                 return false;
             }
             catch (SocketException SockInner)
             {
                 Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (socket exception): " + SockInner.Message);
+                disconnectDetected = true;
                 return false;
             }
             catch (InvalidOperationException InvOpInner)
             {
                 Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (invalid operation exception): " + InvOpInner.Message);
+                disconnectDetected = true;
                 return false;
             }
             catch (IOException IOInner)
             {
                 Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (IO exception): " + IOInner.Message);
+                disconnectDetected = true;
                 return false;
             }
             catch (Exception e)
             {
                 LogException("MessageWrite", e);
+                disconnectDetected = true;
                 return false;
+            }
+            finally
+            {
+                if (disconnectDetected)
+                {
+                    Connected = false;
+                    Dispose();
+                    if (ServerDisconnected != null) Task.Run(() => ServerDisconnected());
+                }
             }
         }
 
