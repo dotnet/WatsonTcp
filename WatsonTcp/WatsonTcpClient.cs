@@ -217,7 +217,7 @@ namespace WatsonTcp
                     if (data == null)
                     {
                         // Log("DataReceiver unable to read message from server " + ServerIp + ":" + ServerPort);
-                        Thread.Sleep(30);
+                        Task.Delay(30);
                         continue;
                     }
 
