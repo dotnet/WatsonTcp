@@ -275,7 +275,7 @@ namespace WatsonTcp
                         if (data == null)
                         {
                             // no message available
-                            Task.Delay(30);
+                            Thread.Sleep(30);
                             continue;
                         }
 
