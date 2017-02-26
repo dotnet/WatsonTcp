@@ -14,7 +14,7 @@ namespace WatsonTcp
     /// <summary>
     /// Watson TCP client.
     /// </summary>
-    public class WatsonTcpClient
+    public class WatsonTcpClient : IDisposable
     {
         #region Public-Members
         
@@ -33,6 +33,7 @@ namespace WatsonTcp
         private Func<bool> ServerConnected;
         private Func<bool> ServerDisconnected;
 
+        private readonly object SendLock;
         private CancellationTokenSource DataReceiverTokenSource;
         private CancellationToken DataReceiverToken;
 
@@ -71,6 +72,7 @@ namespace WatsonTcp
             ServerPort = serverPort;
             Debug = debug;
             MessageReceived = messageReceived;
+            SendLock = new object();
 
             Client = new TcpClient();
             IAsyncResult ar = Client.BeginConnect(ServerIp, ServerPort, null, null);
@@ -90,9 +92,9 @@ namespace WatsonTcp
                 SourcePort = ((IPEndPoint)Client.Client.LocalEndPoint).Port;
                 Connected = true;
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                throw e;
+                throw;
             }
             finally
             {
@@ -115,22 +117,7 @@ namespace WatsonTcp
         /// </summary>
         public void Dispose()
         {
-            if (Client != null)
-            {
-                if (Client.Connected)
-                {
-                    NetworkStream ns = Client.GetStream();
-                    if (ns != null)
-                    {
-                        ns.Close();
-                    }
-                }
-
-                Client.Close();
-            }
-
-            DataReceiverTokenSource.Cancel();
-            Connected = false;
+            Dispose(true);
         }
 
         /// <summary>
@@ -151,10 +138,33 @@ namespace WatsonTcp
         {
             return Connected;
         }
-        
+
         #endregion
 
         #region Private-Methods
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (Client != null)
+                {
+                    if (Client.Connected)
+                    {
+                        NetworkStream ns = Client.GetStream();
+                        if (ns != null)
+                        {
+                            ns.Close();
+                        }
+                    }
+
+                    Client.Close();
+                }
+
+                DataReceiverTokenSource.Cancel();
+                Connected = false;
+            }
+        }
 
         private void Log(string msg)
         {
@@ -217,7 +227,7 @@ namespace WatsonTcp
                     if (data == null)
                     {
                         // Log("DataReceiver unable to read message from server " + ServerIp + ":" + ServerPort);
-                        Thread.Sleep(30);
+                        Task.Delay(30).Wait();
                         continue;
                     }
 
@@ -343,7 +353,7 @@ namespace WatsonTcp
                                 else
                                 {
                                     currentTimeout += sleepInterval;
-                                    Thread.Sleep(sleepInterval);
+                                    Task.Delay(sleepInterval).Wait();
                                 }
                             }
 
@@ -436,7 +446,7 @@ namespace WatsonTcp
                                 else
                                 {
                                     currentTimeout += sleepInterval;
-                                    Thread.Sleep(sleepInterval);
+                                    Task.Delay(sleepInterval).Wait();
                                 }
                             }
 
@@ -519,8 +529,12 @@ namespace WatsonTcp
 
                 #region Send-Message
 
-                Client.GetStream().Write(message, 0, message.Length);
-                Client.GetStream().Flush();
+                lock (SendLock)
+                {
+                    Client.GetStream().Write(message, 0, message.Length);
+                    Client.GetStream().Flush();
+                }
+
                 return true;
 
                 #endregion
