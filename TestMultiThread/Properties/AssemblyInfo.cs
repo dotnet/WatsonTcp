@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("TestClient")]
+[assembly: AssemblyTitle("TestMultiThread")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Marauder Software, Inc.")]
-[assembly: AssemblyProduct("TestClient")]
+[assembly: AssemblyProduct("TestMultiThread")]
 [assembly: AssemblyCopyright("(c) 2016 Marauder Software, Inc.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("7a555bd9-2708-461a-baa1-c9a6188caa53")]
+[assembly: Guid("eedd713d-6691-448e-8861-56c393555c74")]
 
 // Version information for an assembly consists of the following four values:
 //

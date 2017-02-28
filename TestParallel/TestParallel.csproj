@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{CC93A47C-B2DF-4883-ABD1-4F288E2E75C9}</ProjectGuid>
+    <ProjectGuid>{979970E0-5DEC-43BA-B789-0A1D08B5E4C2}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TestServer</RootNamespace>
-    <AssemblyName>TestServer</AssemblyName>
+    <RootNamespace>TestParallel</RootNamespace>
+    <AssemblyName>TestParallel</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -22,7 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>TestServer.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>TestParallel.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,7 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <CodeAnalysisRuleSet>TestServer.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>TestParallel.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -45,12 +45,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TestServer.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="TestServer.ruleset" />
+    <None Include="TestParallel.ruleset" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WatsonTcp\WatsonTcp.csproj">

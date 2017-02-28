@@ -15,7 +15,7 @@ namespace WatsonTcp
     /// <summary>
     /// Watson TCP server.
     /// </summary>
-    public class WatsonTcpServer
+    public class WatsonTcpServer : IDisposable
     {
         #region Public-Members
 
@@ -101,7 +101,7 @@ namespace WatsonTcp
         /// </summary>
         public void Dispose()
         {
-            TokenSource.Cancel();
+            Dispose(true);
         }
 
         /// <summary>
@@ -150,6 +150,14 @@ namespace WatsonTcp
         #endregion
 
         #region Private-Methods
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                TokenSource.Cancel();
+            }
+        }
 
         private void Log(string msg)
         {
@@ -275,7 +283,7 @@ namespace WatsonTcp
                         if (data == null)
                         {
                             // no message available
-                            Thread.Sleep(30);
+                            Task.Delay(30).Wait();
                             continue;
                         }
 
@@ -286,6 +294,8 @@ namespace WatsonTcp
                         break;
                     }
                 }
+
+                #endregion
             }
             finally
             {
@@ -294,8 +304,6 @@ namespace WatsonTcp
                 if (ClientDisconnected != null) Task.Run(() => ClientDisconnected(clientIp + ":" + clientPort));
                 Log("DataReceiver client " + clientIp + ":" + clientPort + " disconnected (now " + ActiveClients + " clients active)");
             }
-
-            #endregion
         }
 
         private bool AddClient(TcpClient client)
@@ -411,7 +419,7 @@ namespace WatsonTcp
                             else
                             {
                                 currentTimeout += sleepInterval;
-                                Thread.Sleep(sleepInterval);
+                                Task.Delay(sleepInterval).Wait();
                             }
                         }
 
@@ -504,7 +512,7 @@ namespace WatsonTcp
                             else
                             {
                                 currentTimeout += sleepInterval;
-                                Thread.Sleep(sleepInterval);
+                                Task.Delay(sleepInterval).Wait();
                             }
                         }
 
