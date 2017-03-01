@@ -201,17 +201,18 @@ namespace WatsonTcp
             Log("================================================================================");
         }
 
-        private void AcceptConnections()
+        private async Task AcceptConnections()
         {
             Listener.Start();
-            while (!Token.IsCancellationRequested)
+            while (true)
             {
+                Token.ThrowIfCancellationRequested();
                 // Log("TCPAcceptConnections waiting for next connection");
 
-                TcpClient client = Listener.AcceptTcpClientAsync().Result;
+                TcpClient client = await Listener.AcceptTcpClientAsync();
                 client.LingerState.Enabled = false;
 
-                Task.Run(() =>
+                var unawaited = Task.Run(async () =>
                 {
                     #region Get-Tuple
 
@@ -246,11 +247,18 @@ namespace WatsonTcp
 
                     #region Start-Data-Receiver
 
-                    CancellationTokenSource dataReceiverTokenSource = new CancellationTokenSource();
-                    CancellationToken dataReceiverToken = dataReceiverTokenSource.Token;
-                    Log("AcceptConnections starting data receiver for " + clientIp + ":" + clientPort + " (now " + ActiveClients + " clients)");
-                    if (ClientConnected != null) Task.Run(() => ClientConnected(clientIp + ":" + clientPort));
-                    Task.Run(() => DataReceiver(client), dataReceiverToken);
+                    // TODO: token source belongs elsewhere (longer-lived?) or else should not be used
+                    using (CancellationTokenSource dataReceiverTokenSource = new CancellationTokenSource())
+                    {
+                        CancellationToken dataReceiverToken = dataReceiverTokenSource.Token;
+                        Log("AcceptConnections starting data receiver for " + clientIp + ":" + clientPort + " (now " + ActiveClients + " clients)");
+                        if (ClientConnected != null)
+                        {
+                            var nowait = Task.Run(() => ClientConnected(clientIp + ":" + clientPort));
+                        }
+
+                        await Task.Run(() => DataReceiver(client, dataReceiverToken), dataReceiverToken);
+                    }
 
                     #endregion
                     
@@ -285,7 +293,7 @@ namespace WatsonTcp
             }
         }
 
-        private void DataReceiver(TcpClient client)
+        private async Task DataReceiver(TcpClient client, CancellationToken? cancelToken=null)
         {
             string clientIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
             int clientPort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
@@ -296,19 +304,24 @@ namespace WatsonTcp
 
                 while (true)
                 {
+                    cancelToken?.ThrowIfCancellationRequested();
+
                     try
                     {
                         if (!IsConnected(client)) break;
 
-                        byte[] data = MessageRead(client);
+                        byte[] data = await MessageReadAsync(client);
                         if (data == null)
                         {
                             // no message available
-                            Task.Delay(30).Wait();
+                            await Task.Delay(30);
                             continue;
                         }
 
-                        if (MessageReceived != null) Task.Run(() => MessageReceived(clientIp + ":" + clientPort, data));
+                        if (MessageReceived != null)
+                        {
+                            var unawaited = Task.Run(() => MessageReceived(clientIp + ":" + clientPort, data));
+                        }
                     }
                     catch (Exception)
                     {
@@ -322,7 +335,10 @@ namespace WatsonTcp
             {
                 ActiveClients--;
                 RemoveClient(client);
-                if (ClientDisconnected != null) Task.Run(() => ClientDisconnected(clientIp + ":" + clientPort));
+                if (ClientDisconnected != null)
+                {
+                    var unawaited = Task.Run(() => ClientDisconnected(clientIp + ":" + clientPort));
+                }
                 Log("DataReceiver client " + clientIp + ":" + clientPort + " disconnected (now " + ActiveClients + " clients active)");
             }
         }
@@ -613,7 +629,7 @@ namespace WatsonTcp
                 currentTimeout = 0;
                 int read = 0;
 
-                while ((read = ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
+                while ((read = await ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
                 {
                     if (read > 0)
                     {
@@ -703,7 +719,7 @@ namespace WatsonTcp
                 if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                 buffer = new byte[bufferSize];
 
-                while ((read = ClientStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                while ((read = await ClientStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     if (read > 0)
                     {

@@ -565,7 +565,7 @@ namespace WatsonTcp
                     currentTimeout = 0;
                     int read = 0;
 
-                    while ((read = ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
+                    while ((read = await ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
                     {
                         if (read > 0)
                         {
@@ -655,7 +655,7 @@ namespace WatsonTcp
                     if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                     buffer = new byte[bufferSize];
 
-                    while ((read = ClientStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                    while ((read = await ClientStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                     {
                         if (read > 0)
                         {
