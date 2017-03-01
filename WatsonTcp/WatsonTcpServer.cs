@@ -212,7 +212,7 @@ namespace WatsonTcp
                 TcpClient client = await Listener.AcceptTcpClientAsync();
                 client.LingerState.Enabled = false;
 
-                var unawaited = Task.Run(async () =>
+                var unawaited = Task.Run(() =>
                 {
                     #region Get-Tuple
 
@@ -247,18 +247,16 @@ namespace WatsonTcp
 
                     #region Start-Data-Receiver
 
-                    // TODO: token source belongs elsewhere (longer-lived?) or else should not be used
-                    using (CancellationTokenSource dataReceiverTokenSource = new CancellationTokenSource())
-                    {
-                        CancellationToken dataReceiverToken = dataReceiverTokenSource.Token;
-                        Log("AcceptConnections starting data receiver for " + clientIp + ":" + clientPort + " (now " + ActiveClients + " clients)");
-                        if (ClientConnected != null)
-                        {
-                            var nowait = Task.Run(() => ClientConnected(clientIp + ":" + clientPort));
-                        }
+                    // TODO consider replacing with another token source or with Token
+                    CancellationToken dataReceiverToken = default(CancellationToken);
 
-                        await Task.Run(() => DataReceiver(client, dataReceiverToken), dataReceiverToken);
+                    Log("AcceptConnections starting data receiver for " + clientIp + ":" + clientPort + " (now " + ActiveClients + " clients)");
+                    if (ClientConnected != null)
+                    {
+                        Task.Run(() => ClientConnected(clientIp + ":" + clientPort));
                     }
+
+                    Task.Run(() => DataReceiver(client, dataReceiverToken), dataReceiverToken);
 
                     #endregion
                     
