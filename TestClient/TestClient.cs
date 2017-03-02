@@ -37,6 +37,7 @@ namespace TestClient
                         Console.WriteLine("  q          quit");
                         Console.WriteLine("  cls        clear screen");
                         Console.WriteLine("  send       send message to server");
+                        Console.WriteLine("  sendasync  send message to server asynchronously");
                         Console.WriteLine("  status     show if client connected");
                         Console.WriteLine("  dispose    dispose of the connection");
                         Console.WriteLine("  connect    connect to the server if not connected");
@@ -56,6 +57,13 @@ namespace TestClient
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
                         client.Send(Encoding.UTF8.GetBytes(userInput));
+                        break;
+
+                    case "sendasync":
+                        Console.Write("Data: ");
+                        userInput = Console.ReadLine();
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        client.SendAsync(Encoding.UTF8.GetBytes(userInput));
                         break;
 
                     case "status":

@@ -121,8 +121,7 @@ namespace WatsonTcp
 
             return MessageWrite(client, data);
         }
-
-
+        
         /// <summary>
         /// Send data to the specified client, asynchronously.
         /// </summary>
@@ -140,9 +139,7 @@ namespace WatsonTcp
 
             return await MessageWriteAsync(client, data);
         }
-
-
-
+        
         /// <summary>
         /// Determine whether or not the specified client is connected to the server.
         /// </summary>

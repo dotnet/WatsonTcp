@@ -748,8 +748,7 @@ namespace WatsonTcp
                 return null;
             }
         }
-
-
+        
         private bool MessageWrite(byte[] data)
         {
             bool disconnectDetected = false;

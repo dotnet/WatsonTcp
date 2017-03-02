@@ -15,6 +15,9 @@ Watson works well in Mono environments to the extent that we have tested it. It 
 
 NOTE: Windows accepts '0.0.0.0' as an IP address representing any interface.  On Mac and Linux you must be specified ('127.0.0.1' is also acceptable, but '0.0.0.0' is NOT).
 
+## Contributions
+Thanks to @brudo for his contributions to add async support to WatsonTcp (pushed in v1.0.7).
+
 ```
 mono --aot=nrgctx-trampolines=8096,nimt-trampolines=8096,ntrampolines=4048 --server myapp.exe
 mono --server myapp.exe
