@@ -128,17 +128,17 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">Byte array containing data.</param>
-        /// <returns>Task with bool indicating if the message was sent successfully.</returns>
-        public Task<bool> SendAsync(string ipPort, byte[] data)
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(string ipPort, byte[] data)
         {
             TcpClient client;
             if (!Clients.TryGetValue(ipPort, out client))
             {
                 Log("Send unable to find client " + ipPort);
-                return Task.FromResult(false);
+                return false;
             }
 
-            return MessageWriteAsync(client, data);
+            return await MessageWriteAsync(client, data);
         }
 
 
@@ -256,7 +256,8 @@ namespace WatsonTcp
                         Task.Run(() => ClientConnected(clientIp + ":" + clientPort));
                     }
 
-                    Task.Run(() => DataReceiver(client, dataReceiverToken), dataReceiverToken);
+                    // TODO not sure if part or all of "Task.Run async () => await" can be omitted.
+                    Task.Run(async () => await DataReceiver(client, dataReceiverToken), dataReceiverToken);
 
                     #endregion
                     

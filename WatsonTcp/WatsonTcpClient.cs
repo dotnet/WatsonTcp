@@ -131,6 +131,17 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Send data to the server asynchronously
+        /// </summary>
+        /// <param name="data">Byte array containing data.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(byte[] data)
+        {
+            return await MessageWriteAsync(data);
+        }
+
+
+        /// <summary>
         /// Determine whether or not the client is connected to the server.
         /// </summary>
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
@@ -186,7 +197,6 @@ namespace WatsonTcp
             Log(" = Exception StackTrace: " + e.StackTrace);
             Log("================================================================================");
         }
-
         
         private async Task DataReceiver(CancellationToken? cancelToken=null)
         {
