@@ -262,47 +262,42 @@ namespace WatsonTcp
             Listener.Start();
             while (true)
             {
+                #region Accept-Connection
+
                 Token.ThrowIfCancellationRequested();
                 // Log("TCPAcceptConnections waiting for next connection");
 
                 TcpClient client = await Listener.AcceptTcpClientAsync();
                 client.LingerState.Enabled = false;
 
-                var unawaited = Task.Run(() =>
+                #endregion
+
+                #region Get-Tuple-and-Check-IP
+
+                string clientIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+                int clientPort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
+
+                if (PermittedIps != null && PermittedIps.Count > 0)
                 {
-                    #region Get-Tuple-and-Check-IP
-
-                    string clientIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                    int clientPort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
-
-                    if (PermittedIps != null && PermittedIps.Count > 0)
+                    if (!PermittedIps.Contains(clientIp))
                     {
-                        if (!PermittedIps.Contains(clientIp))
-                        {
-                            Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
-                            client.Close();
-                            return;
-                        }
+                        Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
+                        client.Close();
+                        return;
                     }
+                }
 
-                    Log("AcceptConnections accepted connection from " + clientIp + ":" + clientPort);
-                    
-                    #endregion
+                Log("AcceptConnections accepted connection from " + clientIp + ":" + clientPort);
 
-                    #region Increment-Counters
+                #endregion
+
+                var unawaited = Task.Run(() =>
+                { 
+                    #region Add-to-Client-List
 
                     ActiveClients++;
-
-                    //
-                    //
                     // Do not decrement in this block, decrement is done by the connection reader
-                    //
-                    //
 
-                    #endregion
-
-                    #region Add-to-Client-List
-                    
                     if (!AddClient(client))
                     {
                         Log("*** AcceptConnections unable to add client " + clientIp + ":" + clientPort);
