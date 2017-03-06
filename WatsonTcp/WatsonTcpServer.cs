@@ -108,7 +108,7 @@ namespace WatsonTcp
         public WatsonTcpServer(
             string listenerIp,
             int listenerPort,
-            List<string> permittedIps,
+            IEnumerable<string> permittedIps,
             Func<string, bool> clientConnected,
             Func<string, bool> clientDisconnected,
             Func<string, byte[], bool> messageReceived,
@@ -126,7 +126,7 @@ namespace WatsonTcp
             MessageReceived = messageReceived;
             Debug = debug;
 
-            if (permittedIps != null && permittedIps.Count > 0) PermittedIps = permittedIps;
+            if (permittedIps != null && permittedIps.Count() > 0) PermittedIps = new List<string>(permittedIps);
 
             if (String.IsNullOrEmpty(listenerIp))
             {
