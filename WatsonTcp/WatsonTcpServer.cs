@@ -30,6 +30,7 @@ namespace WatsonTcp
         private TcpListener Listener;
         private int ActiveClients;
         private ConcurrentDictionary<string, TcpClient> Clients;
+        private List<string> PermittedIps;
         private CancellationTokenSource TokenSource;
         private CancellationToken Token;
         private Func<string, bool> ClientConnected;
@@ -50,11 +51,11 @@ namespace WatsonTcp
         /// <param name="messageReceived">Function to be called when a message is received.</param>
         /// <param name="debug">Enable or debug logging messages.</param>
         public WatsonTcpServer(
-            string listenerIp, 
-            int listenerPort, 
+            string listenerIp,
+            int listenerPort,
             Func<string, bool> clientConnected,
             Func<string, bool> clientDisconnected,
-            Func<string, byte[], bool> messageReceived, 
+            Func<string, byte[], bool> messageReceived,
             bool debug)
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
@@ -69,6 +70,8 @@ namespace WatsonTcp
             MessageReceived = messageReceived;
             Debug = debug;
 
+            PermittedIps = null;
+
             if (String.IsNullOrEmpty(listenerIp))
             {
                 ListenerIpAddress = System.Net.IPAddress.Any;
@@ -81,7 +84,63 @@ namespace WatsonTcp
             }
 
             ListenerPort = listenerPort;
-            
+
+            Log("WatsonTcpServer starting on " + ListenerIp + ":" + ListenerPort);
+
+            Listener = new TcpListener(ListenerIpAddress, ListenerPort);
+            TokenSource = new CancellationTokenSource();
+            Token = TokenSource.Token;
+            ActiveClients = 0;
+            Clients = new ConcurrentDictionary<string, TcpClient>();
+            Task.Run(() => AcceptConnections(), Token);
+        }
+
+        /// <summary>
+        /// Initialize the Watson TCP client.
+        /// </summary>
+        /// <param name="listenerIp">The IP address on which the server should listen, nullable.</param>
+        /// <param name="listenerPort">The TCP port on which the server should listen.</param>
+        /// <param name="permittedIps">List of IP address strings that are allowed to connect (null to permit all).</param>
+        /// <param name="clientConnected">Function to be called when a client connects.</param>
+        /// <param name="clientDisconnected">Function to be called when a client disconnects.</param>
+        /// <param name="messageReceived">Function to be called when a message is received.</param>
+        /// <param name="debug">Enable or debug logging messages.</param>
+        public WatsonTcpServer(
+            string listenerIp,
+            int listenerPort,
+            List<string> permittedIps,
+            Func<string, bool> clientConnected,
+            Func<string, bool> clientDisconnected,
+            Func<string, byte[], bool> messageReceived,
+            bool debug)
+        {
+            if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
+            if (messageReceived == null) throw new ArgumentNullException(nameof(MessageReceived));
+
+            if (clientConnected == null) ClientConnected = null;
+            else ClientConnected = clientConnected;
+
+            if (clientDisconnected == null) ClientDisconnected = null;
+            else ClientDisconnected = clientDisconnected;
+
+            MessageReceived = messageReceived;
+            Debug = debug;
+
+            if (permittedIps != null && permittedIps.Count > 0) PermittedIps = permittedIps;
+
+            if (String.IsNullOrEmpty(listenerIp))
+            {
+                ListenerIpAddress = System.Net.IPAddress.Any;
+                ListenerIp = ListenerIpAddress.ToString();
+            }
+            else
+            {
+                ListenerIpAddress = IPAddress.Parse(listenerIp);
+                ListenerIp = listenerIp;
+            }
+
+            ListenerPort = listenerPort;
+
             Log("WatsonTcpServer starting on " + ListenerIp + ":" + ListenerPort);
 
             Listener = new TcpListener(ListenerIpAddress, ListenerPort);
@@ -176,7 +235,7 @@ namespace WatsonTcp
                 TokenSource.Cancel();
             }
         }
-
+         
         private void Log(string msg)
         {
             if (Debug)
@@ -211,12 +270,23 @@ namespace WatsonTcp
 
                 var unawaited = Task.Run(() =>
                 {
-                    #region Get-Tuple
+                    #region Get-Tuple-and-Check-IP
 
                     string clientIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
                     int clientPort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
-                    Log("AcceptConnections accepted connection from " + clientIp + ":" + clientPort);
 
+                    if (PermittedIps != null && PermittedIps.Count > 0)
+                    {
+                        if (!PermittedIps.Contains(clientIp))
+                        {
+                            Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
+                            client.Close();
+                            return;
+                        }
+                    }
+
+                    Log("AcceptConnections accepted connection from " + clientIp + ":" + clientPort);
+                    
                     #endregion
 
                     #region Increment-Counters
