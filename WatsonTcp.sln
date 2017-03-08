@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestParallel", "TestParalle
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestMultiThread", "TestMultiThread\TestMultiThread.csproj", "{EEDD713D-6691-448E-8861-56C393555C74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSslClient", "TestSslClient\TestSslClient.csproj", "{F7A7ABC3-F329-4200-91AA-068B59B49480}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSslServer", "TestSslServer\TestSslServer.csproj", "{82A1037C-7C8F-48E6-9F1A-C2E5FA601A63}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +43,14 @@ Global
 		{EEDD713D-6691-448E-8861-56C393555C74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EEDD713D-6691-448E-8861-56C393555C74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EEDD713D-6691-448E-8861-56C393555C74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7A7ABC3-F329-4200-91AA-068B59B49480}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7A7ABC3-F329-4200-91AA-068B59B49480}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7A7ABC3-F329-4200-91AA-068B59B49480}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7A7ABC3-F329-4200-91AA-068B59B49480}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82A1037C-7C8F-48E6-9F1A-C2E5FA601A63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82A1037C-7C8F-48E6-9F1A-C2E5FA601A63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82A1037C-7C8F-48E6-9F1A-C2E5FA601A63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82A1037C-7C8F-48E6-9F1A-C2E5FA601A63}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

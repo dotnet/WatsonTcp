@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>WatsonTcp</id>
+        <version>1.1.0</version>
+        <title>WatsonTcp</title>
+        <authors>jchristn</authors>
+        <owners>jchristn</owners>
+        <licenseUrl>https://github.com/jchristn/WatsonTcp/blob/master/LICENSE.TXT</licenseUrl>
+        <projectUrl>https://github.com/jchristn/WatsonTcp</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</description>
+        <summary>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</summary>
+        <releaseNotes>SSL support</releaseNotes>
+        <copyright>(c) 2017 Marauder Software Inc.</copyright>
+    </metadata>
+    <files>
+        <file src="..\WatsonTcp\bin\Release\WatsonTcp.dll" target="lib\WatsonTcp.dll" />
+        <file src="..\WatsonTcp\bin\Release\WatsonTcp.pdb" target="lib\WatsonTcp.pdb" />
+    </files>
+</package>
