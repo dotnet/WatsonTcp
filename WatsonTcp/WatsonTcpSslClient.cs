@@ -41,8 +41,8 @@ namespace WatsonTcp
         private Func<bool> ServerDisconnected;
 
         private readonly SemaphoreSlim SendLock;
-        private CancellationTokenSource DataReceiverTokenSource;
-        private CancellationToken DataReceiverToken;
+        private CancellationTokenSource TokenSource;
+        private CancellationToken Token;
 
         #endregion
 
@@ -138,9 +138,9 @@ namespace WatsonTcp
 
             if (ServerConnected != null) Task.Run(() => ServerConnected());
 
-            DataReceiverTokenSource = new CancellationTokenSource();
-            DataReceiverToken = DataReceiverTokenSource.Token;
-            Task.Run(async () => await DataReceiver(DataReceiverToken), DataReceiverToken);
+            TokenSource = new CancellationTokenSource();
+            Token = TokenSource.Token;
+            Task.Run(async () => await DataReceiver(Token), Token);
         }
 
         #endregion
@@ -174,8 +174,7 @@ namespace WatsonTcp
         {
             return await MessageWriteAsync(data);
         }
-
-
+        
         /// <summary>
         /// Determine whether or not the client is connected to the server.
         /// </summary>
@@ -207,7 +206,7 @@ namespace WatsonTcp
                     Tcp.Close();
                 }
 
-                DataReceiverTokenSource.Cancel();
+                TokenSource.Cancel();
                 Connected = false;
             }
         }
@@ -238,7 +237,13 @@ namespace WatsonTcp
             Log(" = Exception StackTrace: " + e.StackTrace);
             Log("================================================================================");
         }
-        
+
+        private string BytesToHex(byte[] data)
+        {
+            if (data == null || data.Length < 1) return "(null)";
+            return BitConverter.ToString(data).Replace("-", "");
+        }
+
         private async Task DataReceiver(CancellationToken? cancelToken=null)
         {
             try
@@ -269,8 +274,7 @@ namespace WatsonTcp
 
                     byte[] data = await MessageReadAsync();
                     if (data == null)
-                    {
-                        // Log("DataReceiver unable to read message from server " + ServerIp + ":" + ServerPort);
+                    { 
                         await Task.Delay(30);
                         continue;
                     }
@@ -298,10 +302,7 @@ namespace WatsonTcp
         }
 
         private byte[] MessageRead()
-        {
-            string sourceIp = "";
-            int sourcePort = 0;
-            
+        { 
             try
             {
                 #region Check-for-Null-Values
@@ -339,9 +340,6 @@ namespace WatsonTcp
                 int maxTimeout = 500;
                 int currentTimeout = 0;
                 bool timeout = false;
-
-                sourceIp = ((IPEndPoint)Tcp.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)Tcp.Client.RemoteEndPoint).Port; 
                  
                 byte[] headerBytes;
                 string header = "";
@@ -398,8 +396,7 @@ namespace WatsonTcp
 
                     headerBytes = headerMs.ToArray();
                     if (headerBytes == null || headerBytes.Length < 1)
-                    {
-                        // Log("*** MessageRead " + sourceIp + ":" + sourcePort + " no byte data read from peer");
+                    { 
                         return null;
                     }
 
@@ -412,7 +409,7 @@ namespace WatsonTcp
 
                     if (!Int64.TryParse(header, out contentLength))
                     {
-                        Log("*** MessageRead malformed message from " + sourceIp + ":" + sourcePort + " (message header not an integer)");
+                        Log("*** MessageRead malformed message from server (message header not an integer)");
                         return null;
                     }
 
@@ -487,13 +484,13 @@ namespace WatsonTcp
 
                 if (contentBytes == null || contentBytes.Length < 1)
                 {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " no content read");
+                    Log("*** MessageRead no content read");
                     return null;
                 }
 
                 if (contentBytes.Length != contentLength)
                 {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " content length " + contentBytes.Length + " bytes does not match header value of " + contentLength);
+                    Log("*** MessageRead content length " + contentBytes.Length + " bytes does not match header value of " + contentLength);
                     return null;
                 }
 
@@ -503,16 +500,13 @@ namespace WatsonTcp
             }
             catch (Exception)
             {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected");
+                Log("*** MessageRead server disconnected");
                 return null;
             }
         }
 
         private async Task<byte[]> MessageReadAsync()
-        {
-            string sourceIp = "";
-            int sourcePort = 0;
-
+        { 
             try
             {
                 #region Check-for-Null-Values
@@ -550,10 +544,7 @@ namespace WatsonTcp
                 int maxTimeout = 500;
                 int currentTimeout = 0;
                 bool timeout = false;
-
-                sourceIp = ((IPEndPoint)Tcp.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)Tcp.Client.RemoteEndPoint).Port;
-                
+                 
                 byte[] headerBytes;
                 string header = "";
                 long contentLength;
@@ -619,7 +610,7 @@ namespace WatsonTcp
 
                     if (!Int64.TryParse(header, out contentLength))
                     {
-                        Log("*** MessageReadAsync malformed message from " + sourceIp + ":" + sourcePort + " (message header not an integer)");
+                        Log("*** MessageReadAsync malformed message from server (message header not an integer)");
                         return null;
                     }
 
@@ -693,13 +684,13 @@ namespace WatsonTcp
 
                 if (contentBytes == null || contentBytes.Length < 1)
                 {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " no content read");
+                    Log("*** MessageRead no content read");
                     return null;
                 }
 
                 if (contentBytes.Length != contentLength)
                 {
-                    Log("*** MessageRead " + sourceIp + ":" + sourcePort + " content length " + contentBytes.Length + " bytes does not match header value of " + contentLength);
+                    Log("*** MessageRead content length " + contentBytes.Length + " bytes does not match header value of " + contentLength);
                     return null;
                 }
 
@@ -709,7 +700,7 @@ namespace WatsonTcp
             }
             catch (Exception)
             {
-                Log("*** MessageRead " + sourceIp + ":" + sourcePort + " disconnected");
+                Log("*** MessageRead server disconnected");
                 return null;
             }
         }
@@ -770,25 +761,25 @@ namespace WatsonTcp
             }
             catch (ObjectDisposedException ObjDispInner)
             {
-                Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (obj disposed exception): " + ObjDispInner.Message);
+                Log("*** MessageWrite server disconnected (obj disposed exception): " + ObjDispInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (SocketException SockInner)
             {
-                Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (socket exception): " + SockInner.Message);
+                Log("*** MessageWrite server disconnected (socket exception): " + SockInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (InvalidOperationException InvOpInner)
             {
-                Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (invalid operation exception): " + InvOpInner.Message);
+                Log("*** MessageWrite server disconnected (invalid operation exception): " + InvOpInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (IOException IOInner)
             {
-                Log("*** MessageWrite " + SourceIp + ":" + SourcePort + " disconnected (IO exception): " + IOInner.Message);
+                Log("*** MessageWrite server disconnected (IO exception): " + IOInner.Message);
                 disconnectDetected = true;
                 return false;
             }
@@ -804,7 +795,6 @@ namespace WatsonTcp
                 {
                     Connected = false;
                     Dispose();
-                    if (ServerDisconnected != null) Task.Run(() => ServerDisconnected());
                 }
             }
         }
@@ -872,25 +862,25 @@ namespace WatsonTcp
             }
             catch (ObjectDisposedException ObjDispInner)
             {
-                Log("*** MessageWriteAsync " + SourceIp + ":" + SourcePort + " disconnected (obj disposed exception): " + ObjDispInner.Message);
+                Log("*** MessageWriteAsync server disconnected (obj disposed exception): " + ObjDispInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (SocketException SockInner)
             {
-                Log("*** MessageWriteAsync " + SourceIp + ":" + SourcePort + " disconnected (socket exception): " + SockInner.Message);
+                Log("*** MessageWriteAsync server disconnected (socket exception): " + SockInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (InvalidOperationException InvOpInner)
             {
-                Log("*** MessageWriteAsync " + SourceIp + ":" + SourcePort + " disconnected (invalid operation exception): " + InvOpInner.Message);
+                Log("*** MessageWriteAsync server disconnected (invalid operation exception): " + InvOpInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (IOException IOInner)
             {
-                Log("*** MessageWriteAsync " + SourceIp + ":" + SourcePort + " disconnected (IO exception): " + IOInner.Message);
+                Log("*** MessageWriteAsync server disconnected (IO exception): " + IOInner.Message);
                 disconnectDetected = true;
                 return false;
             }
@@ -905,11 +895,7 @@ namespace WatsonTcp
                 if (disconnectDetected)
                 {
                     Connected = false;
-                    Dispose();
-                    if (ServerDisconnected != null)
-                    {
-                        var unawaited = Task.Run(() => ServerDisconnected());
-                    }
+                    Dispose(); 
                 }
             }
         }
