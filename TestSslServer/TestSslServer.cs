@@ -28,7 +28,7 @@ namespace TestSslServer
             Console.Write("Certificate Pass : ");
             certPass = Console.ReadLine();
 
-            WatsonTcpSslServer server = new WatsonTcpSslServer(serverIp, serverPort, certFile, certPass, true, ClientConnected, ClientDisconnected, MessageReceived, true);
+            WatsonTcpSslServer server = new WatsonTcpSslServer(serverIp, serverPort, certFile, certPass, true, false, ClientConnected, ClientDisconnected, MessageReceived, true);
 
             bool runForever = true;
             while (runForever)

@@ -56,6 +56,7 @@ namespace WatsonTcp
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
         /// <param name="acceptInvalidCerts">True to accept invalid or expired SSL certificates.</param>
+        /// <param name="mutualAuthentication">True to mutually authenticate client and server.</param>
         /// <param name="serverConnected">Function to be called when the server connects.</param>
         /// <param name="serverDisconnected">Function to be called when the connection is severed.</param>
         /// <param name="messageReceived">Function to be called when a message is received.</param>
@@ -66,6 +67,7 @@ namespace WatsonTcp
             string pfxCertFile,
             string pfxCertPass,
             bool acceptInvalidCerts,
+            bool mutualAuthentication,
             Func<bool> serverConnected,
             Func<bool> serverDisconnected,
             Func<byte[], bool> messageReceived,
@@ -124,6 +126,10 @@ namespace WatsonTcp
                 }
                  
                 Ssl.AuthenticateAsClient(ServerIp, SslCertificateCollection, SslProtocols.Tls12, !AcceptInvalidCerts);
+
+                if (!Ssl.IsEncrypted) throw new AuthenticationException("Stream is not encrypted");
+                if (!Ssl.IsAuthenticated) throw new AuthenticationException("Stream is not authenticated");
+                if (mutualAuthentication && !Ssl.IsMutuallyAuthenticated) throw new AuthenticationException("Mutual authentication failed");
 
                 Connected = true;
             }

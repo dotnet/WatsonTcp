@@ -33,6 +33,7 @@ namespace WatsonTcp
         private TcpListener Listener;
         private X509Certificate2 SslCertificate;
         private bool AcceptInvalidCerts;
+        private bool MutuallyAuthenticate;
         private int ActiveClients;
         private ConcurrentDictionary<string, ClientMetadata> Clients;
         private List<string> PermittedIps;
@@ -54,6 +55,7 @@ namespace WatsonTcp
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
         /// <param name="acceptInvalidCerts">True to accept invalid or expired SSL certificates.</param>
+        /// <param name="mutualAuthentication">True to mutually authenticate client and server.</param>
         /// <param name="clientConnected">Function to be called when a client connects.</param>
         /// <param name="clientDisconnected">Function to be called when a client disconnects.</param>
         /// <param name="messageReceived">Function to be called when a message is received.</param>
@@ -64,6 +66,7 @@ namespace WatsonTcp
             string pfxCertFile,
             string pfxCertPass,
             bool acceptInvalidCerts,
+            bool mutualAuthentication,
             Func<string, bool> clientConnected,
             Func<string, bool> clientDisconnected,
             Func<string, byte[], bool> messageReceived,
@@ -82,6 +85,7 @@ namespace WatsonTcp
             MessageReceived = messageReceived;
             Debug = debug;
             AcceptInvalidCerts = acceptInvalidCerts;
+            MutuallyAuthenticate = mutualAuthentication;
 
             PermittedIps = null;
 
@@ -120,6 +124,7 @@ namespace WatsonTcp
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
         /// <param name="acceptInvalidCerts">True to accept invalid or expired SSL certificates.</param>
+        /// <param name="mutualAuthentication">True to mutually authenticate client and server.</param>
         /// <param name="permittedIps">List of IP address strings that are allowed to connect (null to permit all).</param>
         /// <param name="clientConnected">Function to be called when a client connects.</param>
         /// <param name="clientDisconnected">Function to be called when a client disconnects.</param>
@@ -131,6 +136,7 @@ namespace WatsonTcp
             string pfxCertFile,
             string pfxCertPass,
             bool acceptInvalidCerts,
+            bool mutualAuthentication,
             IEnumerable<string> permittedIps,
             Func<string, bool> clientConnected,
             Func<string, bool> clientDisconnected,
@@ -149,6 +155,7 @@ namespace WatsonTcp
             MessageReceived = messageReceived;
             Debug = debug;
             AcceptInvalidCerts = acceptInvalidCerts;
+            MutuallyAuthenticate = mutualAuthentication;
 
             if (permittedIps != null && permittedIps.Count() > 0) PermittedIps = new List<string>(permittedIps);
 
@@ -329,7 +336,7 @@ namespace WatsonTcp
 
                 #endregion
 
-                #region Initialize-and-Authenticate-as-Server
+                #region Initialize-and-Authenticate
 
                 SslStream sslStream = null;
                 if (AcceptInvalidCerts)
@@ -344,6 +351,27 @@ namespace WatsonTcp
                 }
 
                 sslStream.AuthenticateAsServer(SslCertificate, true, SslProtocols.Tls12, false);
+
+                if (!sslStream.IsEncrypted)
+                {
+                    Log("*** AcceptConnections stream from " + clientIp + " not encrypted");
+                    tcpClient.Close();
+                    return;
+                }
+
+                if (!sslStream.IsAuthenticated)
+                {
+                    Log("*** AcceptConnections stream from " + clientIp + " not authenticated");
+                    tcpClient.Close();
+                    return;
+                }
+
+                if (MutuallyAuthenticate && !sslStream.IsMutuallyAuthenticated)
+                {
+                    Log("*** AcceptConnections stream from " + clientIp + " failed mutual authentication");
+                    tcpClient.Close();
+                    return;
+                }
 
                 #endregion
 

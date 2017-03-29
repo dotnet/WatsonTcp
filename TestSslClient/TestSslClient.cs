@@ -28,7 +28,7 @@ namespace TestSslClient
             Console.Write("Certificate Pass : ");
             certPass = Console.ReadLine();
 
-            WatsonTcpSslClient client = new WatsonTcpSslClient(serverIp, serverPort, certFile, certPass, true, ServerConnected, ServerDisconnected, MessageReceived, true);
+            WatsonTcpSslClient client = new WatsonTcpSslClient(serverIp, serverPort, certFile, certPass, true, false, ServerConnected, ServerDisconnected, MessageReceived, true);
 
             bool runForever = true;
             while (runForever)
@@ -90,13 +90,13 @@ namespace TestSslClient
                         }
                         else
                         {
-                            client = new WatsonTcpSslClient(serverIp, serverPort, certFile, certPass, true, ServerConnected, ServerDisconnected, MessageReceived, true);
+                            client = new WatsonTcpSslClient(serverIp, serverPort, certFile, certPass, true, false, ServerConnected, ServerDisconnected, MessageReceived, true);
                         }
                         break;
 
                     case "reconnect":
                         if (client != null) client.Dispose();
-                        client = new WatsonTcpSslClient(serverIp, serverPort, certFile, certPass, true, ServerConnected, ServerDisconnected, MessageReceived, true);
+                        client = new WatsonTcpSslClient(serverIp, serverPort, certFile, certPass, true, false, ServerConnected, ServerDisconnected, MessageReceived, true);
                         break;
 
                     default:
