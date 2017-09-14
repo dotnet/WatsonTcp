@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -25,24 +26,24 @@ namespace WatsonTcp
 
         #region Private-Members
 
-        private string SourceIp;
-        private int SourcePort;
-        private string ServerIp;
-        private int ServerPort;
-        private bool Debug;
-        private TcpClient Tcp;
-        private SslStream Ssl;
-        private X509Certificate2 SslCertificate;
-        private X509Certificate2Collection SslCertificateCollection;
-        private bool AcceptInvalidCerts;
-        private bool Connected;
-        private Func<byte[], bool> MessageReceived;
-        private Func<bool> ServerConnected;
-        private Func<bool> ServerDisconnected;
+        private string _SourceIp;
+        private int _SourcePort;
+        private string _ServerIp;
+        private int _ServerPort;
+        private bool _Debug;
+        private TcpClient _Tcp;
+        private SslStream _Ssl;
+        private X509Certificate2 _SslCertificate;
+        private X509Certificate2Collection _SslCertificateCollection;
+        private bool _AcceptInvalidCerts;
+        private bool _Connected;
+        private Func<byte[], bool> _MessageReceived;
+        private Func<bool> _ServerConnected;
+        private Func<bool> _ServerDisconnected;
 
-        private readonly SemaphoreSlim SendLock;
-        private CancellationTokenSource TokenSource;
-        private CancellationToken Token;
+        private readonly SemaphoreSlim _SendLock;
+        private CancellationTokenSource _TokenSource;
+        private CancellationToken _Token;
 
         #endregion
 
@@ -77,61 +78,61 @@ namespace WatsonTcp
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (messageReceived == null) throw new ArgumentNullException(nameof(messageReceived));
 
-            if (serverConnected != null) ServerConnected = serverConnected;
-            else ServerConnected = null;
+            if (serverConnected != null) _ServerConnected = serverConnected;
+            else _ServerConnected = null;
 
-            if (serverDisconnected != null) ServerDisconnected = serverDisconnected;
-            else ServerDisconnected = null;
+            if (serverDisconnected != null) _ServerDisconnected = serverDisconnected;
+            else _ServerDisconnected = null;
 
-            ServerIp = serverIp;
-            ServerPort = serverPort;
-            Debug = debug;
-            AcceptInvalidCerts = acceptInvalidCerts;
-            MessageReceived = messageReceived;
-            SendLock = new SemaphoreSlim(1);
+            _ServerIp = serverIp;
+            _ServerPort = serverPort;
+            _Debug = debug;
+            _AcceptInvalidCerts = acceptInvalidCerts;
+            _MessageReceived = messageReceived;
+            _SendLock = new SemaphoreSlim(1);
 
-            SslCertificate = null;
-            if (String.IsNullOrEmpty(pfxCertPass)) SslCertificate = new X509Certificate2(pfxCertFile);
-            else SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
+            _SslCertificate = null;
+            if (String.IsNullOrEmpty(pfxCertPass)) _SslCertificate = new X509Certificate2(pfxCertFile);
+            else _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
 
-            SslCertificateCollection = new X509Certificate2Collection();
-            SslCertificateCollection.Add(SslCertificate);
+            _SslCertificateCollection = new X509Certificate2Collection();
+            _SslCertificateCollection.Add(_SslCertificate);
 
-            Tcp = new TcpClient();
-            IAsyncResult ar = Tcp.BeginConnect(ServerIp, ServerPort, null, null);
+            _Tcp = new TcpClient();
+            IAsyncResult ar = _Tcp.BeginConnect(_ServerIp, _ServerPort, null, null);
             WaitHandle wh = ar.AsyncWaitHandle;
 
             try
             {
                 if (!ar.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
                 {
-                    Tcp.Close();
-                    throw new TimeoutException("Timeout connecting to " + ServerIp + ":" + ServerPort);
+                    _Tcp.Close();
+                    throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
                 }
 
-                Tcp.EndConnect(ar);
+                _Tcp.EndConnect(ar);
 
-                SourceIp = ((IPEndPoint)Tcp.Client.LocalEndPoint).Address.ToString();
-                SourcePort = ((IPEndPoint)Tcp.Client.LocalEndPoint).Port;
+                _SourceIp = ((IPEndPoint)_Tcp.Client.LocalEndPoint).Address.ToString();
+                _SourcePort = ((IPEndPoint)_Tcp.Client.LocalEndPoint).Port;
 
-                if (AcceptInvalidCerts)
+                if (_AcceptInvalidCerts)
                 {
                     // accept invalid certs
-                    Ssl = new SslStream(Tcp.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                    _Ssl = new SslStream(_Tcp.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
                 }
                 else
                 {
                     // do not accept invalid SSL certificates
-                    Ssl = new SslStream(Tcp.GetStream(), false);
+                    _Ssl = new SslStream(_Tcp.GetStream(), false);
                 }
                  
-                Ssl.AuthenticateAsClient(ServerIp, SslCertificateCollection, SslProtocols.Tls12, !AcceptInvalidCerts);
+                _Ssl.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !_AcceptInvalidCerts);
 
-                if (!Ssl.IsEncrypted) throw new AuthenticationException("Stream is not encrypted");
-                if (!Ssl.IsAuthenticated) throw new AuthenticationException("Stream is not authenticated");
-                if (mutualAuthentication && !Ssl.IsMutuallyAuthenticated) throw new AuthenticationException("Mutual authentication failed");
+                if (!_Ssl.IsEncrypted) throw new AuthenticationException("Stream is not encrypted");
+                if (!_Ssl.IsAuthenticated) throw new AuthenticationException("Stream is not authenticated");
+                if (mutualAuthentication && !_Ssl.IsMutuallyAuthenticated) throw new AuthenticationException("Mutual authentication failed");
 
-                Connected = true;
+                _Connected = true;
             }
             catch (Exception)
             {
@@ -142,11 +143,11 @@ namespace WatsonTcp
                 wh.Close();
             }
 
-            if (ServerConnected != null) Task.Run(() => ServerConnected());
+            if (_ServerConnected != null) Task.Run(() => _ServerConnected());
 
-            TokenSource = new CancellationTokenSource();
-            Token = TokenSource.Token;
-            Task.Run(async () => await DataReceiver(Token), Token);
+            _TokenSource = new CancellationTokenSource();
+            _Token = _TokenSource.Token;
+            Task.Run(async () => await DataReceiver(_Token), _Token);
         }
 
         #endregion
@@ -187,7 +188,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
         public bool IsConnected()
         {
-            return Connected;
+            return _Connected;
         }
 
         #endregion
@@ -198,34 +199,34 @@ namespace WatsonTcp
         {
             if (disposing)
             {
-                if (Tcp != null)
+                if (_Tcp != null)
                 {
-                    if (Tcp.Connected)
+                    if (_Tcp.Connected)
                     {
-                        NetworkStream ns = Tcp.GetStream();
+                        NetworkStream ns = _Tcp.GetStream();
                         if (ns != null)
                         {
                             ns.Close();
                         }
                     }
 
-                    Tcp.Close();
+                    _Tcp.Close();
                 }
 
-                TokenSource.Cancel();
-                Connected = false;
+                _TokenSource.Cancel();
+                _Connected = false;
             }
         }
 
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
-            return AcceptInvalidCerts;
+            return _AcceptInvalidCerts;
         }
 
         private void Log(string msg)
         {
-            if (Debug)
+            if (_Debug)
             {
                 Console.WriteLine(msg);
             }
@@ -262,15 +263,15 @@ namespace WatsonTcp
 
                     #region Check-if-Client-Connected-to-Server
 
-                    if (Tcp == null)
+                    if (_Tcp == null)
                     {
                         Log("*** DataReceiver null TCP interface detected, disconnection or close assumed");
                         break;
                     }
 
-                    if (!Tcp.Connected)
+                    if (!_Tcp.Connected)
                     {
-                        Log("*** DataReceiver server " + ServerIp + ":" + ServerPort + " disconnected");
+                        Log("*** DataReceiver server " + _ServerIp + ":" + _ServerPort + " disconnected");
                         break;
                     }
 
@@ -285,7 +286,7 @@ namespace WatsonTcp
                         continue;
                     }
 
-                    var unawaited = Task.Run(() => MessageReceived(data));
+                    var unawaited = Task.Run(() => _MessageReceived(data));
                     
                     #endregion
                 }
@@ -298,12 +299,12 @@ namespace WatsonTcp
             }
             catch (Exception)
             {
-                Log("*** DataReceiver server " + ServerIp + ":" + ServerPort + " disconnected");
+                Log("*** DataReceiver server " + _ServerIp + ":" + _ServerPort + " disconnected");
             }
             finally
             {
-                Connected = false;
-                if (ServerDisconnected != null) ServerDisconnected();
+                _Connected = false;
+                if (_ServerDisconnected != null) _ServerDisconnected();
             }
         }
 
@@ -313,25 +314,25 @@ namespace WatsonTcp
             {
                 #region Check-for-Null-Values
 
-                if (Tcp == null)
+                if (_Tcp == null)
                 {
                     Log("*** MessageRead null client supplied");
                     return null;
                 }
 
-                if (!Tcp.Connected)
+                if (!_Tcp.Connected)
                 {
                     Log("*** MessageRead supplied client is not connected");
                     return null;
                 }
 
-                if (Ssl == null)
+                if (_Ssl == null)
                 {
                     Log("*** MessageRead null SSL stream");
                     return null;
                 }
 
-                if (!Ssl.CanRead)
+                if (!_Ssl.CanRead)
                 {
                     Log("*** MessageRead SSL stream is unreadable");
                     return null;
@@ -365,7 +366,7 @@ namespace WatsonTcp
                     currentTimeout = 0;
                     int read = 0;
 
-                    while ((read = Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
+                    while ((read = _Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
                     {
                         if (read > 0)
                         {
@@ -438,7 +439,7 @@ namespace WatsonTcp
                     if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                     buffer = new byte[bufferSize];
 
-                    while ((read = Ssl.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                    while ((read = _Ssl.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
                     {
                         if (read > 0)
                         {
@@ -517,25 +518,25 @@ namespace WatsonTcp
             {
                 #region Check-for-Null-Values
 
-                if (Tcp == null)
+                if (_Tcp == null)
                 {
                     Log("*** MessageReadAsync null client supplied");
                     return null;
                 }
 
-                if (!Tcp.Connected)
+                if (!_Tcp.Connected)
                 {
                     Log("*** MessageReadAsync supplied client is not connected");
                     return null;
                 }
 
-                if (Ssl == null)
+                if (_Ssl == null)
                 {
                     Log("*** MessageReadAsync null SSL stream");
                     return null;
                 }
 
-                if (!Ssl.CanRead)
+                if (!_Ssl.CanRead)
                 {
                     Log("*** MessageReadAsync SSL stream is unreadable");
                     return null;
@@ -569,7 +570,7 @@ namespace WatsonTcp
                     currentTimeout = 0;
                     int read = 0;
 
-                    while ((read = await Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
+                    while ((read = await _Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
                     {
                         if (read > 0)
                         {
@@ -639,7 +640,7 @@ namespace WatsonTcp
                     if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                     buffer = new byte[bufferSize];
 
-                    while ((read = await Ssl.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                    while ((read = await _Ssl.ReadAsync(buffer, 0, buffer.Length)) > 0)
                     {
                         if (read > 0)
                         {
@@ -719,7 +720,7 @@ namespace WatsonTcp
             {
                 #region Check-if-Connected
 
-                if (Tcp == null)
+                if (_Tcp == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
@@ -750,15 +751,15 @@ namespace WatsonTcp
 
                 #region Send-Message
 
-                SendLock.Wait();
+                _SendLock.Wait();
                 try
                 {
-                    Ssl.Write(message, 0, message.Length);
-                    Ssl.Flush();
+                    _Ssl.Write(message, 0, message.Length);
+                    _Ssl.Flush();
                 }
                 finally
                 {
-                    SendLock.Release();
+                    _SendLock.Release();
                 }
                  
                 return true;
@@ -799,7 +800,7 @@ namespace WatsonTcp
             {
                 if (disconnectDetected)
                 {
-                    Connected = false;
+                    _Connected = false;
                     Dispose();
                 }
             }
@@ -813,14 +814,14 @@ namespace WatsonTcp
             {
                 #region Check-if-Connected
 
-                if (Tcp == null)
+                if (_Tcp == null)
                 {
                     Log("MessageWriteAsync client is null");
                     disconnectDetected = true;
                     return false;
                 }
 
-                if (Ssl == null)
+                if (_Ssl == null)
                 {
                     Log("MessageWriteAsync SSL stream is null");
                     disconnectDetected = true;
@@ -851,15 +852,15 @@ namespace WatsonTcp
 
                 #region Send-Message
 
-                await SendLock.WaitAsync();
+                await _SendLock.WaitAsync();
                 try
                 {
-                    await Ssl.WriteAsync(message, 0, message.Length);
-                    await Ssl.FlushAsync();
+                    _Ssl.Write(message, 0, message.Length);
+                    _Ssl.Flush();
                 }
                 finally
                 {
-                    SendLock.Release();
+                    _SendLock.Release();
                 }
 
                 return true;
@@ -900,7 +901,7 @@ namespace WatsonTcp
             {
                 if (disconnectDetected)
                 {
-                    Connected = false;
+                    _Connected = false;
                     Dispose(); 
                 }
             }

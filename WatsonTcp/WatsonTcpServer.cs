@@ -23,19 +23,19 @@ namespace WatsonTcp
 
         #region Private-Members
 
-        private bool Debug;
-        private string ListenerIp;
-        private int ListenerPort;
-        private IPAddress ListenerIpAddress;
-        private TcpListener Listener;
-        private int ActiveClients;
-        private ConcurrentDictionary<string, ClientMetadata> Clients;
-        private List<string> PermittedIps;
-        private CancellationTokenSource TokenSource;
-        private CancellationToken Token;
-        private Func<string, bool> ClientConnected;
-        private Func<string, bool> ClientDisconnected;
-        private Func<string, byte[], bool> MessageReceived;
+        private bool _Debug;
+        private string _ListenerIp;
+        private int _ListenerPort;
+        private IPAddress _ListenerIpAddress;
+        private TcpListener _Listener;
+        private int _ActiveClients;
+        private ConcurrentDictionary<string, ClientMetadata> _Clients;
+        private List<string> _PermittedIps;
+        private CancellationTokenSource _TokenSource;
+        private CancellationToken _Token;
+        private Func<string, bool> _ClientConnected;
+        private Func<string, bool> _ClientDisconnected;
+        private Func<string, byte[], bool> _MessageReceived;
 
         #endregion
 
@@ -59,40 +59,40 @@ namespace WatsonTcp
             bool debug)
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
-            if (messageReceived == null) throw new ArgumentNullException(nameof(MessageReceived));
+            if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
 
-            if (clientConnected == null) ClientConnected = null;
-            else ClientConnected = clientConnected;
+            if (clientConnected == null) _ClientConnected = null;
+            else _ClientConnected = clientConnected;
 
-            if (clientDisconnected == null) ClientDisconnected = null;
-            else ClientDisconnected = clientDisconnected;
+            if (clientDisconnected == null) _ClientDisconnected = null;
+            else _ClientDisconnected = clientDisconnected;
 
-            MessageReceived = messageReceived;
-            Debug = debug;
+            _MessageReceived = messageReceived;
+            _Debug = debug;
 
-            PermittedIps = null;
+            _PermittedIps = null;
 
             if (String.IsNullOrEmpty(listenerIp))
             {
-                ListenerIpAddress = System.Net.IPAddress.Any;
-                ListenerIp = ListenerIpAddress.ToString();
+                _ListenerIpAddress = System.Net.IPAddress.Any;
+                _ListenerIp = _ListenerIpAddress.ToString();
             }
             else
             {
-                ListenerIpAddress = IPAddress.Parse(listenerIp);
-                ListenerIp = listenerIp;
+                _ListenerIpAddress = IPAddress.Parse(listenerIp);
+                _ListenerIp = listenerIp;
             }
 
-            ListenerPort = listenerPort;
+            _ListenerPort = listenerPort;
 
-            Log("WatsonTcpServer starting on " + ListenerIp + ":" + ListenerPort);
+            Log("WatsonTcpServer starting on " + _ListenerIp + ":" + _ListenerPort);
 
-            Listener = new TcpListener(ListenerIpAddress, ListenerPort);
-            TokenSource = new CancellationTokenSource();
-            Token = TokenSource.Token;
-            ActiveClients = 0;
-            Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), Token);
+            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
+            _TokenSource = new CancellationTokenSource();
+            _Token = _TokenSource.Token;
+            _ActiveClients = 0;
+            _Clients = new ConcurrentDictionary<string, ClientMetadata>();
+            Task.Run(() => AcceptConnections(), _Token);
         }
 
         /// <summary>
@@ -115,40 +115,40 @@ namespace WatsonTcp
             bool debug)
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
-            if (messageReceived == null) throw new ArgumentNullException(nameof(MessageReceived));
+            if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
 
-            if (clientConnected == null) ClientConnected = null;
-            else ClientConnected = clientConnected;
+            if (clientConnected == null) _ClientConnected = null;
+            else _ClientConnected = clientConnected;
 
-            if (clientDisconnected == null) ClientDisconnected = null;
-            else ClientDisconnected = clientDisconnected;
+            if (clientDisconnected == null) _ClientDisconnected = null;
+            else _ClientDisconnected = clientDisconnected;
 
-            MessageReceived = messageReceived;
-            Debug = debug;
+            _MessageReceived = messageReceived;
+            _Debug = debug;
 
-            if (permittedIps != null && permittedIps.Count() > 0) PermittedIps = new List<string>(permittedIps);
+            if (permittedIps != null && permittedIps.Count() > 0) _PermittedIps = new List<string>(permittedIps);
 
             if (String.IsNullOrEmpty(listenerIp))
             {
-                ListenerIpAddress = System.Net.IPAddress.Any;
-                ListenerIp = ListenerIpAddress.ToString();
+                _ListenerIpAddress = System.Net.IPAddress.Any;
+                _ListenerIp = _ListenerIpAddress.ToString();
             }
             else
             {
-                ListenerIpAddress = IPAddress.Parse(listenerIp);
-                ListenerIp = listenerIp;
+                _ListenerIpAddress = IPAddress.Parse(listenerIp);
+                _ListenerIp = listenerIp;
             }
 
-            ListenerPort = listenerPort;
+            _ListenerPort = listenerPort;
 
-            Log("WatsonTcpServer starting on " + ListenerIp + ":" + ListenerPort);
+            Log("WatsonTcpServer starting on " + _ListenerIp + ":" + _ListenerPort);
 
-            Listener = new TcpListener(ListenerIpAddress, ListenerPort);
-            TokenSource = new CancellationTokenSource();
-            Token = TokenSource.Token;
-            ActiveClients = 0;
-            Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), Token);
+            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
+            _TokenSource = new CancellationTokenSource();
+            _Token = _TokenSource.Token;
+            _ActiveClients = 0;
+            _Clients = new ConcurrentDictionary<string, ClientMetadata>();
+            Task.Run(() => AcceptConnections(), _Token);
         }
 
         #endregion
@@ -172,7 +172,7 @@ namespace WatsonTcp
         public bool Send(string ipPort, byte[] data)
         {
             ClientMetadata client;
-            if (!Clients.TryGetValue(ipPort, out client))
+            if (!_Clients.TryGetValue(ipPort, out client))
             {
                 Log("Send unable to find client " + ipPort);
                 return false;
@@ -190,7 +190,7 @@ namespace WatsonTcp
         public async Task<bool> SendAsync(string ipPort, byte[] data)
         {
             ClientMetadata client;
-            if (!Clients.TryGetValue(ipPort, out client))
+            if (!_Clients.TryGetValue(ipPort, out client))
             {
                 Log("Send unable to find client " + ipPort);
                 return false;
@@ -206,7 +206,7 @@ namespace WatsonTcp
         public bool IsClientConnected(string ipPort)
         {
             ClientMetadata client;
-            return (Clients.TryGetValue(ipPort, out client));
+            return (_Clients.TryGetValue(ipPort, out client));
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace WatsonTcp
         /// <returns>A string list containing each client IP:port.</returns>
         public List<string> ListClients()
         {
-            Dictionary<string, ClientMetadata> clients = Clients.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            Dictionary<string, ClientMetadata> clients = _Clients.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
             List<string> ret = new List<string>();
             foreach (KeyValuePair<string, ClientMetadata> curr in clients)
             {
@@ -232,13 +232,13 @@ namespace WatsonTcp
         {
             if (disposing)
             {
-                TokenSource.Cancel();
+                _TokenSource.Cancel();
             }
         }
          
         private void Log(string msg)
         {
-            if (Debug)
+            if (_Debug)
             {
                 Console.WriteLine(msg);
             }
@@ -265,13 +265,13 @@ namespace WatsonTcp
 
         private async Task AcceptConnections()
         {
-            Listener.Start();
+            _Listener.Start();
             while (true)
             {
                 #region Accept-Connection
 
-                Token.ThrowIfCancellationRequested();
-                TcpClient client = await Listener.AcceptTcpClientAsync();
+                _Token.ThrowIfCancellationRequested();
+                TcpClient client = await _Listener.AcceptTcpClientAsync();
                 client.LingerState.Enabled = false;
 
                 #endregion
@@ -281,9 +281,9 @@ namespace WatsonTcp
                 string clientIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
                 int clientPort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
 
-                if (PermittedIps != null && PermittedIps.Count > 0)
+                if (_PermittedIps != null && _PermittedIps.Count > 0)
                 {
-                    if (!PermittedIps.Contains(clientIp))
+                    if (!_PermittedIps.Contains(clientIp))
                     {
                         Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
                         client.Close();
@@ -299,7 +299,7 @@ namespace WatsonTcp
                 { 
                     #region Add-to-Client-List
 
-                    ActiveClients++;
+                    _ActiveClients++;
                     // Do not decrement in this block, decrement is done by the connection reader
 
                     ClientMetadata currClient = new ClientMetadata(client);
@@ -316,17 +316,17 @@ namespace WatsonTcp
 
                     CancellationToken dataReceiverToken = default(CancellationToken);
 
-                    Log("AcceptConnections starting data receiver for " + currClient.IpPort() + " (now " + ActiveClients + " clients)");
-                    if (ClientConnected != null)
+                    Log("AcceptConnections starting data receiver for " + currClient.IpPort() + " (now " + _ActiveClients + " clients)");
+                    if (_ClientConnected != null)
                     {
-                        Task.Run(() => ClientConnected(currClient.IpPort()));
+                        Task.Run(() => _ClientConnected(currClient.IpPort()));
                     }
 
                     Task.Run(async () => await DataReceiver(currClient, dataReceiverToken), dataReceiverToken);
 
                     #endregion
                     
-                }, Token);
+                }, _Token);
             }
         }
 
@@ -379,9 +379,9 @@ namespace WatsonTcp
                             continue;
                         }
 
-                        if (MessageReceived != null)
+                        if (_MessageReceived != null)
                         {
-                            var unawaited = Task.Run(() => MessageReceived(client.IpPort(), data));
+                            var unawaited = Task.Run(() => _MessageReceived(client.IpPort(), data));
                         }
                     }
                     catch (Exception)
@@ -394,25 +394,25 @@ namespace WatsonTcp
             }
             finally
             {
-                ActiveClients--;
+                _ActiveClients--;
                 RemoveClient(client);
-                if (ClientDisconnected != null)
+                if (_ClientDisconnected != null)
                 {
-                    var unawaited = Task.Run(() => ClientDisconnected(client.IpPort()));
+                    var unawaited = Task.Run(() => _ClientDisconnected(client.IpPort()));
                 }
-                Log("DataReceiver client " + client.IpPort() + " disconnected (now " + ActiveClients + " clients active)");
+                Log("DataReceiver client " + client.IpPort() + " disconnected (now " + _ActiveClients + " clients active)");
             }
         }
 
         private bool AddClient(ClientMetadata client)
         { 
             ClientMetadata removedClient;
-            if (!Clients.TryRemove(client.IpPort(), out removedClient))
+            if (!_Clients.TryRemove(client.IpPort(), out removedClient))
             {
                 // do nothing, it probably did not exist anyway
             }
 
-            Clients.TryAdd(client.IpPort(), client);
+            _Clients.TryAdd(client.IpPort(), client);
             Log("AddClient added client " + client.IpPort());
             return true;
         }
@@ -420,7 +420,7 @@ namespace WatsonTcp
         private bool RemoveClient(ClientMetadata client)
         { 
             ClientMetadata removedClient;
-            if (!Clients.TryRemove(client.IpPort(), out removedClient))
+            if (!_Clients.TryRemove(client.IpPort(), out removedClient))
             {
                 Log("RemoveClient unable to remove client " + client.IpPort());
                 return false;

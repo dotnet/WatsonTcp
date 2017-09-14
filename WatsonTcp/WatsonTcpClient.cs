@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -22,20 +23,20 @@ namespace WatsonTcp
 
         #region Private-Members
 
-        private string SourceIp;
-        private int SourcePort;
-        private string ServerIp;
-        private int ServerPort;
-        private bool Debug;
-        private TcpClient Client;
-        private bool Connected;
-        private Func<byte[], bool> MessageReceived;
-        private Func<bool> ServerConnected;
-        private Func<bool> ServerDisconnected;
+        private string _SourceIp;
+        private int _SourcePort;
+        private string _ServerIp;
+        private int _ServerPort;
+        private bool _Debug;
+        private TcpClient _Client;
+        private bool _Connected;
+        private Func<byte[], bool> _MessageReceived;
+        private Func<bool> _ServerConnected;
+        private Func<bool> _ServerDisconnected;
 
-        private readonly SemaphoreSlim SendLock;
-        private CancellationTokenSource TokenSource;
-        private CancellationToken Token;
+        private readonly SemaphoreSlim _SendLock;
+        private CancellationTokenSource _TokenSource;
+        private CancellationToken _Token;
 
         #endregion
 
@@ -62,35 +63,35 @@ namespace WatsonTcp
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (messageReceived == null) throw new ArgumentNullException(nameof(messageReceived));
 
-            if (serverConnected != null) ServerConnected = serverConnected;
-            else ServerConnected = null;
+            if (serverConnected != null) _ServerConnected = serverConnected;
+            else _ServerConnected = null;
 
-            if (serverDisconnected != null) ServerDisconnected = serverDisconnected;
-            else ServerDisconnected = null;
+            if (serverDisconnected != null) _ServerDisconnected = serverDisconnected;
+            else _ServerDisconnected = null;
 
-            ServerIp = serverIp;
-            ServerPort = serverPort;
-            Debug = debug;
-            MessageReceived = messageReceived;
-            SendLock = new SemaphoreSlim(1);
+            _ServerIp = serverIp;
+            _ServerPort = serverPort;
+            _Debug = debug;
+            _MessageReceived = messageReceived;
+            _SendLock = new SemaphoreSlim(1);
 
-            Client = new TcpClient();
-            IAsyncResult ar = Client.BeginConnect(ServerIp, ServerPort, null, null);
+            _Client = new TcpClient();
+            IAsyncResult ar = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
             WaitHandle wh = ar.AsyncWaitHandle;
 
             try
             {
                 if (!ar.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
                 {
-                    Client.Close();
-                    throw new TimeoutException("Timeout connecting to " + ServerIp + ":" + ServerPort);
+                    _Client.Close();
+                    throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
                 }
 
-                Client.EndConnect(ar);
+                _Client.EndConnect(ar);
 
-                SourceIp = ((IPEndPoint)Client.Client.LocalEndPoint).Address.ToString();
-                SourcePort = ((IPEndPoint)Client.Client.LocalEndPoint).Port;
-                Connected = true;
+                _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
+                _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
+                _Connected = true;
             }
             catch (Exception)
             {
@@ -101,11 +102,11 @@ namespace WatsonTcp
                 wh.Close();
             }
 
-            if (ServerConnected != null) Task.Run(() => ServerConnected());
+            if (_ServerConnected != null) Task.Run(() => _ServerConnected());
 
-            TokenSource = new CancellationTokenSource();
-            Token = TokenSource.Token;
-            Task.Run(async () => await DataReceiver(Token), Token);
+            _TokenSource = new CancellationTokenSource();
+            _Token = _TokenSource.Token;
+            Task.Run(async () => await DataReceiver(_Token), _Token);
         }
 
         #endregion
@@ -146,7 +147,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
         public bool IsConnected()
         {
-            return Connected;
+            return _Connected;
         }
 
         #endregion
@@ -157,28 +158,28 @@ namespace WatsonTcp
         {
             if (disposing)
             {
-                if (Client != null)
+                if (_Client != null)
                 {
-                    if (Client.Connected)
+                    if (_Client.Connected)
                     {
-                        NetworkStream ns = Client.GetStream();
+                        NetworkStream ns = _Client.GetStream();
                         if (ns != null)
                         {
                             ns.Close();
                         }
                     }
 
-                    Client.Close();
+                    _Client.Close();
                 }
 
-                TokenSource.Cancel();
-                Connected = false;
+                _TokenSource.Cancel();
+                _Connected = false;
             }
         }
 
         private void Log(string msg)
         {
-            if (Debug)
+            if (_Debug)
             {
                 Console.WriteLine(msg);
             }
@@ -215,13 +216,13 @@ namespace WatsonTcp
 
                     #region Check-if-Client-Connected-to-Server
 
-                    if (Client == null)
+                    if (_Client == null)
                     {
                         Log("*** DataReceiver null TCP interface detected, disconnection or close assumed");
                         break;
                     }
 
-                    if (!Client.Connected)
+                    if (!_Client.Connected)
                     {
                         Log("*** DataReceiver server disconnected");
                         break;
@@ -238,7 +239,7 @@ namespace WatsonTcp
                         continue;
                     }
 
-                    var unawaited = Task.Run(() => MessageReceived(data));
+                    var unawaited = Task.Run(() => _MessageReceived(data));
                     
                     #endregion
                 }
@@ -255,8 +256,8 @@ namespace WatsonTcp
             }
             finally
             {
-                Connected = false;
-                if (ServerDisconnected != null) ServerDisconnected();
+                _Connected = false;
+                if (_ServerDisconnected != null) _ServerDisconnected();
             }
         }
 
@@ -269,13 +270,13 @@ namespace WatsonTcp
             {
                 #region Check-for-Null-Values
 
-                if (Client == null)
+                if (_Client == null)
                 {
                     Log("*** MessageRead null client supplied");
                     return null;
                 }
 
-                if (!Client.Connected)
+                if (!_Client.Connected)
                 {
                     Log("*** MessageRead supplied client is not connected");
                     return null;
@@ -291,13 +292,13 @@ namespace WatsonTcp
                 int currentTimeout = 0;
                 bool timeout = false;
 
-                sourceIp = ((IPEndPoint)Client.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)Client.Client.RemoteEndPoint).Port;
+                sourceIp = ((IPEndPoint)_Client.Client.RemoteEndPoint).Address.ToString();
+                sourcePort = ((IPEndPoint)_Client.Client.RemoteEndPoint).Port;
                 NetworkStream ClientStream = null;
 
                 try
                 {
-                    ClientStream = Client.GetStream();
+                    ClientStream = _Client.GetStream();
                 }
                 catch (Exception e)
                 {
@@ -483,13 +484,13 @@ namespace WatsonTcp
             {
                 #region Check-for-Null-Values
 
-                if (Client == null)
+                if (_Client == null)
                 {
                     Log("*** MessageReadAsync null client supplied");
                     return null;
                 }
 
-                if (!Client.Connected)
+                if (!_Client.Connected)
                 {
                     Log("*** MessageReadAsync supplied client is not connected");
                     return null;
@@ -505,13 +506,13 @@ namespace WatsonTcp
                 int currentTimeout = 0;
                 bool timeout = false;
 
-                sourceIp = ((IPEndPoint)Client.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)Client.Client.RemoteEndPoint).Port;
+                sourceIp = ((IPEndPoint)_Client.Client.RemoteEndPoint).Address.ToString();
+                sourcePort = ((IPEndPoint)_Client.Client.RemoteEndPoint).Port;
                 NetworkStream ClientStream = null;
 
                 try
                 {
-                    ClientStream = Client.GetStream();
+                    ClientStream = _Client.GetStream();
                 }
                 catch (Exception e)
                 {
@@ -692,7 +693,7 @@ namespace WatsonTcp
             {
                 #region Check-if-Connected
 
-                if (Client == null)
+                if (_Client == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
@@ -723,15 +724,15 @@ namespace WatsonTcp
 
                 #region Send-Message
 
-                SendLock.Wait();
+                _SendLock.Wait();
                 try
                 {
-                    Client.GetStream().Write(message, 0, message.Length);
-                    Client.GetStream().Flush();
+                    _Client.GetStream().Write(message, 0, message.Length);
+                    _Client.GetStream().Flush();
                 }
                 finally
                 {
-                    SendLock.Release();
+                    _SendLock.Release();
                 }
                  
                 return true;
@@ -772,7 +773,7 @@ namespace WatsonTcp
             {
                 if (disconnectDetected)
                 {
-                    Connected = false;
+                    _Connected = false;
                     Dispose();
                 }
             }
@@ -786,12 +787,12 @@ namespace WatsonTcp
             {
                 #region Check-if-Connected
 
-                if (Client == null)
-                {
+                if (_Client == null)
+                { 
                     Log("MessageWriteAsync client is null");
                     disconnectDetected = true;
                     return false;
-                }
+                } 
 
                 #endregion
 
@@ -816,48 +817,48 @@ namespace WatsonTcp
                 #endregion
 
                 #region Send-Message
-
-                await SendLock.WaitAsync();
+                 
+                await _SendLock.WaitAsync();
                 try
                 {
-                    await Client.GetStream().WriteAsync(message, 0, message.Length);
-                    await Client.GetStream().FlushAsync();
+                    _Client.GetStream().Write(message, 0, message.Length);
+                    _Client.GetStream().Flush();
                 }
                 finally
-                {
-                    SendLock.Release();
+                { 
+                    _SendLock.Release();
                 }
-
+                 
                 return true;
 
                 #endregion
             }
             catch (ObjectDisposedException ObjDispInner)
-            {
+            { 
                 Log("*** MessageWriteAsync server disconnected (obj disposed exception): " + ObjDispInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (SocketException SockInner)
-            {
+            { 
                 Log("*** MessageWriteAsync server disconnected (socket exception): " + SockInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (InvalidOperationException InvOpInner)
-            {
+            { 
                 Log("*** MessageWriteAsync server disconnected (invalid operation exception): " + InvOpInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (IOException IOInner)
-            {
+            { 
                 Log("*** MessageWriteAsync server disconnected (IO exception): " + IOInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (Exception e)
-            {
+            { 
                 LogException("MessageWriteAsync", e);
                 disconnectDetected = true;
                 return false;
@@ -866,7 +867,7 @@ namespace WatsonTcp
             {
                 if (disconnectDetected)
                 {
-                    Connected = false;
+                    _Connected = false;
                     Dispose();
                 }
             }
