@@ -271,26 +271,26 @@ namespace WatsonTcp
                 #region Accept-Connection
 
                 _Token.ThrowIfCancellationRequested();
-                TcpClient client = await _Listener.AcceptTcpClientAsync();
-                client.LingerState.Enabled = false;
+                TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
+                tcpClient.LingerState.Enabled = false;
 
                 #endregion
 
                 #region Get-Tuple-and-Check-IP
 
-                string clientIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+                string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
 
                 if (_PermittedIps != null && _PermittedIps.Count > 0)
                 {
                     if (!_PermittedIps.Contains(clientIp))
                     {
                         Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
-                        client.Close();
+                        tcpClient.Close();
                         return;
                     }
                 }
 
-                Log("AcceptConnections accepted connection from " + client.Client.RemoteEndPoint.ToString());
+                Log("AcceptConnections accepted connection from " + tcpClient.Client.RemoteEndPoint.ToString());
 
                 #endregion
 
@@ -301,11 +301,11 @@ namespace WatsonTcp
                     _ActiveClients++;
                     // Do not decrement in this block, decrement is done by the connection reader
 
-                    ClientMetadata currClient = new ClientMetadata(client);
+                    ClientMetadata currClient = new ClientMetadata(tcpClient);
                     if (!AddClient(currClient))
                     {
                         Log("*** AcceptConnections unable to add client " + currClient.IpPort);
-                        client.Close();
+                        tcpClient.Close();
                         return;
                     }
 
