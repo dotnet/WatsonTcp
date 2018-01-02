@@ -17,7 +17,7 @@ namespace WatsonTcp
         #endregion
 
         #region Private-Members
-        
+
         #endregion
 
         #region Constructors-and-Factories

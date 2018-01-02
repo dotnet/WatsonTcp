@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
-using System.Net.Sockets; 
+using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -74,7 +74,7 @@ namespace WatsonTcp
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
             if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
             if (String.IsNullOrEmpty(pfxCertFile)) throw new ArgumentNullException(nameof(pfxCertFile));
-            
+
             if (clientConnected == null) _ClientConnected = null;
             else _ClientConnected = clientConnected;
 
@@ -214,7 +214,7 @@ namespace WatsonTcp
 
             return MessageWrite(client, data);
         }
-        
+
         /// <summary>
         /// Send data to the specified client, asynchronously.
         /// </summary>
@@ -232,7 +232,7 @@ namespace WatsonTcp
 
             return await MessageWriteAsync(client, data);
         }
-        
+
         /// <summary>
         /// Determine whether or not the specified client is connected to the server.
         /// </summary>
@@ -269,7 +269,7 @@ namespace WatsonTcp
                 _TokenSource.Cancel();
             }
         }
-         
+
         private void Log(string msg)
         {
             if (_Debug)
@@ -375,7 +375,7 @@ namespace WatsonTcp
                 #endregion
 
                 var unawaited = Task.Run(() =>
-                { 
+                {
                     #region Add-to-Client-List
 
                     _ActiveClients++;
@@ -404,7 +404,7 @@ namespace WatsonTcp
                     Task.Run(async () => await DataReceiver(currClient, dataReceiverToken), dataReceiverToken);
 
                     #endregion
-                    
+
                 }, _Token);
             }
         }
@@ -437,7 +437,7 @@ namespace WatsonTcp
         }
 
         private async Task DataReceiver(ClientMetadata client, CancellationToken? cancelToken=null)
-        { 
+        {
             try
             {
                 #region Wait-for-Data
@@ -484,7 +484,7 @@ namespace WatsonTcp
         }
 
         private bool AddClient(ClientMetadata client)
-        { 
+        {
             ClientMetadata removed;
             if (!_Clients.TryRemove(client.IpPort(), out removed))
             {
@@ -497,7 +497,7 @@ namespace WatsonTcp
         }
 
         private bool RemoveClient(ClientMetadata client)
-        { 
+        {
             ClientMetadata removedClient;
             if (!_Clients.TryRemove(client.IpPort(), out removedClient))
             {
@@ -530,14 +530,14 @@ namespace WatsonTcp
 
             string sourceIp = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Address.ToString();
             int sourcePort = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Port;
-            
+
             byte[] headerBytes;
             string header = "";
             long contentLength;
             byte[] contentBytes;
 
             if (!client.Ssl.CanRead) return null;
-            
+
             #endregion
 
             #region Read-Header
@@ -575,9 +575,9 @@ namespace WatsonTcp
                             {
                                 currentTimeout += sleepInterval;
                                 Task.Delay(sleepInterval).Wait();
-                            } 
+                            }
                         }
-                    } 
+                    }
                 }
 
                 if (timeout)
@@ -588,7 +588,7 @@ namespace WatsonTcp
 
                 headerBytes = headerMs.ToArray();
                 if (headerBytes == null || headerBytes.Length < 1)
-                { 
+                {
                     return null;
                 }
 
@@ -711,14 +711,14 @@ namespace WatsonTcp
 
             string sourceIp = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Address.ToString();
             int sourcePort = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Port;
-            
+
             byte[] headerBytes;
             string header = "";
             long contentLength;
             byte[] contentBytes;
 
             if (!client.Ssl.CanRead) return null;
-            
+
             #endregion
 
             #region Read-Header
@@ -761,11 +761,11 @@ namespace WatsonTcp
 
                         #endregion
                     }
-                        
+
                     if (bytesRead > 1)
                     {
                         // check if end of headers reached
-                        if ((int)headerBuffer[0] == 58) break; 
+                        if ((int)headerBuffer[0] == 58) break;
                     }
                     else
                     {
@@ -796,7 +796,7 @@ namespace WatsonTcp
 
                 headerBytes = headerMs.ToArray();
                 if (headerBytes == null || headerBytes.Length < 1)
-                { 
+                {
                     return null;
                 }
 
@@ -812,10 +812,10 @@ namespace WatsonTcp
                     Log("*** MessageReadAsync malformed message from " + client.IpPort() + " (message header not an integer)");
                     return null;
                 }
-                    
+
                 #endregion
             }
-                
+
             #endregion
 
             #region Read-Data
@@ -878,7 +878,7 @@ namespace WatsonTcp
                     Log("*** MessageReadAsync timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading content after reading " + bytesRead + " bytes");
                     return null;
                 }
-                    
+
                 contentBytes = dataMs.ToArray();
             }
 
@@ -904,7 +904,7 @@ namespace WatsonTcp
         }
 
         private bool MessageWrite(ClientMetadata client, byte[] data)
-        { 
+        {
             try
             {
                 #region Format-Message
@@ -943,7 +943,7 @@ namespace WatsonTcp
         }
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, byte[] data)
-        { 
+        {
             try
             {
                 #region Format-Message

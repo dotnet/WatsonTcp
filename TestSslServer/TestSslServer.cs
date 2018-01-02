@@ -47,7 +47,7 @@ namespace TestSslServer
                         Console.WriteLine("  q        quit");
                         Console.WriteLine("  cls      clear screen");
                         Console.WriteLine("  list     list clients");
-                        Console.WriteLine("  send     send message to client"); 
+                        Console.WriteLine("  send     send message to client");
                         break;
 
                     case "q":

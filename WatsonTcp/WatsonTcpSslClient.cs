@@ -17,7 +17,7 @@ namespace WatsonTcp
     public class WatsonTcpSslClient : IDisposable
     {
         #region Public-Members
-        
+
         #endregion
 
         #region Private-Members
@@ -59,7 +59,7 @@ namespace WatsonTcp
         /// <param name="messageReceived">Function to be called when a message is received.</param>
         /// <param name="debug">Enable or debug logging messages.</param>
         public WatsonTcpSslClient(
-            string serverIp, 
+            string serverIp,
             int serverPort,
             string pfxCertFile,
             string pfxCertPass,
@@ -121,7 +121,7 @@ namespace WatsonTcp
                     // do not accept invalid SSL certificates
                     _Ssl = new SslStream(_Tcp.GetStream(), false);
                 }
-                 
+
                 _Ssl.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !_AcceptInvalidCerts);
 
                 if (!_Ssl.IsEncrypted) throw new AuthenticationException("Stream is not encrypted");
@@ -177,7 +177,7 @@ namespace WatsonTcp
         {
             return await MessageWriteAsync(data);
         }
-        
+
         /// <summary>
         /// Determine whether or not the client is connected to the server.
         /// </summary>
@@ -250,7 +250,7 @@ namespace WatsonTcp
         private async Task DataReceiver(CancellationToken? cancelToken=null)
         {
             try
-            { 
+            {
                 #region Wait-for-Data
 
                 while (true)
@@ -277,13 +277,13 @@ namespace WatsonTcp
 
                     byte[] data = await MessageReadAsync();
                     if (data == null)
-                    { 
+                    {
                         await Task.Delay(30);
                         continue;
                     }
 
                     var unawaited = Task.Run(() => _MessageReceived(data));
-                    
+
                     #endregion
                 }
 
@@ -305,7 +305,7 @@ namespace WatsonTcp
         }
 
         private byte[] MessageRead()
-        { 
+        {
             try
             {
                 #region Check-for-Null-Values
@@ -343,7 +343,7 @@ namespace WatsonTcp
                 int maxTimeout = 500;
                 int currentTimeout = 0;
                 bool timeout = false;
-                 
+
                 byte[] headerBytes;
                 string header = "";
                 long contentLength;
@@ -352,7 +352,7 @@ namespace WatsonTcp
                 #endregion
 
                 #region Read-Header
-                 
+
                 using (MemoryStream headerMs = new MemoryStream())
                 {
                     #region Read-Header-Bytes
@@ -387,7 +387,7 @@ namespace WatsonTcp
                             {
                                 currentTimeout += sleepInterval;
                                 Task.Delay(sleepInterval).Wait();
-                            } 
+                            }
                         }
                     }
 
@@ -399,7 +399,7 @@ namespace WatsonTcp
 
                     headerBytes = headerMs.ToArray();
                     if (headerBytes == null || headerBytes.Length < 1)
-                    { 
+                    {
                         return null;
                     }
 
@@ -509,7 +509,7 @@ namespace WatsonTcp
         }
 
         private async Task<byte[]> MessageReadAsync()
-        { 
+        {
             try
             {
                 #region Check-for-Null-Values
@@ -547,7 +547,7 @@ namespace WatsonTcp
                 int maxTimeout = 500;
                 int currentTimeout = 0;
                 bool timeout = false;
-                 
+
                 byte[] headerBytes;
                 string header = "";
                 long contentLength;
@@ -556,7 +556,7 @@ namespace WatsonTcp
                 #endregion
 
                 #region Read-Header
-                 
+
                 using (MemoryStream headerMs = new MemoryStream())
                 {
                     #region Read-Header-Bytes
@@ -602,7 +602,7 @@ namespace WatsonTcp
                     }
 
                     headerBytes = headerMs.ToArray();
-                    if (headerBytes == null || headerBytes.Length < 1) return null; 
+                    if (headerBytes == null || headerBytes.Length < 1) return null;
 
                     #endregion
 
@@ -668,7 +668,7 @@ namespace WatsonTcp
                             {
                                 currentTimeout += sleepInterval;
                                 await Task.Delay(sleepInterval);
-                            } 
+                            }
                         }
                     }
 
@@ -707,7 +707,7 @@ namespace WatsonTcp
                 return null;
             }
         }
-        
+
         private bool MessageWrite(byte[] data)
         {
             bool disconnectDetected = false;
@@ -757,7 +757,7 @@ namespace WatsonTcp
                 {
                     _SendLock.Release();
                 }
-                 
+
                 return true;
 
                 #endregion
@@ -898,7 +898,7 @@ namespace WatsonTcp
                 if (disconnectDetected)
                 {
                     _Connected = false;
-                    Dispose(); 
+                    Dispose();
                 }
             }
         }
