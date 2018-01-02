@@ -63,16 +63,15 @@ namespace WatsonTcp
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (messageReceived == null) throw new ArgumentNullException(nameof(messageReceived));
 
-            if (serverConnected != null) _ServerConnected = serverConnected;
-            else _ServerConnected = null;
-
-            if (serverDisconnected != null) _ServerDisconnected = serverDisconnected;
-            else _ServerDisconnected = null;
-
             _ServerIp = serverIp;
             _ServerPort = serverPort;
-            _Debug = debug;
+
+            _ServerConnected = serverConnected;
+            _ServerDisconnected = serverDisconnected;
             _MessageReceived = messageReceived;
+
+            _Debug = debug;
+
             _SendLock = new SemaphoreSlim(1);
 
             _Client = new TcpClient();
