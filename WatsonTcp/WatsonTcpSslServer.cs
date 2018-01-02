@@ -75,16 +75,14 @@ namespace WatsonTcp
             if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
             if (String.IsNullOrEmpty(pfxCertFile)) throw new ArgumentNullException(nameof(pfxCertFile));
 
-            if (clientConnected == null) _ClientConnected = null;
-            else _ClientConnected = clientConnected;
-
-            if (clientDisconnected == null) _ClientDisconnected = null;
-            else _ClientDisconnected = clientDisconnected;
-
-            _MessageReceived = messageReceived;
-            _Debug = debug;
             _AcceptInvalidCerts = acceptInvalidCerts;
             _MutuallyAuthenticate = mutualAuthentication;
+
+            _ClientConnected = clientConnected;
+            _ClientDisconnected = clientDisconnected;
+            _MessageReceived = messageReceived;
+
+            _Debug = debug;
 
             _PermittedIps = null;
 
@@ -145,16 +143,14 @@ namespace WatsonTcp
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
             if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
 
-            if (clientConnected == null) _ClientConnected = null;
-            else _ClientConnected = clientConnected;
-
-            if (clientDisconnected == null) _ClientDisconnected = null;
-            else _ClientDisconnected = clientDisconnected;
-
-            _MessageReceived = messageReceived;
-            _Debug = debug;
             _AcceptInvalidCerts = acceptInvalidCerts;
             _MutuallyAuthenticate = mutualAuthentication;
+
+            _ClientConnected = clientConnected;
+            _ClientDisconnected = clientDisconnected;
+            _MessageReceived = messageReceived;
+
+            _Debug = debug;
 
             if (permittedIps != null && permittedIps.Count() > 0) _PermittedIps = new List<string>(permittedIps);
 
