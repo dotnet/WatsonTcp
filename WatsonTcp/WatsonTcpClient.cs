@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -18,7 +14,7 @@ namespace WatsonTcp
     public class WatsonTcpClient : IDisposable
     {
         #region Public-Members
-        
+
         #endregion
 
         #region Private-Members
@@ -33,9 +29,9 @@ namespace WatsonTcp
         private bool _Debug;
         private TcpClient _Client;
         private bool _Connected;
-        private Func<byte[], bool> _MessageReceived;
-        private Func<bool> _ServerConnected;
-        private Func<bool> _ServerDisconnected;
+        private Func<byte[], bool> _MessageReceived = null; 
+        private Func<bool> _ServerConnected = null;
+        private Func<bool> _ServerDisconnected = null;
 
         private readonly SemaphoreSlim _SendLock;
         private CancellationTokenSource _TokenSource;
@@ -55,7 +51,7 @@ namespace WatsonTcp
         /// <param name="messageReceived">Function to be called when a message is received.</param>
         /// <param name="debug">Enable or debug logging messages.</param>
         public WatsonTcpClient(
-            string serverIp, 
+            string serverIp,
             int serverPort,
             Func<bool> serverConnected,
             Func<bool> serverDisconnected,
@@ -66,16 +62,15 @@ namespace WatsonTcp
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (messageReceived == null) throw new ArgumentNullException(nameof(messageReceived));
 
-            if (serverConnected != null) _ServerConnected = serverConnected;
-            else _ServerConnected = null;
-
-            if (serverDisconnected != null) _ServerDisconnected = serverDisconnected;
-            else _ServerDisconnected = null;
-
             _ServerIp = serverIp;
             _ServerPort = serverPort;
-            _Debug = debug;
+
+            _ServerConnected = serverConnected;
+            _ServerDisconnected = serverDisconnected;
             _MessageReceived = messageReceived;
+
+            _Debug = debug;
+
             _SendLock = new SemaphoreSlim(1);
 
             _Client = new TcpClient();
@@ -144,7 +139,7 @@ namespace WatsonTcp
         {
             return await MessageWriteAsync(data);
         }
-        
+
         /// <summary>
         /// Determine whether or not the client is connected to the server.
         /// </summary>
@@ -216,7 +211,7 @@ namespace WatsonTcp
         private async Task DataReceiver(CancellationToken? cancelToken=null)
         {
             try
-            { 
+            {
                 #region Wait-for-Data
 
                 while (true)
@@ -243,13 +238,13 @@ namespace WatsonTcp
 
                     byte[] data = await MessageReadAsync();
                     if (data == null)
-                    { 
+                    {
                         await Task.Delay(30);
                         continue;
                     }
 
                     var unawaited = Task.Run(() => _MessageReceived(data));
-                    
+
                     #endregion
                 }
 
@@ -274,7 +269,7 @@ namespace WatsonTcp
         {
             string sourceIp = "";
             int sourcePort = 0;
-            
+
             try
             {
                 #region Check-for-Null-Values
@@ -323,12 +318,12 @@ namespace WatsonTcp
                 #endregion
 
                 #region Read-Header
-                
+
                 if (!ClientStream.CanRead && !ClientStream.DataAvailable)
                 {
                     return null;
                 }
-                
+
                 using (MemoryStream headerMs = new MemoryStream())
                 {
                     #region Read-Header-Bytes
@@ -375,7 +370,7 @@ namespace WatsonTcp
 
                     headerBytes = headerMs.ToArray();
                     if (headerBytes == null || headerBytes.Length < 1)
-                    { 
+                    {
                         return null;
                     }
 
@@ -445,7 +440,7 @@ namespace WatsonTcp
                                 currentTimeout += sleepInterval;
                                 Task.Delay(sleepInterval).Wait();
                             }
-                        } 
+                        }
                     }
 
                     if (timeout)
@@ -588,7 +583,7 @@ namespace WatsonTcp
                     }
 
                     headerBytes = headerMs.ToArray();
-                    if (headerBytes == null || headerBytes.Length < 1) return null; 
+                    if (headerBytes == null || headerBytes.Length < 1) return null;
 
                     #endregion
 
@@ -644,7 +639,7 @@ namespace WatsonTcp
                             if (bytesRead == contentLength) break;
                         }
                         else
-                        { 
+                        {
                             if (currentTimeout >= maxTimeout)
                             {
                                 timeout = true;
@@ -654,8 +649,8 @@ namespace WatsonTcp
                             {
                                 currentTimeout += sleepInterval;
                                 await Task.Delay(sleepInterval);
-                            } 
-                        } 
+                            }
+                        }
                     }
 
                     if (timeout)
@@ -693,7 +688,7 @@ namespace WatsonTcp
                 return null;
             }
         }
-        
+
         private bool MessageWrite(byte[] data)
         {
             bool disconnectDetected = false;
@@ -743,7 +738,7 @@ namespace WatsonTcp
                 {
                     _SendLock.Release();
                 }
-                 
+
                 return true;
 
                 #endregion
@@ -797,11 +792,11 @@ namespace WatsonTcp
                 #region Check-if-Connected
 
                 if (_Client == null)
-                { 
+                {
                     Log("MessageWriteAsync client is null");
                     disconnectDetected = true;
                     return false;
-                } 
+                }
 
                 #endregion
 
@@ -826,7 +821,7 @@ namespace WatsonTcp
                 #endregion
 
                 #region Send-Message
-                 
+
                 await _SendLock.WaitAsync();
                 try
                 {
@@ -834,40 +829,40 @@ namespace WatsonTcp
                     _Client.GetStream().Flush();
                 }
                 finally
-                { 
+                {
                     _SendLock.Release();
                 }
-                 
+
                 return true;
 
                 #endregion
             }
             catch (ObjectDisposedException ObjDispInner)
-            { 
+            {
                 Log("*** MessageWriteAsync server disconnected (obj disposed exception): " + ObjDispInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (SocketException SockInner)
-            { 
+            {
                 Log("*** MessageWriteAsync server disconnected (socket exception): " + SockInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (InvalidOperationException InvOpInner)
-            { 
+            {
                 Log("*** MessageWriteAsync server disconnected (invalid operation exception): " + InvOpInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (IOException IOInner)
-            { 
+            {
                 Log("*** MessageWriteAsync server disconnected (IO exception): " + IOInner.Message);
                 disconnectDetected = true;
                 return false;
             }
             catch (Exception e)
-            { 
+            {
                 LogException("MessageWriteAsync", e);
                 disconnectDetected = true;
                 return false;

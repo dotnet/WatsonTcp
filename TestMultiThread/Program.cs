@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using WatsonTcp;
@@ -12,7 +9,7 @@ namespace TestMultiThread
     class Program
     {
         static int serverPort = 8000;
-        static int clientThreads = 8;
+        static int clientThreads = 128;
         static int numIterations = 10000;
         static Random rng;
         static byte[] data;
