@@ -23,12 +23,15 @@ namespace TestParallel
             data = InitByteArray(262144, 0x00);
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");
-            WatsonTcpServer s = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false);
-            Thread.Sleep(3000);
 
-            Console.WriteLine("Press ENTER to exit");
-            
-            for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
+            using (WatsonTcpServer server = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false))
+            {
+                Thread.Sleep(3000);
+
+                Console.WriteLine("Press ENTER to exit");
+
+                for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
+            }
 
             Console.ReadLine();
         }
