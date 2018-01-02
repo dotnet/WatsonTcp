@@ -41,7 +41,7 @@ namespace TestServer
                         Console.WriteLine("  q        quit");
                         Console.WriteLine("  cls      clear screen");
                         Console.WriteLine("  list     list clients");
-                        Console.WriteLine("  send     send message to client"); 
+                        Console.WriteLine("  send     send message to client");
                         break;
 
                     case "q":
@@ -76,7 +76,7 @@ namespace TestServer
                         if (String.IsNullOrEmpty(userInput)) break;
                         server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
                         break;
-                        
+
                     default:
                         break;
                 }

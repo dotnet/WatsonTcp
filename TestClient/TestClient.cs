@@ -43,7 +43,7 @@ namespace TestClient
                         Console.WriteLine("  connect    connect to the server if not connected");
                         Console.WriteLine("  reconnect  disconnect if connected, then reconnect");
                         break;
-                        
+
                     case "q":
                         runForever = false;
                         break;

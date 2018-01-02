@@ -27,12 +27,12 @@ namespace TestParallel
             Thread.Sleep(3000);
 
             Console.WriteLine("Press ENTER to exit");
-            
+
             for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
 
             Console.ReadLine();
         }
-        
+
         static void ClientTask()
         {
             WatsonTcpClient c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
@@ -79,7 +79,7 @@ namespace TestParallel
             Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
-         
+
         public static byte[] InitByteArray(int count, byte val)
         {
             byte[] ret = new byte[count];
@@ -96,7 +96,7 @@ namespace TestParallel
             MD5 m = MD5.Create();
             return m.ComputeHash(data);
         }
-        
+
         public static string BytesToHex(byte[] bytes)
         {
             if (bytes == null) return null;

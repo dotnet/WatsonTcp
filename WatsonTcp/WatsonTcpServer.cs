@@ -180,7 +180,7 @@ namespace WatsonTcp
 
             return MessageWrite(client, data);
         }
-        
+
         /// <summary>
         /// Send data to the specified client, asynchronously.
         /// </summary>
@@ -198,7 +198,7 @@ namespace WatsonTcp
 
             return await MessageWriteAsync(client, data);
         }
-        
+
         /// <summary>
         /// Determine whether or not the specified client is connected to the server.
         /// </summary>
@@ -235,7 +235,7 @@ namespace WatsonTcp
                 _TokenSource.Cancel();
             }
         }
-         
+
         private void Log(string msg)
         {
             if (_Debug)
@@ -296,7 +296,7 @@ namespace WatsonTcp
                 #endregion
 
                 var unawaited = Task.Run(() =>
-                { 
+                {
                     #region Add-to-Client-List
 
                     _ActiveClients++;
@@ -325,7 +325,7 @@ namespace WatsonTcp
                     Task.Run(async () => await DataReceiver(currClient, dataReceiverToken), dataReceiverToken);
 
                     #endregion
-                    
+
                 }, _Token);
             }
         }
@@ -358,7 +358,7 @@ namespace WatsonTcp
         }
 
         private async Task DataReceiver(ClientMetadata client, CancellationToken? cancelToken=null)
-        { 
+        {
             try
             {
                 #region Wait-for-Data
@@ -405,7 +405,7 @@ namespace WatsonTcp
         }
 
         private bool AddClient(ClientMetadata client)
-        { 
+        {
             ClientMetadata removedClient;
             if (!_Clients.TryRemove(client.IpPort(), out removedClient))
             {
@@ -418,7 +418,7 @@ namespace WatsonTcp
         }
 
         private bool RemoveClient(ClientMetadata client)
-        { 
+        {
             ClientMetadata removedClient;
             if (!_Clients.TryRemove(client.IpPort(), out removedClient))
             {
@@ -448,7 +448,7 @@ namespace WatsonTcp
             int maxTimeout = 500;
             int currentTimeout = 0;
             bool timeout = false;
-             
+
             NetworkStream ClientStream = client.Tcp.GetStream();
 
             byte[] headerBytes;
@@ -628,7 +628,7 @@ namespace WatsonTcp
             int maxTimeout = 500;
             int currentTimeout = 0;
             bool timeout = false;
-             
+
             NetworkStream ClientStream = client.Tcp.GetStream();
 
             byte[] headerBytes;
@@ -701,10 +701,10 @@ namespace WatsonTcp
                     Log("*** MessageReadAsync malformed message from " + client.IpPort() + " (message header not an integer)");
                     return null;
                 }
-                    
+
                 #endregion
             }
-                
+
             #endregion
 
             #region Read-Data
@@ -765,7 +765,7 @@ namespace WatsonTcp
                     Log("*** MessageReadAsync timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading content after reading " + bytesRead + " bytes");
                     return null;
                 }
-                    
+
                 contentBytes = dataMs.ToArray();
             }
 
@@ -791,7 +791,7 @@ namespace WatsonTcp
         }
 
         private bool MessageWrite(ClientMetadata client, byte[] data)
-        { 
+        {
             try
             {
                 #region Format-Message
@@ -830,7 +830,7 @@ namespace WatsonTcp
         }
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, byte[] data)
-        { 
+        {
             try
             {
                 #region Format-Message
@@ -854,7 +854,7 @@ namespace WatsonTcp
                 #endregion
 
                 #region Send-Message-Async
-                
+
                 var clientStream = client.Tcp.GetStream();
                 await clientStream.WriteAsync(message, 0, message.Length);
                 await clientStream.FlushAsync();
