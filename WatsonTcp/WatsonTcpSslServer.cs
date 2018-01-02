@@ -26,6 +26,9 @@ namespace WatsonTcp
 
         #region Private-Members
 
+        // Flag: Has Dispose already been called?
+        private bool disposed = false;
+
         private bool _Debug;
         private string _ListenerIp;
         private int _ListenerPort;
@@ -196,6 +199,7 @@ namespace WatsonTcp
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -265,10 +269,15 @@ namespace WatsonTcp
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposed)
+                return;
+
             if (disposing)
             {
                 _TokenSource.Cancel();
             }
+
+            disposed = true;
         }
          
         private void Log(string msg)

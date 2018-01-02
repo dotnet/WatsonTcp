@@ -26,6 +26,9 @@ namespace WatsonTcp
 
         #region Private-Members
 
+        // Flag: Has Dispose already been called?
+        private bool disposed = false;
+
         private string _SourceIp;
         private int _SourcePort;
         private string _ServerIp;
@@ -160,6 +163,7 @@ namespace WatsonTcp
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -197,6 +201,9 @@ namespace WatsonTcp
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposed)
+                return;
+
             if (disposing)
             {
                 if (_Tcp != null)
@@ -216,6 +223,8 @@ namespace WatsonTcp
                 _TokenSource.Cancel();
                 _Connected = false;
             }
+
+            disposed = true;
         }
 
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
