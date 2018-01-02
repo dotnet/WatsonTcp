@@ -15,9 +15,7 @@ namespace WatsonTcp
         #endregion
 
         #region Private-Members
-          
-        #endregion
-
+           
         private string ipPort;
 
         #endregion
