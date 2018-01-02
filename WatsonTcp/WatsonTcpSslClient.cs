@@ -33,9 +33,9 @@ namespace WatsonTcp
         private X509Certificate2Collection _SslCertificateCollection;
         private bool _AcceptInvalidCerts;
         private bool _Connected;
-        private Func<byte[], bool> _MessageReceived;
-        private Func<bool> _ServerConnected;
-        private Func<bool> _ServerDisconnected;
+        private Func<byte[], bool> _MessageReceived = null;
+        private Func<bool> _ServerConnected = null;
+        private Func<bool> _ServerDisconnected = null;
 
         private readonly SemaphoreSlim _SendLock;
         private CancellationTokenSource _TokenSource;

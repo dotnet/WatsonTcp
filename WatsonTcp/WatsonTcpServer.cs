@@ -32,9 +32,9 @@ namespace WatsonTcp
         private List<string> _PermittedIps;
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
-        private Func<string, bool> _ClientConnected;
-        private Func<string, bool> _ClientDisconnected;
-        private Func<string, byte[], bool> _MessageReceived;
+        private Func<string, bool> _ClientConnected = null;
+        private Func<string, bool> _ClientDisconnected = null;
+        private Func<string, byte[], bool> _MessageReceived = null;
 
         #endregion
 
