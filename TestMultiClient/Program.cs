@@ -1,44 +1,63 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using WatsonTcp;
+using ConcurrentList;
 
 namespace TestMultiThread
 {
     class Program
     {
         static int serverPort = 8000;
-        static int clientThreads = 128;
-        static int numIterations = 10000;
+        static int clientThreads = 16;
+        static int numIterations = 1000;
+        static int connectionCount = 0;
+        static ConcurrentList<string> connections = new ConcurrentList<string>();
+        static bool clientsStarted = false;
+
         static Random rng;
         static byte[] data;
 
         static WatsonTcpServer s;
-        static WatsonTcpClient c;
 
         static void Main(string[] args)
         {
             rng = new Random((int)DateTime.Now.Ticks);
-            data = InitByteArray(262144, 0x00);
+            data = InitByteArray(65536, 0x00);
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
-            Console.WriteLine("Starting in 3 seconds...");
+
+            Console.WriteLine("Starting server");
             s = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false);
             Thread.Sleep(3000);
 
-            c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
-            Console.WriteLine("Press ENTER to exit");
+            Console.WriteLine("Starting clients");
+            for (int i = 0; i < clientThreads; i++)
+            {
+                Console.WriteLine("Starting client " + i);
+                Task.Run(() => ClientTask());
+            }
 
-            for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
-
+            Console.WriteLine("Press ENTER to exit"); 
             Console.ReadLine();
         }
 
         static void ClientTask()
         {
+            Console.WriteLine("ClientTask entering");
+            WatsonTcpClient c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
+
+            while (!clientsStarted)
+            {
+                Thread.Sleep(100);
+            }
+
             for (int i = 0; i < numIterations; i++)
             {
-                Task.Delay(rng.Next(0, 25)).Wait();
+                Task.Delay(rng.Next(0, 1000)).Wait();
                 c.Send(data);
             }
 
@@ -47,19 +66,25 @@ namespace TestMultiThread
 
         static bool ServerClientConnected(string ipPort)
         {
-            Console.WriteLine("[server] connection from " + ipPort);
+            connectionCount++;
+            Console.WriteLine("[server] connection from " + ipPort + " (now " + connectionCount + ")");
+
+            if (connectionCount >= clientThreads) clientsStarted = true;
+
+            connections.Add(ipPort);
             return true;
         }
 
         static bool ServerClientDisconnected(string ipPort)
         {
-            Console.WriteLine("[server] disconnection from " + ipPort);
+            connectionCount--;
+            Console.WriteLine("[server] disconnection from " + ipPort + " (now " + connectionCount + ")");
             return true;
         }
 
         static bool ServerMsgReceived(string ipPort, byte[] data)
         {
-            Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
+            // Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
 
@@ -69,13 +94,13 @@ namespace TestMultiThread
         }
 
         static bool ClientServerDisconnected()
-        {
+        { 
             return true;
         }
 
         static bool ClientMsgReceived(byte[] data)
         {
-            Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
+            // Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
 

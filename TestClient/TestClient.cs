@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using WatsonTcp;
 
 namespace TestClient
@@ -43,7 +40,7 @@ namespace TestClient
                         Console.WriteLine("  connect    connect to the server if not connected");
                         Console.WriteLine("  reconnect  disconnect if connected, then reconnect");
                         break;
-                        
+
                     case "q":
                         runForever = false;
                         break;
