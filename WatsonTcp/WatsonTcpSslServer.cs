@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -328,7 +327,7 @@ namespace WatsonTcp
                     {
                         Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
                         tcpClient.Close();
-                        return;
+                        continue;
                     }
                 }
 
@@ -356,21 +355,21 @@ namespace WatsonTcp
                 {
                     Log("*** AcceptConnections stream from " + clientIp + " not encrypted");
                     tcpClient.Close();
-                    return;
+                    continue;
                 }
 
                 if (!sslStream.IsAuthenticated)
                 {
                     Log("*** AcceptConnections stream from " + clientIp + " not authenticated");
                     tcpClient.Close();
-                    return;
+                    continue;
                 }
 
                 if (_MutuallyAuthenticate && !sslStream.IsMutuallyAuthenticated)
                 {
                     Log("*** AcceptConnections stream from " + clientIp + " failed mutual authentication");
                     tcpClient.Close();
-                    return;
+                    continue;
                 }
 
                 #endregion
