@@ -407,7 +407,7 @@ namespace WatsonTcp
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Log("OnAuthenticateAsServer general exception from " + client.IpPort + Environment.NewLine + ex.ToString());
 
                 if (client != null)
                 {
