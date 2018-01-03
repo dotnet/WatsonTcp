@@ -88,7 +88,9 @@ namespace WatsonTcp
             _Token = _TokenSource.Token;
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), _Token);
+
+            _Listener.Start();
+            WaitForClients();
         }
 
         /// <summary>
@@ -141,7 +143,9 @@ namespace WatsonTcp
             _Token = _TokenSource.Token;
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), _Token);
+
+            _Listener.Start();
+            WaitForClients();
         }
 
         #endregion
@@ -256,70 +260,90 @@ namespace WatsonTcp
             return BitConverter.ToString(data).Replace("-", "");
         }
 
-        private async Task AcceptConnections()
+        private void WaitForClients()
         {
-            _Listener.Start();
-            while (true)
+            _Listener.BeginAcceptTcpClient(new AsyncCallback(OnClientConnected), null);
+        }
+
+        private void OnClientConnected(IAsyncResult asyncResult)
+        {
+            ClientMetadata client = null;
+            try
             {
-                #region Accept-Connection
+                TcpClient clientSocket = _Listener.EndAcceptTcpClient(asyncResult);
+                client = new ClientMetadata(clientSocket);
 
-                _Token.ThrowIfCancellationRequested();
-                TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
-                tcpClient.LingerState.Enabled = false;
+                Log("OnClientConnected received connection from: " + client.IpPort);
 
-                #endregion
-
-                #region Get-Tuple-and-Check-IP
-
-                string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
-
-                if (_PermittedIps != null && _PermittedIps.Count > 0)
+                string clientIp = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Address.ToString();
+                if (IsAllowedIp(clientIp))
                 {
-                    if (!_PermittedIps.Contains(clientIp))
-                    {
-                        Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
-                        tcpClient.Close();
-                        return;
-                    }
+                    FinaliseConnection(client);
+                }
+                else
+                {
+                    Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
+                    client.Tcp.Close();
+                }
+            }
+            catch (SocketException ex)
+            {
+                Log("OnClientConnected socket exception from " + client.IpPort + Environment.NewLine + ex.ToString());
+            }
+            catch (Exception ex)
+            {
+                Log("OnClientConnected general exception from " + client.IpPort + Environment.NewLine + ex.ToString());
+            }
+
+            WaitForClients();
+        }
+
+        private bool IsAllowedIp(string clientIp)
+        {
+            if (_PermittedIps != null && _PermittedIps.Count > 0)
+            {
+                if (!_PermittedIps.Contains(clientIp))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void FinaliseConnection(ClientMetadata client)
+        {
+            var unawaited = Task.Run(() =>
+            {
+                #region Add-to-Client-List
+
+                if (!AddClient(client))
+                {
+                    Log("*** FinaliseConnection unable to add client " + client.IpPort);
+                    client.Tcp.Close();
+                    return;
                 }
 
-                Log("AcceptConnections accepted connection from " + tcpClient.Client.RemoteEndPoint.ToString());
+                // Do not decrement in this block, decrement is done by the connection reader
+                _ActiveClients++;
 
                 #endregion
 
-                var unawaited = Task.Run(() =>
+                #region Start-Data-Receiver
+
+                CancellationToken dataReceiverToken = default(CancellationToken);
+
+                Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + _ActiveClients + " clients)");
+                if (_ClientConnected != null)
                 {
-                    #region Add-to-Client-List
+                    Task.Run(() => _ClientConnected(client.IpPort));
+                }
 
-                    _ActiveClients++;
-                    // Do not decrement in this block, decrement is done by the connection reader
+                Task.Run(async () => await DataReceiver(client, dataReceiverToken), dataReceiverToken);
 
-                    ClientMetadata currClient = new ClientMetadata(tcpClient);
-                    if (!AddClient(currClient))
-                    {
-                        Log("*** AcceptConnections unable to add client " + currClient.IpPort);
-                        tcpClient.Close();
-                        return;
-                    }
+                #endregion
 
-                    #endregion
-
-                    #region Start-Data-Receiver
-
-                    CancellationToken dataReceiverToken = default(CancellationToken);
-
-                    Log("AcceptConnections starting data receiver for " + currClient.IpPort + " (now " + _ActiveClients + " clients)");
-                    if (_ClientConnected != null)
-                    {
-                        Task.Run(() => _ClientConnected(currClient.IpPort));
-                    }
-
-                    Task.Run(async () => await DataReceiver(currClient, dataReceiverToken), dataReceiverToken);
-
-                    #endregion
-
-                }, _Token);
-            }
+            }, _Token);
         }
 
         private bool IsConnected(ClientMetadata client)
