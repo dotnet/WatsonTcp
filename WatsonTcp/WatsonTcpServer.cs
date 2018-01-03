@@ -73,7 +73,7 @@ namespace WatsonTcp
 
             if (String.IsNullOrEmpty(listenerIp))
             {
-                _ListenerIpAddress = System.Net.IPAddress.Any;
+                _ListenerIpAddress = IPAddress.Any;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
             else
@@ -126,7 +126,7 @@ namespace WatsonTcp
 
             if (String.IsNullOrEmpty(listenerIp))
             {
-                _ListenerIpAddress = System.Net.IPAddress.Any;
+                _ListenerIpAddress = IPAddress.Any;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
             else
@@ -273,27 +273,26 @@ namespace WatsonTcp
                 #region Accept-Connection
 
                 _Token.ThrowIfCancellationRequested();
-                TcpClient client = await _Listener.AcceptTcpClientAsync();
-                client.LingerState.Enabled = false;
+                TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
+                tcpClient.LingerState.Enabled = false;
 
                 #endregion
 
                 #region Get-Tuple-and-Check-IP
 
-                string clientIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                int clientPort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
+                string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
 
                 if (_PermittedIps != null && _PermittedIps.Count > 0)
                 {
                     if (!_PermittedIps.Contains(clientIp))
                     {
                         Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
-                        client.Close();
+                        tcpClient.Close();
                         return;
                     }
                 }
 
-                Log("AcceptConnections accepted connection from " + clientIp + ":" + clientPort);
+                Log("AcceptConnections accepted connection from " + tcpClient.Client.RemoteEndPoint.ToString());
 
                 #endregion
 
@@ -304,11 +303,11 @@ namespace WatsonTcp
                     _ActiveClients++;
                     // Do not decrement in this block, decrement is done by the connection reader
 
-                    ClientMetadata currClient = new ClientMetadata(client);
+                    ClientMetadata currClient = new ClientMetadata(tcpClient);
                     if (!AddClient(currClient))
                     {
-                        Log("*** AcceptConnections unable to add client " + currClient.IpPort());
-                        client.Close();
+                        Log("*** AcceptConnections unable to add client " + currClient.IpPort);
+                        tcpClient.Close();
                         return;
                     }
 
@@ -318,10 +317,10 @@ namespace WatsonTcp
 
                     CancellationToken dataReceiverToken = default(CancellationToken);
 
-                    Log("AcceptConnections starting data receiver for " + currClient.IpPort() + " (now " + _ActiveClients + " clients)");
+                    Log("AcceptConnections starting data receiver for " + currClient.IpPort + " (now " + _ActiveClients + " clients)");
                     if (_ClientConnected != null)
                     {
-                        Task.Run(() => _ClientConnected(currClient.IpPort()));
+                        Task.Run(() => _ClientConnected(currClient.IpPort));
                     }
 
                     Task.Run(async () => await DataReceiver(currClient, dataReceiverToken), dataReceiverToken);
@@ -383,7 +382,7 @@ namespace WatsonTcp
 
                         if (_MessageReceived != null)
                         {
-                            var unawaited = Task.Run(() => _MessageReceived(client.IpPort(), data));
+                            var unawaited = Task.Run(() => _MessageReceived(client.IpPort, data));
                         }
                     }
                     catch (Exception)
@@ -400,36 +399,36 @@ namespace WatsonTcp
                 RemoveClient(client);
                 if (_ClientDisconnected != null)
                 {
-                    var unawaited = Task.Run(() => _ClientDisconnected(client.IpPort()));
+                    var unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
                 }
-                Log("DataReceiver client " + client.IpPort() + " disconnected (now " + _ActiveClients + " clients active)");
+                Log("DataReceiver client " + client.IpPort + " disconnected (now " + _ActiveClients + " clients active)");
             }
         }
 
         private bool AddClient(ClientMetadata client)
         {
             ClientMetadata removedClient;
-            if (!_Clients.TryRemove(client.IpPort(), out removedClient))
+            if (!_Clients.TryRemove(client.IpPort, out removedClient))
             {
                 // do nothing, it probably did not exist anyway
             }
 
-            _Clients.TryAdd(client.IpPort(), client);
-            Log("AddClient added client " + client.IpPort());
+            _Clients.TryAdd(client.IpPort, client);
+            Log("AddClient added client " + client.IpPort);
             return true;
         }
 
         private bool RemoveClient(ClientMetadata client)
         {
             ClientMetadata removedClient;
-            if (!_Clients.TryRemove(client.IpPort(), out removedClient))
+            if (!_Clients.TryRemove(client.IpPort, out removedClient))
             {
-                Log("RemoveClient unable to remove client " + client.IpPort());
+                Log("RemoveClient unable to remove client " + client.IpPort);
                 return false;
             }
             else
             {
-                Log("RemoveClient removed client " + client.IpPort());
+                Log("RemoveClient removed client " + client.IpPort);
                 return true;
             }
         }
@@ -523,7 +522,7 @@ namespace WatsonTcp
 
                 if (!Int64.TryParse(header, out contentLength))
                 {
-                    Log("*** MessageRead malformed message from " + client.IpPort() + " (message header not an integer)");
+                    Log("*** MessageRead malformed message from " + client.IpPort + " (message header not an integer)");
                     return null;
                 }
 
@@ -599,13 +598,13 @@ namespace WatsonTcp
 
             if (contentBytes == null || contentBytes.Length < 1)
             {
-                Log("*** MessageRead " + client.IpPort() + " no content read");
+                Log("*** MessageRead " + client.IpPort + " no content read");
                 return null;
             }
 
             if (contentBytes.Length != contentLength)
             {
-                Log("*** MessageRead " + client.IpPort() + " content length " + contentBytes.Length + " bytes does not match header value " + contentLength + ", discarding");
+                Log("*** MessageRead " + client.IpPort + " content length " + contentBytes.Length + " bytes does not match header value " + contentLength + ", discarding");
                 return null;
             }
 
@@ -700,7 +699,7 @@ namespace WatsonTcp
 
                 if (!Int64.TryParse(header, out contentLength))
                 {
-                    Log("*** MessageReadAsync malformed message from " + client.IpPort() + " (message header not an integer)");
+                    Log("*** MessageReadAsync malformed message from " + client.IpPort + " (message header not an integer)");
                     return null;
                 }
 
@@ -777,13 +776,13 @@ namespace WatsonTcp
 
             if (contentBytes == null || contentBytes.Length < 1)
             {
-                Log("*** MessageReadAsync " + client.IpPort() + " no content read");
+                Log("*** MessageReadAsync " + client.IpPort + " no content read");
                 return null;
             }
 
             if (contentBytes.Length != contentLength)
             {
-                Log("*** MessageReadAsync " + client.IpPort() + " content length " + contentBytes.Length + " bytes does not match header value " + contentLength + ", discarding");
+                Log("*** MessageReadAsync " + client.IpPort + " content length " + contentBytes.Length + " bytes does not match header value " + contentLength + ", discarding");
                 return null;
             }
 
@@ -826,7 +825,7 @@ namespace WatsonTcp
             }
             catch (Exception)
             {
-                Log("*** MessageWrite " + client.IpPort() + " disconnected due to exception");
+                Log("*** MessageWrite " + client.IpPort + " disconnected due to exception");
                 return false;
             }
         }
@@ -866,7 +865,7 @@ namespace WatsonTcp
             }
             catch (Exception)
             {
-                Log("*** MessageWriteAsync " + client.IpPort() + " disconnected due to exception");
+                Log("*** MessageWriteAsync " + client.IpPort + " disconnected due to exception");
                 return false;
             }
         }
