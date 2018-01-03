@@ -56,39 +56,8 @@ namespace WatsonTcp
             Func<string, bool> clientDisconnected,
             Func<string, byte[], bool> messageReceived,
             bool debug)
+            : this(listenerIp, listenerPort, null, clientConnected, clientDisconnected, messageReceived, debug)
         {
-            if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
-            if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
-
-            _ClientConnected = clientConnected;
-            _ClientDisconnected = clientDisconnected;
-            _MessageReceived = messageReceived;
-
-            _Debug = debug;
-
-            _PermittedIps = null;
-
-            if (String.IsNullOrEmpty(listenerIp))
-            {
-                _ListenerIpAddress = IPAddress.Any;
-                _ListenerIp = _ListenerIpAddress.ToString();
-            }
-            else
-            {
-                _ListenerIpAddress = IPAddress.Parse(listenerIp);
-                _ListenerIp = listenerIp;
-            }
-
-            _ListenerPort = listenerPort;
-
-            Log("WatsonTcpServer starting on " + _ListenerIp + ":" + _ListenerPort);
-
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
-            _TokenSource = new CancellationTokenSource();
-            _Token = _TokenSource.Token;
-            _ActiveClients = 0;
-            _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), _Token);
         }
 
         /// <summary>

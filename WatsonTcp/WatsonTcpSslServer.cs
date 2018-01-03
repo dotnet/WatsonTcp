@@ -70,47 +70,8 @@ namespace WatsonTcp
             Func<string, bool> clientDisconnected,
             Func<string, byte[], bool> messageReceived,
             bool debug)
+            : this(listenerIp, listenerPort, pfxCertFile, pfxCertPass, acceptInvalidCerts, mutualAuthentication, null, clientConnected, clientDisconnected, messageReceived, debug)
         {
-            if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
-            if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
-            if (String.IsNullOrEmpty(pfxCertFile)) throw new ArgumentNullException(nameof(pfxCertFile));
-
-            _AcceptInvalidCerts = acceptInvalidCerts;
-            _MutuallyAuthenticate = mutualAuthentication;
-
-            _ClientConnected = clientConnected;
-            _ClientDisconnected = clientDisconnected;
-            _MessageReceived = messageReceived;
-
-            _Debug = debug;
-
-            _PermittedIps = null;
-
-            if (String.IsNullOrEmpty(listenerIp))
-            {
-                _ListenerIpAddress = IPAddress.Any;
-                _ListenerIp = _ListenerIpAddress.ToString();
-            }
-            else
-            {
-                _ListenerIpAddress = IPAddress.Parse(listenerIp);
-                _ListenerIp = listenerIp;
-            }
-
-            _ListenerPort = listenerPort;
-
-            _SslCertificate = null;
-            if (String.IsNullOrEmpty(pfxCertPass)) _SslCertificate = new X509Certificate2(pfxCertFile);
-            else _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
-
-            Log("WatsonTcpSslServer starting on " + _ListenerIp + ":" + _ListenerPort);
-
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
-            _TokenSource = new CancellationTokenSource();
-            _Token = _TokenSource.Token;
-            _ActiveClients = 0;
-            _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), _Token);
         }
 
         /// <summary>
