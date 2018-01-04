@@ -28,8 +28,8 @@ namespace TestParallel
                 Console.WriteLine("Press ENTER to exit");
 
                 for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
-            } 
-          
+            }
+
             Console.ReadLine();
         }
 

@@ -83,7 +83,7 @@ namespace TestSslServer
                             if (String.IsNullOrEmpty(userInput)) break;
                             server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
                             break;
-                        
+
                         case "remove":
                             Console.Write("IP:Port: ");
                             ipPort = Console.ReadLine();

@@ -29,7 +29,7 @@ namespace WatsonTcp
         private bool _Debug;
         private TcpClient _Client;
         private bool _Connected;
-        private Func<byte[], bool> _MessageReceived = null; 
+        private Func<byte[], bool> _MessageReceived = null;
         private Func<bool> _ServerConnected = null;
         private Func<bool> _ServerDisconnected = null;
 

@@ -41,7 +41,7 @@ namespace TestMultiThread
                 Task.Run(() => ClientTask());
             }
 
-            Console.WriteLine("Press ENTER to exit"); 
+            Console.WriteLine("Press ENTER to exit");
             Console.ReadLine();
         }
 
@@ -94,7 +94,7 @@ namespace TestMultiThread
         }
 
         static bool ClientServerDisconnected()
-        { 
+        {
             return true;
         }
 
