@@ -245,6 +245,8 @@ namespace WatsonTcp
                     _Tcp.Close();
                 }
 
+                _Ssl.Dispose();
+
                 _TokenSource.Cancel();
                 _TokenSource.Dispose();
 
