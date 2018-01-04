@@ -323,15 +323,13 @@ namespace WatsonTcp
 
                 #region Start-Data-Receiver
 
-                CancellationToken dataReceiverToken = default(CancellationToken);
-
                 Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + _ActiveClients + " clients)");
                 if (_ClientConnected != null)
                 {
                     Task.Run(() => _ClientConnected(client.IpPort));
                 }
 
-                Task.Run(async () => await DataReceiver(client, dataReceiverToken), dataReceiverToken);
+                Task.Run(async () => await DataReceiver(client));
 
                 #endregion
 
@@ -365,7 +363,7 @@ namespace WatsonTcp
             }
         }
 
-        private async Task DataReceiver(ClientMetadata client, CancellationToken? cancelToken=null)
+        private async Task DataReceiver(ClientMetadata client)
         {
             try
             {
@@ -373,8 +371,6 @@ namespace WatsonTcp
 
                 while (true)
                 {
-                    cancelToken?.ThrowIfCancellationRequested();
-
                     try
                     {
                         if (!IsConnected(client)) break;
