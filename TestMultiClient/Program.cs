@@ -31,14 +31,16 @@ namespace TestMultiThread
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
 
             Console.WriteLine("Starting server");
-            s = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false);
-            Thread.Sleep(3000);
-
-            Console.WriteLine("Starting clients");
-            for (int i = 0; i < clientThreads; i++)
+            using (WatsonTcpServer server = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false))
             {
-                Console.WriteLine("Starting client " + i);
-                Task.Run(() => ClientTask());
+                Thread.Sleep(3000);
+
+                Console.WriteLine("Starting clients");
+                for (int i = 0; i < clientThreads; i++)
+                {
+                    Console.WriteLine("Starting client " + i);
+                    Task.Run(() => ClientTask());
+                }
             }
 
             Console.WriteLine("Press ENTER to exit");
@@ -48,17 +50,18 @@ namespace TestMultiThread
         static void ClientTask()
         {
             Console.WriteLine("ClientTask entering");
-            WatsonTcpClient c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
-
-            while (!clientsStarted)
+            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false))
             {
-                Thread.Sleep(100);
-            }
+                while (!clientsStarted)
+                {
+                    Thread.Sleep(100);
+                }
 
-            for (int i = 0; i < numIterations; i++)
-            {
-                Task.Delay(rng.Next(0, 1000)).Wait();
-                c.Send(data);
+                for (int i = 0; i < numIterations; i++)
+                {
+                    Task.Delay(rng.Next(0, 1000)).Wait();
+                    client.Send(data);
+                }
             }
 
             Console.WriteLine("[client] finished");

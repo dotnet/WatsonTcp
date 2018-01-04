@@ -35,13 +35,14 @@ namespace TestParallel
 
         static void ClientTask()
         {
-            WatsonTcpClient c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
-
-            for (int i = 0; i < numIterations; i++)
+            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false))
             {
-                Task.Delay(rng.Next(0, 25)).Wait();
-                c.Send(data);
-            }
+                for (int i = 0; i < numIterations; i++)
+                {
+                    Task.Delay(rng.Next(0, 25)).Wait();
+                    client.Send(data);
+                }
+        }
 
             Console.WriteLine("[client] finished");
         }
