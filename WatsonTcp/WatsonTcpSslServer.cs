@@ -233,7 +233,7 @@ namespace WatsonTcp
             }
             else
             {
-                client.Tcp.Close();
+                client.TcpClient.Close();
             }
         }
 
@@ -302,26 +302,26 @@ namespace WatsonTcp
 
                 Log("OnClientConnected received connection from: " + client.IpPort);
 
-                string clientIp = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Address.ToString();
+                string clientIp = ((IPEndPoint)client.TcpClient.Client.RemoteEndPoint).Address.ToString();
                 if (IsAllowedIp(clientIp))
                 {
                     if (_AcceptInvalidCerts)
                     {
                         // accept invalid certs
-                        client.Ssl = new SslStream(client.Tcp.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                        client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
                     }
                     else
                     {
                         // do not accept invalid SSL certificates
-                        client.Ssl = new SslStream(client.Tcp.GetStream(), false);
+                        client.SslStream = new SslStream(client.NetworkStream, false);
                     }
 
-                    client.Ssl.BeginAuthenticateAsServer(_SslCertificate, true, SslProtocols.Tls12, true, OnAuthenticateAsServer, client);
+                    client.SslStream.BeginAuthenticateAsServer(_SslCertificate, true, SslProtocols.Tls12, true, OnAuthenticateAsServer, client);
                 }
                 else
                 {
                     Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                 }
             }
             catch (SocketException ex)
@@ -355,26 +355,26 @@ namespace WatsonTcp
             try
             {
                 client = asyncResult.AsyncState as ClientMetadata;
-                client.Ssl.EndAuthenticateAsServer(asyncResult);
+                client.SslStream.EndAuthenticateAsServer(asyncResult);
 
-                if (!client.Ssl.IsEncrypted)
+                if (!client.SslStream.IsEncrypted)
                 {
                     Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not encrypted");
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                     return;
                 }
 
-                if (!client.Ssl.IsAuthenticated)
+                if (!client.SslStream.IsAuthenticated)
                 {
                     Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not authenticated");
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                     return;
                 }
 
-                if (_MutuallyAuthenticate && !client.Ssl.IsMutuallyAuthenticated)
+                if (_MutuallyAuthenticate && !client.SslStream.IsMutuallyAuthenticated)
                 {
                     Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " failed mutual authentication");
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                     return;
                 }
 
@@ -386,7 +386,7 @@ namespace WatsonTcp
                 Log("OnAuthenticateAsServer rejected due to IOException " + client.IpPort + " (now " + _ActiveClients + " clients)");
                 if (client != null)
                 {
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                 }
             }
             catch (Exception ex)
@@ -395,7 +395,7 @@ namespace WatsonTcp
 
                 if (client != null)
                 {
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                 }
             }
         }
@@ -409,7 +409,7 @@ namespace WatsonTcp
                 if (!AddClient(client))
                 {
                     Log("*** FinaliseConnection unable to add client " + client.IpPort);
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                     return;
                 }
 
@@ -437,12 +437,12 @@ namespace WatsonTcp
 
         private bool IsConnected(ClientMetadata client)
         {
-            if (client.Tcp.Connected)
+            if (client.TcpClient.Connected)
             {
-                if ((client.Tcp.Client.Poll(0, SelectMode.SelectWrite)) && (!client.Tcp.Client.Poll(0, SelectMode.SelectError)))
+                if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite)) && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
                 {
                     byte[] buffer = new byte[1];
-                    if (client.Tcp.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                    if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
                     {
                         return false;
                     }
@@ -559,7 +559,7 @@ namespace WatsonTcp
             long contentLength;
             byte[] contentBytes;
 
-            if (!client.Ssl.CanRead) return null;
+            if (!client.SslStream.CanRead) return null;
 
             #endregion
 
@@ -574,7 +574,7 @@ namespace WatsonTcp
                 currentTimeout = 0;
                 int read = 0;
 
-                while ((read = client.Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
+                while ((read = client.SslStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
                 {
                     if (read > 0)
                     {
@@ -647,7 +647,7 @@ namespace WatsonTcp
                 if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                 buffer = new byte[bufferSize];
 
-                while ((read = client.Ssl.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                while ((read = client.SslStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
                 {
                     if (read > 0)
                     {
@@ -737,7 +737,7 @@ namespace WatsonTcp
             long contentLength;
             byte[] contentBytes;
 
-            if (!client.Ssl.CanRead) return null;
+            if (!client.SslStream.CanRead) return null;
 
             #endregion
 
@@ -752,7 +752,7 @@ namespace WatsonTcp
                 currentTimeout = 0;
                 int read = 0;
 
-                while ((read = await client.Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
+                while ((read = await client.SslStream.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
                 {
                     if (read > 0)
                     {
@@ -852,7 +852,7 @@ namespace WatsonTcp
                 if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                 buffer = new byte[bufferSize];
 
-                while ((read = await client.Ssl.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((read = await client.SslStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     if (read > 0)
                     {
@@ -949,8 +949,8 @@ namespace WatsonTcp
 
                 #region Send-Message
 
-                client.Ssl.Write(message, 0, message.Length);
-                client.Ssl.Flush();
+                client.SslStream.Write(message, 0, message.Length);
+                client.SslStream.Flush();
                 return true;
 
                 #endregion
@@ -988,8 +988,8 @@ namespace WatsonTcp
 
                 #region Send-Message-Async
 
-                await client.Ssl.WriteAsync(message, 0, message.Length);
-                await client.Ssl.FlushAsync();
+                await client.SslStream.WriteAsync(message, 0, message.Length);
+                await client.SslStream.FlushAsync();
                 return true;
 
                 #endregion

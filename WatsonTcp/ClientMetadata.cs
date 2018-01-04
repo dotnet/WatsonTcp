@@ -9,13 +9,13 @@ namespace WatsonTcp
     {
         #region Public-Members
 
-        public TcpClient Tcp;
-        public SslStream Ssl;
-
         #endregion
 
         #region Private-Members
 
+        private TcpClient tcpClient;
+        private NetworkStream networkStream;
+        private SslStream sslStream;
         private string ipPort;
 
         #endregion
@@ -25,7 +25,9 @@ namespace WatsonTcp
         public ClientMetadata(TcpClient tcp)
         {
             if (tcp == null) throw new ArgumentNullException(nameof(tcp));
-            Tcp = tcp;
+            tcpClient = tcp;
+
+            networkStream = tcp.GetStream();
 
             ipPort = tcp.Client.RemoteEndPoint.ToString();
         }
@@ -33,6 +35,22 @@ namespace WatsonTcp
         #endregion
 
         #region Public-Methods
+
+        public TcpClient TcpClient
+        {
+            get { return tcpClient; }
+        }
+
+        public NetworkStream NetworkStream
+        {
+            get { return networkStream; }
+        }
+
+        public SslStream SslStream
+        {
+            get { return sslStream; }
+            set { sslStream = value; }
+        }
 
         public string IpPort
         {

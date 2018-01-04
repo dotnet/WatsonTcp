@@ -204,7 +204,7 @@ namespace WatsonTcp
             }
             else
             {
-                client.Tcp.Close();
+                client.TcpClient.Close();
             }
         }
 
@@ -267,7 +267,7 @@ namespace WatsonTcp
 
                 Log("OnClientConnected received connection from: " + client.IpPort);
 
-                string clientIp = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Address.ToString();
+                string clientIp = ((IPEndPoint)client.TcpClient.Client.RemoteEndPoint).Address.ToString();
                 if (IsAllowedIp(clientIp))
                 {
                     FinaliseConnection(client);
@@ -275,7 +275,7 @@ namespace WatsonTcp
                 else
                 {
                     Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                 }
             }
             catch (SocketException ex)
@@ -312,7 +312,7 @@ namespace WatsonTcp
                 if (!AddClient(client))
                 {
                     Log("*** FinaliseConnection unable to add client " + client.IpPort);
-                    client.Tcp.Close();
+                    client.TcpClient.Close();
                     return;
                 }
 
@@ -340,12 +340,12 @@ namespace WatsonTcp
 
         private bool IsConnected(ClientMetadata client)
         {
-            if (client.Tcp.Connected)
+            if (client.TcpClient.Connected)
             {
-                if ((client.Tcp.Client.Poll(0, SelectMode.SelectWrite)) && (!client.Tcp.Client.Poll(0, SelectMode.SelectError)))
+                if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite)) && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
                 {
                     byte[] buffer = new byte[1];
-                    if (client.Tcp.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                    if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
                     {
                         return false;
                     }
@@ -457,7 +457,7 @@ namespace WatsonTcp
             int currentTimeout = 0;
             bool timeout = false;
 
-            NetworkStream ClientStream = client.Tcp.GetStream();
+            NetworkStream ClientStream = client.TcpClient.GetStream();
 
             byte[] headerBytes;
             string header = "";
@@ -637,7 +637,7 @@ namespace WatsonTcp
             int currentTimeout = 0;
             bool timeout = false;
 
-            NetworkStream ClientStream = client.Tcp.GetStream();
+            NetworkStream ClientStream = client.TcpClient.GetStream();
 
             byte[] headerBytes;
             string header = "";
@@ -824,8 +824,8 @@ namespace WatsonTcp
 
                 #region Send-Message
 
-                client.Tcp.GetStream().Write(message, 0, message.Length);
-                client.Tcp.GetStream().Flush();
+                client.TcpClient.GetStream().Write(message, 0, message.Length);
+                client.TcpClient.GetStream().Flush();
                 return true;
 
                 #endregion
@@ -863,7 +863,7 @@ namespace WatsonTcp
 
                 #region Send-Message-Async
 
-                var clientStream = client.Tcp.GetStream();
+                var clientStream = client.TcpClient.GetStream();
                 await clientStream.WriteAsync(message, 0, message.Length);
                 await clientStream.FlushAsync();
                 return true;
