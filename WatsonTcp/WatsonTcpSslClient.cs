@@ -105,8 +105,10 @@ namespace WatsonTcp
                 _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
             }
 
-            _SslCertificateCollection = new X509Certificate2Collection();
-            _SslCertificateCollection.Add(_SslCertificate);
+            _SslCertificateCollection = new X509Certificate2Collection
+            {
+                _SslCertificate
+            };
 
             _Tcp = new TcpClient();
             IAsyncResult ar = _Tcp.BeginConnect(_ServerIp, _ServerPort, null, null);
