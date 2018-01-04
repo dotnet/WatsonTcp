@@ -26,72 +26,73 @@ namespace TestSslServer
             Console.Write("Certificate Pass : ");
             certPass = Console.ReadLine();
 
-            WatsonTcpSslServer server = new WatsonTcpSslServer(serverIp, serverPort, certFile, certPass, true, false, ClientConnected, ClientDisconnected, MessageReceived, true);
-
-            bool runForever = true;
-            while (runForever)
+            using (WatsonTcpSslServer server = new WatsonTcpSslServer(serverIp, serverPort, certFile, certPass, true, false, ClientConnected, ClientDisconnected, MessageReceived, true))
             {
-                Console.Write("Command [? for help]: ");
-                string userInput = Console.ReadLine();
-
-                List<string> clients;
-                string ipPort;
-
-                if (String.IsNullOrEmpty(userInput)) continue;
-
-                switch (userInput)
+                bool runForever = true;
+                while (runForever)
                 {
-                    case "?":
-                        Console.WriteLine("Available commands:");
-                        Console.WriteLine("  ?        help (this menu)");
-                        Console.WriteLine("  q        quit");
-                        Console.WriteLine("  cls      clear screen");
-                        Console.WriteLine("  list     list clients");
-                        Console.WriteLine("  send     send message to client");
-                        Console.WriteLine("  remove   disconnect client");
-                        break;
+                    Console.Write("Command [? for help]: ");
+                    string userInput = Console.ReadLine();
 
-                    case "q":
-                        runForever = false;
-                        break;
+                    List<string> clients;
+                    string ipPort;
 
-                    case "cls":
-                        Console.Clear();
-                        break;
+                    if (String.IsNullOrEmpty(userInput)) continue;
 
-                    case "list":
-                        clients = server.ListClients();
-                        if (clients != null && clients.Count > 0)
-                        {
-                            Console.WriteLine("Clients");
-                            foreach (string curr in clients)
+                    switch (userInput)
+                    {
+                        case "?":
+                            Console.WriteLine("Available commands:");
+                            Console.WriteLine("  ?        help (this menu)");
+                            Console.WriteLine("  q        quit");
+                            Console.WriteLine("  cls      clear screen");
+                            Console.WriteLine("  list     list clients");
+                            Console.WriteLine("  send     send message to client");
+                            Console.WriteLine("  remove   disconnect client");
+                            break;
+
+                        case "q":
+                            runForever = false;
+                            break;
+
+                        case "cls":
+                            Console.Clear();
+                            break;
+
+                        case "list":
+                            clients = server.ListClients();
+                            if (clients != null && clients.Count > 0)
                             {
-                                Console.WriteLine("  " + curr);
+                                Console.WriteLine("Clients");
+                                foreach (string curr in clients)
+                                {
+                                    Console.WriteLine("  " + curr);
+                                }
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine("None");
-                        }
-                        break;
+                            else
+                            {
+                                Console.WriteLine("None");
+                            }
+                            break;
 
-                    case "send":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
-                        break;
+                        case "send":
+                            Console.Write("IP:Port: ");
+                            ipPort = Console.ReadLine();
+                            Console.Write("Data: ");
+                            userInput = Console.ReadLine();
+                            if (String.IsNullOrEmpty(userInput)) break;
+                            server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
+                            break;
+                        
+                        case "remove":
+                            Console.Write("IP:Port: ");
+                            ipPort = Console.ReadLine();
+                            server.DisconnectClient(ipPort);
+                            break;
 
-                    case "remove":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        server.DisconnectClient(ipPort);
-                        break;
-
-                    default:
-                        break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
