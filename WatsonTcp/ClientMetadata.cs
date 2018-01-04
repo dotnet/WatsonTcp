@@ -27,12 +27,7 @@ namespace WatsonTcp
 
         public ClientMetadata(TcpClient tcp)
         {
-            if (tcp == null)
-            {
-                throw new ArgumentNullException(nameof(tcp));
-            }
-
-            tcpClient = tcp;
+            tcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
 
             networkStream = tcp.GetStream();
 

@@ -83,18 +83,13 @@ namespace WatsonTcp
                 throw new ArgumentOutOfRangeException(nameof(serverPort));
             }
 
-            if (messageReceived == null)
-            {
-                throw new ArgumentNullException(nameof(messageReceived));
-            }
-
             _ServerIp = serverIp;
             _ServerPort = serverPort;
             _AcceptInvalidCerts = acceptInvalidCerts;
 
             _ServerConnected = serverConnected;
             _ServerDisconnected = serverDisconnected;
-            _MessageReceived = messageReceived;
+            _MessageReceived = messageReceived ?? throw new ArgumentNullException(nameof(messageReceived));
 
             _Debug = debug;
 
