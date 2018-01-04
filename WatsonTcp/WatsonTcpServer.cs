@@ -457,15 +457,13 @@ namespace WatsonTcp
             int currentTimeout = 0;
             bool timeout = false;
 
-            NetworkStream ClientStream = client.TcpClient.GetStream();
-
             byte[] headerBytes;
             string header = "";
             long contentLength;
             byte[] contentBytes;
 
-            if (!ClientStream.CanRead) return null;
-            if (!ClientStream.DataAvailable) return null;
+            if (!client.NetworkStream.CanRead) return null;
+            if (!client.NetworkStream.DataAvailable) return null;
 
             #endregion
 
@@ -480,7 +478,7 @@ namespace WatsonTcp
                 currentTimeout = 0;
                 int read = 0;
 
-                while ((read = ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
+                while ((read = client.NetworkStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
                 {
                     if (read > 0)
                     {
@@ -552,7 +550,7 @@ namespace WatsonTcp
                 if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                 buffer = new byte[bufferSize];
 
-                while ((read = ClientStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                while ((read = client.NetworkStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
                 {
                     if (read > 0)
                     {
@@ -637,15 +635,13 @@ namespace WatsonTcp
             int currentTimeout = 0;
             bool timeout = false;
 
-            NetworkStream ClientStream = client.TcpClient.GetStream();
-
             byte[] headerBytes;
             string header = "";
             long contentLength;
             byte[] contentBytes;
 
-            if (!ClientStream.CanRead) return null;
-            if (!ClientStream.DataAvailable) return null;
+            if (!client.NetworkStream.CanRead) return null;
+            if (!client.NetworkStream.DataAvailable) return null;
 
             #endregion
 
@@ -660,7 +656,7 @@ namespace WatsonTcp
                 currentTimeout = 0;
                 int read = 0;
 
-                while ((read = await ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
+                while ((read = await client.NetworkStream.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
                 {
                     if (read > 0)
                     {
@@ -729,7 +725,7 @@ namespace WatsonTcp
                 if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
                 buffer = new byte[bufferSize];
 
-                while ((read = await ClientStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((read = await client.NetworkStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     if (read > 0)
                     {
@@ -748,7 +744,7 @@ namespace WatsonTcp
                         if (bytesRead == contentLength) break;
                     }
 
-                    if (!ClientStream.DataAvailable)
+                    if (!client.NetworkStream.DataAvailable)
                     {
                         while (true)
                         {
@@ -824,8 +820,8 @@ namespace WatsonTcp
 
                 #region Send-Message
 
-                client.TcpClient.GetStream().Write(message, 0, message.Length);
-                client.TcpClient.GetStream().Flush();
+                client.NetworkStream.Write(message, 0, message.Length);
+                client.NetworkStream.Flush();
                 return true;
 
                 #endregion
@@ -863,9 +859,8 @@ namespace WatsonTcp
 
                 #region Send-Message-Async
 
-                var clientStream = client.TcpClient.GetStream();
-                await clientStream.WriteAsync(message, 0, message.Length);
-                await clientStream.FlushAsync();
+                await client.NetworkStream.WriteAsync(message, 0, message.Length);
+                await client.NetworkStream.FlushAsync();
                 return true;
 
                 #endregion
