@@ -340,10 +340,7 @@ namespace WatsonTcp
             finally
             {
                 _Connected = false;
-                if (_ServerDisconnected != null)
-                {
-                    _ServerDisconnected();
-                }
+                _ServerDisconnected?.Invoke();
             }
         }
 
