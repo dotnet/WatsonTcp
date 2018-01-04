@@ -496,6 +496,7 @@ namespace WatsonTcp
                     {
                         headerMs.Write(headerBuffer, 0, read);
                         bytesRead += read;
+                        currentTimeout = 0;
 
                         if (bytesRead > 1)
                         {
@@ -505,18 +506,18 @@ namespace WatsonTcp
                                 break;
                             }
                         }
-                    }
-                    else
-                    {
-                        if (currentTimeout >= maxTimeout)
-                        {
-                            timeout = true;
-                            break;
-                        }
                         else
                         {
-                            currentTimeout += sleepInterval;
-                            Task.Delay(sleepInterval).Wait();
+                            if (currentTimeout >= maxTimeout)
+                            {
+                                timeout = true;
+                                break;
+                            }
+                            else
+                            {
+                                currentTimeout += sleepInterval;
+                                Task.Delay(sleepInterval).Wait();
+                            }
                         }
                     }
                 }
@@ -695,18 +696,14 @@ namespace WatsonTcp
                     {
                         await headerMs.WriteAsync(headerBuffer, 0, read);
                         bytesRead += read;
-                        currentTimeout = 0;
 
-                        if (bytesRead > 1)
-                        {
-                            if ((int)headerBuffer[0] == 58)
-                            {
-                                break;
-                            }
-                        }
+                        // reset timeout since there was a successful read
+                        currentTimeout = 0;
                     }
                     else
                     {
+                        #region Check-for-Timeout
+
                         if (currentTimeout >= maxTimeout)
                         {
                             timeout = true;
@@ -717,6 +714,44 @@ namespace WatsonTcp
                             currentTimeout += sleepInterval;
                             await Task.Delay(sleepInterval);
                         }
+
+                        if (timeout)
+                        {
+                            break;
+                        }
+
+                        #endregion
+                    }
+
+                    if (bytesRead > 1)
+                    {
+                        // check if end of headers reached
+                        if ((int)headerBuffer[0] == 58)
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        #region Check-for-Timeout
+
+                        if (currentTimeout >= maxTimeout)
+                        {
+                            timeout = true;
+                            break;
+                        }
+                        else
+                        {
+                            currentTimeout += sleepInterval;
+                            await Task.Delay(sleepInterval);
+                        }
+
+                        if (timeout)
+                        {
+                            break;
+                        }
+
+                        #endregion
                     }
                 }
 
@@ -775,6 +810,8 @@ namespace WatsonTcp
                         dataMs.Write(buffer, 0, read);
                         bytesRead = bytesRead + read;
                         bytesRemaining = bytesRemaining - read;
+
+                        // reset timeout
                         currentTimeout = 0;
 
                         // reduce buffer size if number of bytes remaining is
@@ -797,27 +834,27 @@ namespace WatsonTcp
                             break;
                         }
                     }
-
-                    if (!client.NetworkStream.DataAvailable)
+                    else
                     {
-                        while (true)
+                        #region Check-for-Timeout
+
+                        if (currentTimeout >= maxTimeout)
                         {
-                            if (currentTimeout >= maxTimeout)
-                            {
-                                timeout = true;
-                                break;
-                            }
-                            else
-                            {
-                                currentTimeout += sleepInterval;
-                                await Task.Delay(sleepInterval);
-                            }
+                            timeout = true;
+                            break;
+                        }
+                        else
+                        {
+                            currentTimeout += sleepInterval;
+                            await Task.Delay(sleepInterval);
                         }
 
                         if (timeout)
                         {
                             break;
                         }
+
+                        #endregion
                     }
                 }
 
