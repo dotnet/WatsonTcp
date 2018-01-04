@@ -258,6 +258,7 @@ namespace WatsonTcp
             if (disposing)
             {
                 _TokenSource.Cancel();
+                _TokenSource.Dispose();
             }
 
             disposed = true;

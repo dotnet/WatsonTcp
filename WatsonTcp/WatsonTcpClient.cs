@@ -186,6 +186,10 @@ namespace WatsonTcp
                 }
 
                 _TokenSource.Cancel();
+                _TokenSource.Dispose();
+
+                _SendLock.Dispose();
+
                 _Connected = false;
             }
 
