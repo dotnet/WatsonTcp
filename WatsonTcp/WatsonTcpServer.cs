@@ -149,8 +149,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, byte[] data)
         {
-            ClientMetadata client;
-            if (!_Clients.TryGetValue(ipPort, out client))
+            if (!_Clients.TryGetValue(ipPort, out var client))
             {
                 Log("Send unable to find client " + ipPort);
                 return false;
@@ -167,8 +166,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, byte[] data)
         {
-            ClientMetadata client;
-            if (!_Clients.TryGetValue(ipPort, out client))
+            if (!_Clients.TryGetValue(ipPort, out var client))
             {
                 Log("Send unable to find client " + ipPort);
                 return false;
@@ -183,8 +181,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
         public bool IsClientConnected(string ipPort)
         {
-            ClientMetadata client;
-            return (_Clients.TryGetValue(ipPort, out client));
+            return (_Clients.TryGetValue(ipPort, out var client));
         }
 
         /// <summary>
@@ -207,8 +204,7 @@ namespace WatsonTcp
         /// </summary>
         public void DisconnectClient(string ipPort)
         {
-            ClientMetadata client;
-            if (!_Clients.TryGetValue(ipPort, out client))
+            if (!_Clients.TryGetValue(ipPort, out var client))
             {
                 Log("Disconnect unable to find client " + ipPort);
             }
@@ -429,8 +425,7 @@ namespace WatsonTcp
 
         private bool AddClient(ClientMetadata client)
         {
-            ClientMetadata removedClient;
-            if (!_Clients.TryRemove(client.IpPort, out removedClient))
+            if (!_Clients.TryRemove(client.IpPort, out var removedClient))
             {
                 // do nothing, it probably did not exist anyway
             }
@@ -442,8 +437,7 @@ namespace WatsonTcp
 
         private bool RemoveClient(ClientMetadata client)
         {
-            ClientMetadata removedClient;
-            if (!_Clients.TryRemove(client.IpPort, out removedClient))
+            if (!_Clients.TryRemove(client.IpPort, out var removedClient))
             {
                 Log("RemoveClient unable to remove client " + client.IpPort);
                 return false;
