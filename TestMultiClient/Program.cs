@@ -21,9 +21,7 @@ namespace TestMultiThread
 
         static Random rng;
         static byte[] data;
-
-        static WatsonTcpServer s;
-
+        
         static void Main(string[] args)
         {
             rng = new Random((int)DateTime.Now.Ticks);
@@ -72,7 +70,10 @@ namespace TestMultiThread
             connectionCount++;
             Console.WriteLine("[server] connection from " + ipPort + " (now " + connectionCount + ")");
 
-            if (connectionCount >= clientThreads) clientsStarted = true;
+            if (connectionCount >= clientThreads)
+            {
+                clientsStarted = true;
+            }
 
             connections.Add(ipPort);
             return true;
@@ -119,15 +120,27 @@ namespace TestMultiThread
 
         static byte[] Md5(byte[] data)
         {
-            if (data == null || data.Length < 1) return null;
+            if (data == null || data.Length < 1)
+            {
+                return null;
+            }
+
             MD5 m = MD5.Create();
             return m.ComputeHash(data);
         }
 
         public static string BytesToHex(byte[] bytes)
         {
-            if (bytes == null) return null;
-            if (bytes.Length < 1) return null;
+            if (bytes == null)
+            {
+                return null;
+            }
+
+            if (bytes.Length < 1)
+            {
+                return null;
+            }
+
             return BitConverter.ToString(bytes).Replace("-", "");
         }
     }

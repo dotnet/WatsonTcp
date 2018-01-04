@@ -82,8 +82,15 @@ namespace WatsonTcp
             Func<string, byte[], bool> messageReceived,
             bool debug)
         {
-            if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
-            if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
+            if (listenerPort < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(listenerPort));
+            }
+
+            if (messageReceived == null)
+            {
+                throw new ArgumentNullException(nameof(_MessageReceived));
+            }
 
             _ClientConnected = clientConnected;
             _ClientDisconnected = clientDisconnected;
@@ -91,7 +98,10 @@ namespace WatsonTcp
 
             _Debug = debug;
 
-            if (permittedIps != null && permittedIps.Count() > 0) _PermittedIps = new List<string>(permittedIps);
+            if (permittedIps != null && permittedIps.Count() > 0)
+            {
+                _PermittedIps = new List<string>(permittedIps);
+            }
 
             if (String.IsNullOrEmpty(listenerIp))
             {
@@ -215,7 +225,9 @@ namespace WatsonTcp
         protected virtual void Dispose(bool disposing)
         {
             if (disposed)
+            {
                 return;
+            }
 
             if (disposing)
             {
@@ -248,7 +260,11 @@ namespace WatsonTcp
 
         private string BytesToHex(byte[] data)
         {
-            if (data == null || data.Length < 1) return "(null)";
+            if (data == null || data.Length < 1)
+            {
+                return "(null)";
+            }
+
             return BitConverter.ToString(data).Replace("-", "");
         }
 
@@ -373,7 +389,10 @@ namespace WatsonTcp
                 {
                     try
                     {
-                        if (!IsConnected(client)) break;
+                        if (!IsConnected(client))
+                        {
+                            break;
+                        }
 
                         byte[] data = await MessageReadAsync(client);
                         if (data == null)
@@ -458,8 +477,15 @@ namespace WatsonTcp
             long contentLength;
             byte[] contentBytes;
 
-            if (!client.NetworkStream.CanRead) return null;
-            if (!client.NetworkStream.DataAvailable) return null;
+            if (!client.NetworkStream.CanRead)
+            {
+                return null;
+            }
+
+            if (!client.NetworkStream.DataAvailable)
+            {
+                return null;
+            }
 
             #endregion
 
@@ -484,7 +510,10 @@ namespace WatsonTcp
                         if (bytesRead > 1)
                         {
                             // check if end of headers reached
-                            if ((int)headerBuffer[0] == 58) break;
+                            if ((int)headerBuffer[0] == 58)
+                            {
+                                break;
+                            }
                         }
                     }
                     else
@@ -543,7 +572,11 @@ namespace WatsonTcp
                 int read = 0;
                 byte[] buffer;
                 long bufferSize = 2048;
-                if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+                if (bufferSize > bytesRemaining)
+                {
+                    bufferSize = bytesRemaining;
+                }
+
                 buffer = new byte[bufferSize];
 
                 while ((read = client.NetworkStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
@@ -566,8 +599,15 @@ namespace WatsonTcp
                         buffer = new byte[bufferSize];
 
                         // check if read fully
-                        if (bytesRemaining == 0) break;
-                        if (bytesRead == contentLength) break;
+                        if (bytesRemaining == 0)
+                        {
+                            break;
+                        }
+
+                        if (bytesRead == contentLength)
+                        {
+                            break;
+                        }
                     }
                     else
                     {
@@ -636,8 +676,15 @@ namespace WatsonTcp
             long contentLength;
             byte[] contentBytes;
 
-            if (!client.NetworkStream.CanRead) return null;
-            if (!client.NetworkStream.DataAvailable) return null;
+            if (!client.NetworkStream.CanRead)
+            {
+                return null;
+            }
+
+            if (!client.NetworkStream.DataAvailable)
+            {
+                return null;
+            }
 
             #endregion
 
@@ -662,7 +709,10 @@ namespace WatsonTcp
 
                         if (bytesRead > 1)
                         {
-                            if ((int)headerBuffer[0] == 58) break;
+                            if ((int)headerBuffer[0] == 58)
+                            {
+                                break;
+                            }
                         }
                     }
                     else
@@ -687,7 +737,10 @@ namespace WatsonTcp
                 }
 
                 headerBytes = headerMs.ToArray();
-                if (headerBytes == null || headerBytes.Length < 1) return null;
+                if (headerBytes == null || headerBytes.Length < 1)
+                {
+                    return null;
+                }
 
                 #endregion
 
@@ -718,7 +771,11 @@ namespace WatsonTcp
                 int read = 0;
                 byte[] buffer;
                 long bufferSize = 2048;
-                if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+                if (bufferSize > bytesRemaining)
+                {
+                    bufferSize = bytesRemaining;
+                }
+
                 buffer = new byte[bufferSize];
 
                 while ((read = await client.NetworkStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
@@ -732,12 +789,23 @@ namespace WatsonTcp
 
                         // reduce buffer size if number of bytes remaining is
                         // less than the pre-defined buffer size of 2KB
-                        if (bytesRemaining < bufferSize) bufferSize = bytesRemaining;
+                        if (bytesRemaining < bufferSize)
+                        {
+                            bufferSize = bytesRemaining;
+                        }
+
                         buffer = new byte[bufferSize];
 
                         // check if read fully
-                        if (bytesRemaining == 0) break;
-                        if (bytesRead == contentLength) break;
+                        if (bytesRemaining == 0)
+                        {
+                            break;
+                        }
+
+                        if (bytesRead == contentLength)
+                        {
+                            break;
+                        }
                     }
 
                     if (!client.NetworkStream.DataAvailable)
@@ -756,7 +824,10 @@ namespace WatsonTcp
                             }
                         }
 
-                        if (timeout) break;
+                        if (timeout)
+                        {
+                            break;
+                        }
                     }
                 }
 
@@ -800,17 +871,29 @@ namespace WatsonTcp
                 byte[] headerBytes;
                 byte[] message;
 
-                if (data == null || data.Length < 1) header += "0:";
-                else header += data.Length + ":";
+                if (data == null || data.Length < 1)
+                {
+                    header += "0:";
+                }
+                else
+                {
+                    header += data.Length + ":";
+                }
 
                 headerBytes = Encoding.UTF8.GetBytes(header);
                 int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0) messageLen += data.Length;
+                if (data != null && data.Length > 0)
+                {
+                    messageLen += data.Length;
+                }
 
                 message = new byte[messageLen];
                 Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
 
-                if (data != null && data.Length > 0) Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                if (data != null && data.Length > 0)
+                {
+                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                }
 
                 #endregion
 
@@ -839,17 +922,29 @@ namespace WatsonTcp
                 byte[] headerBytes;
                 byte[] message;
 
-                if (data == null || data.Length < 1) header += "0:";
-                else header += data.Length + ":";
+                if (data == null || data.Length < 1)
+                {
+                    header += "0:";
+                }
+                else
+                {
+                    header += data.Length + ":";
+                }
 
                 headerBytes = Encoding.UTF8.GetBytes(header);
                 int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0) messageLen += data.Length;
+                if (data != null && data.Length > 0)
+                {
+                    messageLen += data.Length;
+                }
 
                 message = new byte[messageLen];
                 Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
 
-                if (data != null && data.Length > 0) Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                if (data != null && data.Length > 0)
+                {
+                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                }
 
                 #endregion
 

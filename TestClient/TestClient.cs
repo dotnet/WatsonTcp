@@ -24,7 +24,10 @@ namespace TestClient
             {
                 Console.Write("Command [? for help]: ");
                 string userInput = Console.ReadLine();
-                if (String.IsNullOrEmpty(userInput)) continue;
+                if (String.IsNullOrEmpty(userInput))
+                {
+                    continue;
+                }
 
                 switch (userInput)
                 {
@@ -52,20 +55,35 @@ namespace TestClient
                     case "send":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (String.IsNullOrEmpty(userInput))
+                        {
+                            break;
+                        }
+
                         client.Send(Encoding.UTF8.GetBytes(userInput));
                         break;
 
                     case "sendasync":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (String.IsNullOrEmpty(userInput))
+                        {
+                            break;
+                        }
+
                         client.SendAsync(Encoding.UTF8.GetBytes(userInput));
                         break;
 
                     case "status":
-                        if (client == null) Console.WriteLine("Connected: False (null)");
-                        else Console.WriteLine("Connected: " + client.IsConnected());
+                        if (client == null)
+                        {
+                            Console.WriteLine("Connected: False (null)");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Connected: " + client.IsConnected());
+                        }
+
                         break;
 
                     case "dispose":
@@ -84,7 +102,11 @@ namespace TestClient
                         break;
 
                     case "reconnect":
-                        if (client != null) client.Dispose();
+                        if (client != null)
+                        {
+                            client.Dispose();
+                        }
+
                         client = new WatsonTcpClient(serverIp, serverPort, ServerConnected, ServerDisconnected, MessageReceived, true);
                         break;
 

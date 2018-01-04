@@ -27,7 +27,11 @@ namespace WatsonTcp
 
         public ClientMetadata(TcpClient tcp)
         {
-            if (tcp == null) throw new ArgumentNullException(nameof(tcp));
+            if (tcp == null)
+            {
+                throw new ArgumentNullException(nameof(tcp));
+            }
+
             tcpClient = tcp;
 
             networkStream = tcp.GetStream();
@@ -73,7 +77,9 @@ namespace WatsonTcp
         protected virtual void Dispose(bool disposing)
         {
             if (disposed)
+            {
                 return;
+            }
 
             if (disposing)
             {

@@ -29,7 +29,10 @@ namespace TestServer
                     List<string> clients;
                     string ipPort;
 
-                    if (String.IsNullOrEmpty(userInput)) continue;
+                    if (String.IsNullOrEmpty(userInput))
+                    {
+                        continue;
+                    }
 
                     switch (userInput)
                     {
@@ -72,7 +75,11 @@ namespace TestServer
                             ipPort = Console.ReadLine();
                             Console.Write("Data: ");
                             userInput = Console.ReadLine();
-                            if (String.IsNullOrEmpty(userInput)) break;
+                            if (String.IsNullOrEmpty(userInput))
+                            {
+                                break;
+                            }
+
                             server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
                             break;
 
@@ -104,7 +111,11 @@ namespace TestServer
         static bool MessageReceived(string ipPort, byte[] data)
         {
             string msg = "";
-            if (data != null && data.Length > 0) msg = Encoding.UTF8.GetString(data);
+            if (data != null && data.Length > 0)
+            {
+                msg = Encoding.UTF8.GetString(data);
+            }
+
             Console.WriteLine("Message received from " + ipPort + ": " + msg);
             return true;
         }

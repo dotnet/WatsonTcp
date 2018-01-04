@@ -73,9 +73,20 @@ namespace WatsonTcp
             Func<byte[], bool> messageReceived,
             bool debug)
         {
-            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
-            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
-            if (messageReceived == null) throw new ArgumentNullException(nameof(messageReceived));
+            if (String.IsNullOrEmpty(serverIp))
+            {
+                throw new ArgumentNullException(nameof(serverIp));
+            }
+
+            if (serverPort < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(serverPort));
+            }
+
+            if (messageReceived == null)
+            {
+                throw new ArgumentNullException(nameof(messageReceived));
+            }
 
             _ServerIp = serverIp;
             _ServerPort = serverPort;
@@ -90,8 +101,14 @@ namespace WatsonTcp
             _SendLock = new SemaphoreSlim(1);
 
             _SslCertificate = null;
-            if (String.IsNullOrEmpty(pfxCertPass)) _SslCertificate = new X509Certificate2(pfxCertFile);
-            else _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
+            if (String.IsNullOrEmpty(pfxCertPass))
+            {
+                _SslCertificate = new X509Certificate2(pfxCertFile);
+            }
+            else
+            {
+                _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
+            }
 
             _SslCertificateCollection = new X509Certificate2Collection();
             _SslCertificateCollection.Add(_SslCertificate);
@@ -126,9 +143,20 @@ namespace WatsonTcp
 
                 _Ssl.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !_AcceptInvalidCerts);
 
-                if (!_Ssl.IsEncrypted) throw new AuthenticationException("Stream is not encrypted");
-                if (!_Ssl.IsAuthenticated) throw new AuthenticationException("Stream is not authenticated");
-                if (mutualAuthentication && !_Ssl.IsMutuallyAuthenticated) throw new AuthenticationException("Mutual authentication failed");
+                if (!_Ssl.IsEncrypted)
+                {
+                    throw new AuthenticationException("Stream is not encrypted");
+                }
+
+                if (!_Ssl.IsAuthenticated)
+                {
+                    throw new AuthenticationException("Stream is not authenticated");
+                }
+
+                if (mutualAuthentication && !_Ssl.IsMutuallyAuthenticated)
+                {
+                    throw new AuthenticationException("Mutual authentication failed");
+                }
 
                 _Connected = true;
             }
@@ -141,7 +169,10 @@ namespace WatsonTcp
                 wh.Close();
             }
 
-            if (_ServerConnected != null) Task.Run(() => _ServerConnected());
+            if (_ServerConnected != null)
+            {
+                Task.Run(() => _ServerConnected());
+            }
 
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
@@ -197,7 +228,9 @@ namespace WatsonTcp
         protected virtual void Dispose(bool disposing)
         {
             if (disposed)
+            {
                 return;
+            }
 
             if (disposing)
             {
@@ -251,7 +284,11 @@ namespace WatsonTcp
 
         private string BytesToHex(byte[] data)
         {
-            if (data == null || data.Length < 1) return "(null)";
+            if (data == null || data.Length < 1)
+            {
+                return "(null)";
+            }
+
             return BitConverter.ToString(data).Replace("-", "");
         }
 
@@ -308,7 +345,10 @@ namespace WatsonTcp
             finally
             {
                 _Connected = false;
-                if (_ServerDisconnected != null) _ServerDisconnected();
+                if (_ServerDisconnected != null)
+                {
+                    _ServerDisconnected();
+                }
             }
         }
 
@@ -381,7 +421,10 @@ namespace WatsonTcp
                             if (bytesRead > 1)
                             {
                                 // check if end of headers reached
-                                if ((int)headerBuffer[0] == 58) break;
+                                if ((int)headerBuffer[0] == 58)
+                                {
+                                    break;
+                                }
                             }
                         }
                         else
@@ -440,7 +483,11 @@ namespace WatsonTcp
                     int read = 0;
                     byte[] buffer;
                     long bufferSize = 2048;
-                    if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+                    if (bufferSize > bytesRemaining)
+                    {
+                        bufferSize = bytesRemaining;
+                    }
+
                     buffer = new byte[bufferSize];
 
                     while ((read = _Ssl.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
@@ -462,8 +509,15 @@ namespace WatsonTcp
                             buffer = new byte[bufferSize];
 
                             // check if read fully
-                            if (bytesRemaining == 0) break;
-                            if (bytesRead == contentLength) break;
+                            if (bytesRemaining == 0)
+                            {
+                                break;
+                            }
+
+                            if (bytesRead == contentLength)
+                            {
+                                break;
+                            }
                         }
                         else
                         {
@@ -585,7 +639,10 @@ namespace WatsonTcp
                             if (bytesRead > 1)
                             {
                                 // check if end of headers reached
-                                if ((int)headerBuffer[0] == 58) break;
+                                if ((int)headerBuffer[0] == 58)
+                                {
+                                    break;
+                                }
                             }
                         }
                         else
@@ -610,7 +667,10 @@ namespace WatsonTcp
                     }
 
                     headerBytes = headerMs.ToArray();
-                    if (headerBytes == null || headerBytes.Length < 1) return null;
+                    if (headerBytes == null || headerBytes.Length < 1)
+                    {
+                        return null;
+                    }
 
                     #endregion
 
@@ -641,7 +701,11 @@ namespace WatsonTcp
                     int read = 0;
                     byte[] buffer;
                     long bufferSize = 2048;
-                    if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+                    if (bufferSize > bytesRemaining)
+                    {
+                        bufferSize = bytesRemaining;
+                    }
+
                     buffer = new byte[bufferSize];
 
                     while ((read = await _Ssl.ReadAsync(buffer, 0, buffer.Length)) > 0)
@@ -662,8 +726,15 @@ namespace WatsonTcp
                             buffer = new byte[bufferSize];
 
                             // check if read fully
-                            if (bytesRemaining == 0) break;
-                            if (bytesRead == contentLength) break;
+                            if (bytesRemaining == 0)
+                            {
+                                break;
+                            }
+
+                            if (bytesRead == contentLength)
+                            {
+                                break;
+                            }
                         }
                         else
                         {
@@ -739,17 +810,29 @@ namespace WatsonTcp
                 byte[] headerBytes;
                 byte[] message;
 
-                if (data == null || data.Length < 1) header += "0:";
-                else header += data.Length + ":";
+                if (data == null || data.Length < 1)
+                {
+                    header += "0:";
+                }
+                else
+                {
+                    header += data.Length + ":";
+                }
 
                 headerBytes = Encoding.UTF8.GetBytes(header);
                 int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0) messageLen += data.Length;
+                if (data != null && data.Length > 0)
+                {
+                    messageLen += data.Length;
+                }
 
                 message = new byte[messageLen];
                 Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
 
-                if (data != null && data.Length > 0) Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                if (data != null && data.Length > 0)
+                {
+                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                }
 
                 #endregion
 
@@ -840,17 +923,29 @@ namespace WatsonTcp
                 byte[] headerBytes;
                 byte[] message;
 
-                if (data == null || data.Length < 1) header += "0:";
-                else header += data.Length + ":";
+                if (data == null || data.Length < 1)
+                {
+                    header += "0:";
+                }
+                else
+                {
+                    header += data.Length + ":";
+                }
 
                 headerBytes = Encoding.UTF8.GetBytes(header);
                 int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0) messageLen += data.Length;
+                if (data != null && data.Length > 0)
+                {
+                    messageLen += data.Length;
+                }
 
                 message = new byte[messageLen];
                 Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
 
-                if (data != null && data.Length > 0) Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                if (data != null && data.Length > 0)
+                {
+                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                }
 
                 #endregion
 
