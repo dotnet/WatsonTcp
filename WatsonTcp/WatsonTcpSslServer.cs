@@ -110,7 +110,9 @@ namespace WatsonTcp
             _Token = _TokenSource.Token;
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), _Token);
+
+            _Listener.Start();
+            WaitForClients();
         }
 
         /// <summary>
@@ -178,7 +180,9 @@ namespace WatsonTcp
             _Token = _TokenSource.Token;
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            Task.Run(() => AcceptConnections(), _Token);
+
+            _Listener.Start();
+            WaitForClients();
         }
 
         #endregion
@@ -299,109 +303,152 @@ namespace WatsonTcp
             return _AcceptInvalidCerts;
         }
 
-        private async Task AcceptConnections()
+        private void WaitForClients()
         {
-            _Listener.Start();
-            while (true)
+            _Listener.BeginAcceptTcpClient(new AsyncCallback(OnClientConnected), null);
+        }
+
+        private void OnClientConnected(IAsyncResult asyncResult)
+        {
+            ClientMetadata client = null;
+            try
             {
-                #region Accept-Connection
+                TcpClient clientSocket = _Listener.EndAcceptTcpClient(asyncResult);
+                client = new ClientMetadata(clientSocket);
 
-                _Token.ThrowIfCancellationRequested();
-                TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
-                tcpClient.LingerState.Enabled = false;
+                Log("OnClientConnected received connection from: " + client.IpPort);
 
-                #endregion
-
-                #region Get-Tuple-and-Check-IP
-
-                string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
-
-                if (_PermittedIps != null && _PermittedIps.Count > 0)
+                string clientIp = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Address.ToString();
+                if (IsAllowedIp(clientIp))
                 {
-                    if (!_PermittedIps.Contains(clientIp))
+                    if (_AcceptInvalidCerts)
                     {
-                        Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
-                        tcpClient.Close();
-                        continue;
+                        // accept invalid certs
+                        client.Ssl = new SslStream(client.Tcp.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
                     }
-                }
+                    else
+                    {
+                        // do not accept invalid SSL certificates
+                        client.Ssl = new SslStream(client.Tcp.GetStream(), false);
+                    }
 
-                Log("AcceptConnections accepted connection from " + tcpClient.Client.RemoteEndPoint.ToString());
-
-                #endregion
-
-                #region Initialize-and-Authenticate
-
-                SslStream sslStream = null;
-                if (_AcceptInvalidCerts)
-                {
-                    // accept invalid certs
-                    sslStream = new SslStream(tcpClient.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                    client.Ssl.BeginAuthenticateAsServer(_SslCertificate, true, SslProtocols.Tls12, true, OnAuthenticateAsServer, client);
                 }
                 else
                 {
-                    // do not accept invalid SSL certificates
-                    sslStream = new SslStream(tcpClient.GetStream(), false);
+                    Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
+                    client.Tcp.Close();
                 }
+            }
+            catch (SocketException ex)
+            {
+                Log("OnClientConnected socket exception from " + client.IpPort + Environment.NewLine + ex.ToString());
+            }
+            catch (Exception ex)
+            {
+                Log("OnClientConnected general exception from " + client.IpPort + Environment.NewLine + ex.ToString());
+            }
 
-                sslStream.AuthenticateAsServer(_SslCertificate, true, SslProtocols.Tls12, false);
+            WaitForClients();
+        }
 
-                if (!sslStream.IsEncrypted)
+        private bool IsAllowedIp(string clientIp)
+        {
+            if (_PermittedIps != null && _PermittedIps.Count > 0)
+            {
+                if (!_PermittedIps.Contains(clientIp))
                 {
-                    Log("*** AcceptConnections stream from " + clientIp + " not encrypted");
-                    tcpClient.Close();
-                    continue;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void OnAuthenticateAsServer(IAsyncResult asyncResult)
+        {
+            ClientMetadata client = null;
+            try
+            {
+                client = asyncResult.AsyncState as ClientMetadata;
+                client.Ssl.EndAuthenticateAsServer(asyncResult);
+
+                if (!client.Ssl.IsEncrypted)
+                {
+                    Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not encrypted");
+                    client.Tcp.Close();
+                    return;
                 }
 
-                if (!sslStream.IsAuthenticated)
+                if (!client.Ssl.IsAuthenticated)
                 {
-                    Log("*** AcceptConnections stream from " + clientIp + " not authenticated");
-                    tcpClient.Close();
-                    continue;
+                    Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not authenticated");
+                    client.Tcp.Close();
+                    return;
                 }
 
-                if (_MutuallyAuthenticate && !sslStream.IsMutuallyAuthenticated)
+                if (_MutuallyAuthenticate && !client.Ssl.IsMutuallyAuthenticated)
                 {
-                    Log("*** AcceptConnections stream from " + clientIp + " failed mutual authentication");
-                    tcpClient.Close();
-                    continue;
+                    Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " failed mutual authentication");
+                    client.Tcp.Close();
+                    return;
                 }
+
+                FinaliseConnection(client);
+            }
+            catch (IOException)
+            {
+                // Some type of problem initiating the SSL connection
+                Log("OnAuthenticateAsServer rejected due to IOException " + client.IpPort + " (now " + _ActiveClients + " clients)");
+                if (client != null)
+                {
+                    client.Tcp.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("OnAuthenticateAsServer general exception from " + client.IpPort + Environment.NewLine + ex.ToString());
+
+                if (client != null)
+                {
+                    client.Tcp.Close();
+                }
+            }
+        }
+
+        private void FinaliseConnection(ClientMetadata client)
+        {
+            var unawaited = Task.Run(() =>
+            {
+                #region Add-to-Client-List
+
+                if (!AddClient(client))
+                {
+                    Log("*** FinaliseConnection unable to add client " + client.IpPort);
+                    client.Tcp.Close();
+                    return;
+                }
+
+                // Do not decrement in this block, decrement is done by the connection reader
+                _ActiveClients++;
 
                 #endregion
 
-                var unawaited = Task.Run(() =>
+                #region Start-Data-Receiver
+
+                CancellationToken dataReceiverToken = default(CancellationToken);
+
+                Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + _ActiveClients + " clients)");
+                if (_ClientConnected != null)
                 {
-                    #region Add-to-Client-List
+                    Task.Run(() => _ClientConnected(client.IpPort));
+                }
 
-                    _ActiveClients++;
-                    // Do not decrement in this block, decrement is done by the connection reader
+                Task.Run(async () => await DataReceiver(client, dataReceiverToken), dataReceiverToken);
 
-                    ClientMetadata currClient = new ClientMetadata(tcpClient, sslStream);
-                    if (!AddClient(currClient))
-                    {
-                        Log("*** AcceptConnections unable to add client " + currClient.IpPort);
-                        tcpClient.Close();
-                        return;
-                    }
+                #endregion
 
-                    #endregion
-
-                    #region Start-Data-Receiver
-
-                    CancellationToken dataReceiverToken = default(CancellationToken);
-
-                    Log("AcceptConnections starting data receiver for " + currClient.IpPort + " (now " + _ActiveClients + " clients)");
-                    if (_ClientConnected != null)
-                    {
-                        Task.Run(() => _ClientConnected(currClient.IpPort));
-                    }
-
-                    Task.Run(async () => await DataReceiver(currClient, dataReceiverToken), dataReceiverToken);
-
-                    #endregion
-
-                }, _Token);
-            }
+            }, _Token);
         }
 
         private bool IsConnected(ClientMetadata client)
@@ -522,7 +569,7 @@ namespace WatsonTcp
             int maxTimeout = 500;
             int currentTimeout = 0;
             bool timeout = false;
-            
+
             byte[] headerBytes;
             string header = "";
             long contentLength;
@@ -700,7 +747,7 @@ namespace WatsonTcp
             int maxTimeout = 500;
             int currentTimeout = 0;
             bool timeout = false;
-            
+
             byte[] headerBytes;
             string header = "";
             long contentLength;
