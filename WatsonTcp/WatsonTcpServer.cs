@@ -192,6 +192,22 @@ namespace WatsonTcp
             return ret;
         }
 
+        /// <summary>
+        /// Disconnects the specified client.
+        /// </summary>
+        public void DisconnectClient(string ipPort)
+        {
+            ClientMetadata client;
+            if (!_Clients.TryGetValue(ipPort, out client))
+            {
+                Log("Disconnect unable to find client " + ipPort);
+            }
+            else
+            {
+                client.Tcp.Close();
+            }
+        }
+
         #endregion
 
         #region Private-Methods

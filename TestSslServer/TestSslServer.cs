@@ -48,6 +48,7 @@ namespace TestSslServer
                             Console.WriteLine("  cls      clear screen");
                             Console.WriteLine("  list     list clients");
                             Console.WriteLine("  send     send message to client");
+                            Console.WriteLine("  remove   disconnect client");
                             break;
 
                         case "q":
@@ -81,6 +82,12 @@ namespace TestSslServer
                             userInput = Console.ReadLine();
                             if (String.IsNullOrEmpty(userInput)) break;
                             server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
+                            break;
+                        
+                        case "remove":
+                            Console.Write("IP:Port: ");
+                            ipPort = Console.ReadLine();
+                            server.DisconnectClient(ipPort);
                             break;
 
                         default:
