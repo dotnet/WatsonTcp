@@ -402,7 +402,7 @@ namespace WatsonTcp
 
         private void FinaliseConnection(ClientMetadata client)
         {
-            var unawaited = Task.Run(() =>
+            Task unawaited = Task.Run(() =>
             {
                 #region Add-to-Client-List
 
@@ -486,7 +486,7 @@ namespace WatsonTcp
 
                         if (_MessageReceived != null)
                         {
-                            var unawaited = Task.Run(() => _MessageReceived(client.IpPort, data));
+                            Task<bool> unawaited = Task.Run(() => _MessageReceived(client.IpPort, data));
                         }
                     }
                     catch (Exception)
@@ -503,7 +503,7 @@ namespace WatsonTcp
                 RemoveClient(client);
                 if (_ClientDisconnected != null)
                 {
-                    var unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
+                    Task<bool> unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
                 }
                 Log("DataReceiver client " + client.IpPort + " disconnected (now " + _ActiveClients + " clients active)");
             }

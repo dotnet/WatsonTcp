@@ -290,7 +290,7 @@ namespace WatsonTcp
                         continue;
                     }
 
-                    var unawaited = Task.Run(() => _MessageReceived(data));
+                    Task<bool> unawaited = Task.Run(() => _MessageReceived(data));
 
                     #endregion
                 }
