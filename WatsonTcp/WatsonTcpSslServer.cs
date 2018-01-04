@@ -233,7 +233,7 @@ namespace WatsonTcp
             }
             else
             {
-                client.TcpClient.Close();
+                client.Dispose();
             }
         }
 
@@ -321,7 +321,7 @@ namespace WatsonTcp
                 else
                 {
                     Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
-                    client.TcpClient.Close();
+                    client.Dispose();
                 }
             }
             catch (SocketException ex)
@@ -360,21 +360,21 @@ namespace WatsonTcp
                 if (!client.SslStream.IsEncrypted)
                 {
                     Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not encrypted");
-                    client.TcpClient.Close();
+                    client.Dispose();
                     return;
                 }
 
                 if (!client.SslStream.IsAuthenticated)
                 {
                     Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not authenticated");
-                    client.TcpClient.Close();
+                    client.Dispose();
                     return;
                 }
 
                 if (_MutuallyAuthenticate && !client.SslStream.IsMutuallyAuthenticated)
                 {
                     Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " failed mutual authentication");
-                    client.TcpClient.Close();
+                    client.Dispose();
                     return;
                 }
 
@@ -386,7 +386,7 @@ namespace WatsonTcp
                 Log("OnAuthenticateAsServer rejected due to IOException " + client.IpPort + " (now " + _ActiveClients + " clients)");
                 if (client != null)
                 {
-                    client.TcpClient.Close();
+                    client.Dispose();
                 }
             }
             catch (Exception ex)
@@ -395,7 +395,7 @@ namespace WatsonTcp
 
                 if (client != null)
                 {
-                    client.TcpClient.Close();
+                    client.Dispose();
                 }
             }
         }
@@ -409,7 +409,7 @@ namespace WatsonTcp
                 if (!AddClient(client))
                 {
                     Log("*** FinaliseConnection unable to add client " + client.IpPort);
-                    client.TcpClient.Close();
+                    client.Dispose();
                     return;
                 }
 

@@ -204,7 +204,7 @@ namespace WatsonTcp
             }
             else
             {
-                client.TcpClient.Close();
+                client.Dispose();
             }
         }
 
@@ -275,7 +275,7 @@ namespace WatsonTcp
                 else
                 {
                     Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
-                    client.TcpClient.Close();
+                    client.Dispose();
                 }
             }
             catch (SocketException ex)
@@ -312,7 +312,7 @@ namespace WatsonTcp
                 if (!AddClient(client))
                 {
                     Log("*** FinaliseConnection unable to add client " + client.IpPort);
-                    client.TcpClient.Close();
+                    client.Dispose();
                     return;
                 }
 

@@ -5,13 +5,16 @@ using System.Net.Sockets;
 
 namespace WatsonTcp
 {
-    public class ClientMetadata
+    public class ClientMetadata : IDisposable
     {
         #region Public-Members
 
         #endregion
 
         #region Private-Members
+
+        // Flag: Has Dispose already been called?
+        private bool disposed = false;
 
         private TcpClient tcpClient;
         private NetworkStream networkStream;
@@ -35,6 +38,12 @@ namespace WatsonTcp
         #endregion
 
         #region Public-Methods
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
         public TcpClient TcpClient
         {
@@ -60,6 +69,32 @@ namespace WatsonTcp
         #endregion
 
         #region Private-Methods
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed)
+                return;
+
+            if (disposing)
+            {
+                if (sslStream != null)
+                {
+                    sslStream.Close();
+                }
+
+                if (networkStream != null)
+                {
+                    networkStream.Close();
+                }
+
+                if (tcpClient != null)
+                {
+                    tcpClient.Close();
+                }
+            }
+
+            disposed = true;
+        }
 
         #endregion
     }
