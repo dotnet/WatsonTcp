@@ -325,13 +325,13 @@ namespace WatsonTcp
                 }
 
                 // Do not decrement in this block, decrement is done by the connection reader
-                _ActiveClients++;
+                int activeCount = Interlocked.Increment(ref _ActiveClients);
 
                 #endregion
 
                 #region Start-Data-Receiver
 
-                Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + _ActiveClients + " clients)");
+                Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
                 if (_ClientConnected != null)
                 {
                     Task.Run(() => _ClientConnected(client.IpPort));
@@ -409,13 +409,13 @@ namespace WatsonTcp
             }
             finally
             {
-                _ActiveClients--;
+                int activeCount = Interlocked.Decrement(ref _ActiveClients);
                 RemoveClient(client);
                 if (_ClientDisconnected != null)
                 {
                     Task<bool> unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
                 }
-                Log("DataReceiver client " + client.IpPort + " disconnected (now " + _ActiveClients + " clients active)");
+                Log("DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
             }
         }
 
