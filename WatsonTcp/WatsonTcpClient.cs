@@ -363,7 +363,7 @@ namespace WatsonTcp
                             if (bytesRead > 1)
                             {
                                 // check if end of headers reached
-                                if ((int)headerBuffer[0] == 58)
+                                if (headerBuffer[0] == 58)
                                 {
                                     break;
                                 }
@@ -591,7 +591,7 @@ namespace WatsonTcp
                             if (bytesRead > 1)
                             {
                                 // check if end of headers reached
-                                if ((int)headerBuffer[0] == 58)
+                                if (headerBuffer[0] == 58)
                                 {
                                     break;
                                 }
