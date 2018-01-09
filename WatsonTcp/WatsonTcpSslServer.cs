@@ -340,12 +340,12 @@ namespace WatsonTcp
                     if (_AcceptInvalidCerts)
                     {
                         // accept invalid certs
-                        client.SslStream = new SslStream(tcpClient.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                        client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
                     }
                     else
                     {
                         // do not accept invalid SSL certificates
-                        client.SslStream = new SslStream(tcpClient.GetStream(), false);
+                        client.SslStream = new SslStream(client.NetworkStream, false);
                     }
 
                     Task unawaited = Task.Run(() => {
