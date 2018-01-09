@@ -180,7 +180,7 @@ namespace WatsonTcp
         {
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
-                Log("Send unable to find client " + ipPort);
+                Log("*** Send unable to find client " + ipPort);
                 return false;
             }
 
@@ -197,7 +197,7 @@ namespace WatsonTcp
         {
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
-                Log("Send unable to find client " + ipPort);
+                Log("*** SendAsync unable to find client " + ipPort);
                 return false;
             }
 
@@ -235,7 +235,7 @@ namespace WatsonTcp
         {
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
-                Log("Disconnect unable to find client " + ipPort);
+                Log("*** DisconnectClient unable to find client " + ipPort);
             }
             else
             {
@@ -436,7 +436,11 @@ namespace WatsonTcp
             // Do not decrement in this block, decrement is done by the connection reader
             int activeCount = Interlocked.Increment(ref _ActiveClients);
 
-            Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
+            #endregion
+
+            #region Start-Data-Receiver
+
+            Log("*** FinaliseConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
             if (_ClientConnected != null)
             {
                 Task.Run(() => _ClientConnected(client.IpPort));
@@ -444,7 +448,7 @@ namespace WatsonTcp
 
             Task.Run(async () => await DataReceiver(client));
 
-            Log("FinaliseConnection exited");
+            #endregion
         }
 
         private bool IsConnected(ClientMetadata client)
@@ -518,7 +522,8 @@ namespace WatsonTcp
                 {
                     Task<bool> unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
                 }
-                Log("DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
+                Log("*** DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
+
                 client.Dispose();
             }
         }
@@ -531,7 +536,7 @@ namespace WatsonTcp
             }
 
             _Clients.TryAdd(client.IpPort, client);
-            Log("AddClient added client " + client.IpPort);
+            Log("*** AddClient added client " + client.IpPort);
             return true;
         }
 
@@ -539,12 +544,12 @@ namespace WatsonTcp
         {
             if (!_Clients.TryRemove(client.IpPort, out ClientMetadata removedClient))
             {
-                Log("RemoveClient unable to remove client " + client.IpPort);
+                Log("*** RemoveClient unable to remove client " + client.IpPort);
                 return false;
             }
             else
             {
-                Log("RemoveClient removed client " + client.IpPort);
+                Log("*** RemoveClient removed client " + client.IpPort);
                 return true;
             }
         }
