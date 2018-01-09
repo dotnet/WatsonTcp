@@ -519,6 +519,7 @@ namespace WatsonTcp
                     Task<bool> unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
                 }
                 Log("DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
+                client.Dispose();
             }
         }
 
