@@ -376,6 +376,8 @@ namespace WatsonTcp
         {
             try
             {
+                // the two bools in this should really be contruction paramaters
+                // maybe re-use mutualAuthentication and acceptInvalidCerts ?
                 await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, false);
 
                 if (!client.SslStream.IsEncrypted)
@@ -426,6 +428,8 @@ namespace WatsonTcp
 
         private void FinaliseConnection(ClientMetadata client)
         {
+            #region Add-to-Client-List
+
             if (!AddClient(client))
             {
                 Log("*** FinaliseConnection unable to add client " + client.IpPort);
