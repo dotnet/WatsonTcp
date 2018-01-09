@@ -119,8 +119,7 @@ namespace WatsonTcp
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
 
-            _Listener.Start();
-            WaitForClients();
+            Task.Run(() => AcceptConnections(), _Token);
         }
 
         #endregion
@@ -260,88 +259,92 @@ namespace WatsonTcp
             return BitConverter.ToString(data).Replace("-", "");
         }
 
-        private void WaitForClients()
+        private async Task AcceptConnections()
         {
-            _Listener.BeginAcceptTcpClient(new AsyncCallback(OnClientConnected), null);
-        }
-
-        private void OnClientConnected(IAsyncResult asyncResult)
-        {
-            ClientMetadata client = null;
-            try
+            _Listener.Start();
+            while (!_Token.IsCancellationRequested)
             {
-                TcpClient clientSocket = _Listener.EndAcceptTcpClient(asyncResult);
-                client = new ClientMetadata(clientSocket);
+                string clientIpPort = String.Empty;
 
-                Log("OnClientConnected received connection from: " + client.IpPort);
-
-                string clientIp = ((IPEndPoint)client.TcpClient.Client.RemoteEndPoint).Address.ToString();
-                if (IsAllowedIp(clientIp))
+                try
                 {
-                    FinaliseConnection(client);
+                    #region Accept-Connection
+
+                    TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
+                    tcpClient.LingerState.Enabled = false;
+
+                    #endregion
+
+                    #region Get-Tuple-and-Check-IP
+
+                    string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
+
+                    if (_PermittedIps != null && _PermittedIps.Count > 0)
+                    {
+                        if (!_PermittedIps.Contains(clientIp))
+                        {
+                            Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
+                            tcpClient.Close();
+                            continue;
+                        }
+                    }
+
+                    #endregion
+
+                    ClientMetadata client = new ClientMetadata(tcpClient);
+                    clientIpPort = client.IpPort;
+
+                    Log("*** AcceptConnections accepted connection from " + client.IpPort);
+
+                    Task unawaited = Task.Run(() => {
+                        FinaliseConnection(client);
+                    }, _Token);
                 }
-                else
+                catch (ObjectDisposedException ex)
                 {
-                    Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
-                    client.Dispose();
+                    // Listener stopped ? if so, clientIpPort will be empty
+                    Log("*** AcceptConnections ObjectDisposedException from " + clientIpPort + Environment.NewLine + ex.ToString());
                 }
-            }
-            catch (SocketException ex)
-            {
-                Log("OnClientConnected socket exception from " + client.IpPort + Environment.NewLine + ex.ToString());
-            }
-            catch (Exception ex)
-            {
-                Log("OnClientConnected general exception from " + client.IpPort + Environment.NewLine + ex.ToString());
-            }
-
-            WaitForClients();
-        }
-
-        private bool IsAllowedIp(string clientIp)
-        {
-            if (_PermittedIps != null && _PermittedIps.Count > 0)
-            {
-                if (!_PermittedIps.Contains(clientIp))
+                catch (SocketException ex)
                 {
-                    return false;
+                    Log("*** AcceptConnections SocketException from " + clientIpPort + Environment.NewLine + ex.ToString());
+                }
+                catch (Exception ex)
+                {
+                    Log("*** AcceptConnections Exception from " + clientIpPort + Environment.NewLine + ex.ToString());
                 }
             }
-
-            return true;
         }
 
         private void FinaliseConnection(ClientMetadata client)
         {
-            Task unawaited = Task.Run(() =>
+            #region Add-to-Client-List
+
+            if (!AddClient(client))
             {
-                #region Add-to-Client-List
+                Log("*** FinaliseConnection unable to add client " + client.IpPort);
+                client.Dispose();
+                return;
+            }
 
-                if (!AddClient(client))
-                {
-                    Log("*** FinaliseConnection unable to add client " + client.IpPort);
-                    client.Dispose();
-                    return;
-                }
+            // Do not decrement in this block, decrement is done by the connection reader
+            int activeCount = Interlocked.Increment(ref _ActiveClients);
 
-                // Do not decrement in this block, decrement is done by the connection reader
-                int activeCount = Interlocked.Increment(ref _ActiveClients);
+            #endregion
 
-                #endregion
+            #region Start-Data-Receiver
 
-                #region Start-Data-Receiver
+            Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
+            if (_ClientConnected != null)
+            {
+                Task.Run(() => _ClientConnected(client.IpPort));
+            }
 
-                Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
-                if (_ClientConnected != null)
-                {
-                    Task.Run(() => _ClientConnected(client.IpPort));
-                }
+            Task.Run(async () => await DataReceiver(client));
 
-                Task.Run(async () => await DataReceiver(client));
+            Log("FinaliseConnection exited");
 
-                #endregion
-
-            }, _Token);
+            #endregion
         }
 
         private bool IsConnected(ClientMetadata client)
