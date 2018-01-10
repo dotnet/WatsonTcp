@@ -366,7 +366,7 @@ namespace WatsonTcp
                     switch (ex.Message)
                     {
                         case "An existing connection was forcibly closed by the remote host":
-                            Log("*** AcceptConnections IOException " + clientIpPort + " closed the connection.");
+                            Log("*** AcceptConnections SocketException " + clientIpPort + " closed the connection.");
                             break;
                         default:
                             Log("*** AcceptConnections SocketException from " + clientIpPort + Environment.NewLine + ex.ToString());
