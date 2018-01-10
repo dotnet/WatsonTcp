@@ -404,22 +404,24 @@ namespace WatsonTcp
             catch (IOException ex)
             {
                 // Some type of problem initiating the SSL connection
-                Log("*** StartTls IOException from " + client.IpPort + Environment.NewLine + ex.ToString());
-                if (client != null)
+                switch (ex.Message)
                 {
-                    client.Dispose();
+                    case "Authentication failed because the remote party has closed the transport stream.":
+                    case "The handshake failed due to an unexpected packet format.":
+                        Log("*** StartTls IOException " + client.IpPort + " disconnected. " + ex.Message);
+                        break;
+                    default:
+                        Log("*** StartTls IOException from " + client.IpPort + Environment.NewLine + ex.ToString());
+                        break;
                 }
 
+                client.Dispose();
                 return false;
             }
             catch (Exception ex)
             {
                 Log("*** StartTls Exception from " + client.IpPort + Environment.NewLine + ex.ToString());
-                if (client != null)
-                {
-                    client.Dispose();
-                }
-
+                client.Dispose();
                 return false;
             }
 
