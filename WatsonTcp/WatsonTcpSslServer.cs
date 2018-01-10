@@ -363,7 +363,15 @@ namespace WatsonTcp
                 }
                 catch (SocketException ex)
                 {
-                    Log("*** AcceptConnections SocketException from " + clientIpPort + Environment.NewLine + ex.ToString());
+                    switch (ex.Message)
+                    {
+                        case "An existing connection was forcibly closed by the remote host":
+                            Log("*** AcceptConnections IOException " + clientIpPort + " closed the connection.");
+                            break;
+                        default:
+                            Log("*** AcceptConnections SocketException from " + clientIpPort + Environment.NewLine + ex.ToString());
+                            break;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -407,8 +415,11 @@ namespace WatsonTcp
                 switch (ex.Message)
                 {
                     case "Authentication failed because the remote party has closed the transport stream.":
+                    case "Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host.":
+                        Log("*** StartTls IOException " + client.IpPort + " closed the connection.");
+                        break;
                     case "The handshake failed due to an unexpected packet format.":
-                        Log("*** StartTls IOException " + client.IpPort + " disconnected. " + ex.Message);
+                        Log("*** StartTls IOException " + client.IpPort + " disconnected, invalid handshake.");
                         break;
                     default:
                         Log("*** StartTls IOException from " + client.IpPort + Environment.NewLine + ex.ToString());

@@ -307,7 +307,15 @@ namespace WatsonTcp
                 }
                 catch (SocketException ex)
                 {
-                    Log("*** AcceptConnections SocketException from " + clientIpPort + Environment.NewLine + ex.ToString());
+                    switch (ex.Message)
+                    {
+                        case "An existing connection was forcibly closed by the remote host":
+                            Log("*** AcceptConnections IOException " + clientIpPort + " closed the connection.");
+                            break;
+                        default:
+                            Log("*** AcceptConnections SocketException from " + clientIpPort + Environment.NewLine + ex.ToString());
+                            break;
+                    }
                 }
                 catch (Exception ex)
                 {
