@@ -104,19 +104,24 @@ namespace WatsonTcp
             Func<string, byte[], bool> messageReceived,
             bool debug)
         {
-            if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
-            if (messageReceived == null) throw new ArgumentNullException(nameof(_MessageReceived));
+            if (listenerPort < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(listenerPort));
+            }
 
             _AcceptInvalidCerts = acceptInvalidCerts;
             _MutuallyAuthenticate = mutualAuthentication;
 
             _ClientConnected = clientConnected;
             _ClientDisconnected = clientDisconnected;
-            _MessageReceived = messageReceived;
+            _MessageReceived = messageReceived ?? throw new ArgumentNullException(nameof(_MessageReceived));
 
             _Debug = debug;
 
-            if (permittedIps != null && permittedIps.Count() > 0) _PermittedIps = new List<string>(permittedIps);
+            if (permittedIps != null && permittedIps.Count() > 0)
+            {
+                _PermittedIps = new List<string>(permittedIps);
+            }
 
             if (String.IsNullOrEmpty(listenerIp))
             {
@@ -132,8 +137,14 @@ namespace WatsonTcp
             _ListenerPort = listenerPort;
 
             _SslCertificate = null;
-            if (String.IsNullOrEmpty(pfxCertPass)) _SslCertificate = new X509Certificate2(pfxCertFile);
-            else _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
+            if (String.IsNullOrEmpty(pfxCertPass))
+            {
+                _SslCertificate = new X509Certificate2(pfxCertFile);
+            }
+            else
+            {
+                _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
+            }
 
             Log("WatsonTcpSslServer starting on " + _ListenerIp + ":" + _ListenerPort);
 
@@ -143,8 +154,7 @@ namespace WatsonTcp
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
 
-            _Listener.Start();
-            WaitForClients();
+            Task.Run(() => AcceptConnections(), _Token);
         }
 
         #endregion
@@ -168,10 +178,9 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, byte[] data)
         {
-            ClientMetadata client;
-            if (!_Clients.TryGetValue(ipPort, out client))
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
-                Log("Send unable to find client " + ipPort);
+                Log("*** Send unable to find client " + ipPort);
                 return false;
             }
 
@@ -186,10 +195,9 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, byte[] data)
         {
-            ClientMetadata client;
-            if (!_Clients.TryGetValue(ipPort, out client))
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
-                Log("Send unable to find client " + ipPort);
+                Log("*** SendAsync unable to find client " + ipPort);
                 return false;
             }
 
@@ -202,8 +210,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
         public bool IsClientConnected(string ipPort)
         {
-            ClientMetadata client;
-            return (_Clients.TryGetValue(ipPort, out client));
+            return (_Clients.TryGetValue(ipPort, out ClientMetadata client));
         }
 
         /// <summary>
@@ -221,6 +228,21 @@ namespace WatsonTcp
             return ret;
         }
 
+        /// <summary>
+        /// Disconnects the specified client.
+        /// </summary>
+        public void DisconnectClient(string ipPort)
+        {
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Log("*** DisconnectClient unable to find client " + ipPort);
+            }
+            else
+            {
+                client.Dispose();
+            }
+        }
+
         #endregion
 
         #region Private-Methods
@@ -228,11 +250,14 @@ namespace WatsonTcp
         protected virtual void Dispose(bool disposing)
         {
             if (disposed)
+            {
                 return;
+            }
 
             if (disposing)
             {
                 _TokenSource.Cancel();
+                _TokenSource.Dispose();
             }
 
             disposed = true;
@@ -261,7 +286,11 @@ namespace WatsonTcp
 
         private string BytesToHex(byte[] data)
         {
-            if (data == null || data.Length < 1) return "(null)";
+            if (data == null || data.Length < 1)
+            {
+                return "(null)";
+            }
+
             return BitConverter.ToString(data).Replace("-", "");
         }
 
@@ -271,162 +300,182 @@ namespace WatsonTcp
             return _AcceptInvalidCerts;
         }
 
-        private void WaitForClients()
+        private async Task AcceptConnections()
         {
-            _Listener.BeginAcceptTcpClient(new AsyncCallback(OnClientConnected), null);
-        }
-
-        private void OnClientConnected(IAsyncResult asyncResult)
-        {
-            ClientMetadata client = null;
-            try
+            _Listener.Start();
+            while (!_Token.IsCancellationRequested)
             {
-                TcpClient clientSocket = _Listener.EndAcceptTcpClient(asyncResult);
-                client = new ClientMetadata(clientSocket);
+                string clientIpPort = String.Empty;
 
-                Log("OnClientConnected received connection from: " + client.IpPort);
-
-                string clientIp = ((IPEndPoint)client.Tcp.Client.RemoteEndPoint).Address.ToString();
-                if (IsAllowedIp(clientIp))
+                try
                 {
+                    #region Accept-Connection
+
+                    TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
+                    tcpClient.LingerState.Enabled = false;
+
+                    #endregion
+
+                    #region Get-Tuple-and-Check-IP
+
+                    string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
+
+                    if (_PermittedIps != null && _PermittedIps.Count > 0)
+                    {
+                        if (!_PermittedIps.Contains(clientIp))
+                        {
+                            Log("*** AcceptConnections rejecting connection from " + clientIp + " (not permitted)");
+                            tcpClient.Close();
+                            continue;
+                        }
+                    }
+
+                    #endregion
+
+                    ClientMetadata client = new ClientMetadata(tcpClient);
+                    clientIpPort = client.IpPort;
+
+                    Log("*** AcceptConnections accepted connection from " + client.IpPort);
+
                     if (_AcceptInvalidCerts)
                     {
                         // accept invalid certs
-                        client.Ssl = new SslStream(client.Tcp.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                        client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
                     }
                     else
                     {
                         // do not accept invalid SSL certificates
-                        client.Ssl = new SslStream(client.Tcp.GetStream(), false);
+                        client.SslStream = new SslStream(client.NetworkStream, false);
                     }
 
-                    client.Ssl.BeginAuthenticateAsServer(_SslCertificate, true, SslProtocols.Tls12, true, OnAuthenticateAsServer, client);
+                    Task unawaited = Task.Run(() => {
+                        Task<bool> success = StartTls(client);
+                        if (success.Result)
+                        {
+                            FinaliseConnection(client);
+                        }
+                    }, _Token);
                 }
-                else
+                catch (ObjectDisposedException ex)
                 {
-                    Log("*** OnClientConnected rejecting connection from " + clientIp + " (not permitted)");
-                    client.Tcp.Close();
+                    // Listener stopped ? if so, clientIpPort will be empty
+                    Log("*** AcceptConnections ObjectDisposedException from " + clientIpPort + Environment.NewLine + ex.ToString());
+                }
+                catch (SocketException ex)
+                {
+                    switch (ex.Message)
+                    {
+                        case "An existing connection was forcibly closed by the remote host":
+                            Log("*** AcceptConnections SocketException " + clientIpPort + " closed the connection.");
+                            break;
+                        default:
+                            Log("*** AcceptConnections SocketException from " + clientIpPort + Environment.NewLine + ex.ToString());
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("*** AcceptConnections Exception from " + clientIpPort + Environment.NewLine + ex.ToString());
                 }
             }
-            catch (SocketException ex)
+        }
+
+        private async Task<bool> StartTls(ClientMetadata client)
+        {
+            try
             {
-                Log("OnClientConnected socket exception from " + client.IpPort + Environment.NewLine + ex.ToString());
+                // the two bools in this should really be contruction paramaters
+                // maybe re-use mutualAuthentication and acceptInvalidCerts ?
+                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, false);
+
+                if (!client.SslStream.IsEncrypted)
+                {
+                    Log("*** StartTls stream from " + client.IpPort + " not encrypted");
+                    client.Dispose();
+                    return false;
+                }
+
+                if (!client.SslStream.IsAuthenticated)
+                {
+                    Log("*** StartTls stream from " + client.IpPort + " not authenticated");
+                    client.Dispose();
+                    return false;
+                }
+
+                if (_MutuallyAuthenticate && !client.SslStream.IsMutuallyAuthenticated)
+                {
+                    Log("*** StartTls stream from " + client.IpPort + " failed mutual authentication");
+                    client.Dispose();
+                    return false;
+                }
+            }
+            catch (IOException ex)
+            {
+                // Some type of problem initiating the SSL connection
+                switch (ex.Message)
+                {
+                    case "Authentication failed because the remote party has closed the transport stream.":
+                    case "Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host.":
+                        Log("*** StartTls IOException " + client.IpPort + " closed the connection.");
+                        break;
+                    case "The handshake failed due to an unexpected packet format.":
+                        Log("*** StartTls IOException " + client.IpPort + " disconnected, invalid handshake.");
+                        break;
+                    default:
+                        Log("*** StartTls IOException from " + client.IpPort + Environment.NewLine + ex.ToString());
+                        break;
+                }
+
+                client.Dispose();
+                return false;
             }
             catch (Exception ex)
             {
-                Log("OnClientConnected general exception from " + client.IpPort + Environment.NewLine + ex.ToString());
-            }
-
-            WaitForClients();
-        }
-
-        private bool IsAllowedIp(string clientIp)
-        {
-            if (_PermittedIps != null && _PermittedIps.Count > 0)
-            {
-                if (!_PermittedIps.Contains(clientIp))
-                {
-                    return false;
-                }
+                Log("*** StartTls Exception from " + client.IpPort + Environment.NewLine + ex.ToString());
+                client.Dispose();
+                return false;
             }
 
             return true;
         }
 
-        private void OnAuthenticateAsServer(IAsyncResult asyncResult)
-        {
-            ClientMetadata client = null;
-            try
-            {
-                client = asyncResult.AsyncState as ClientMetadata;
-                client.Ssl.EndAuthenticateAsServer(asyncResult);
-
-                if (!client.Ssl.IsEncrypted)
-                {
-                    Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not encrypted");
-                    client.Tcp.Close();
-                    return;
-                }
-
-                if (!client.Ssl.IsAuthenticated)
-                {
-                    Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " not authenticated");
-                    client.Tcp.Close();
-                    return;
-                }
-
-                if (_MutuallyAuthenticate && !client.Ssl.IsMutuallyAuthenticated)
-                {
-                    Log("*** OnAuthenticateAsServer stream from " + client.IpPort + " failed mutual authentication");
-                    client.Tcp.Close();
-                    return;
-                }
-
-                FinaliseConnection(client);
-            }
-            catch (IOException)
-            {
-                // Some type of problem initiating the SSL connection
-                Log("OnAuthenticateAsServer rejected due to IOException " + client.IpPort + " (now " + _ActiveClients + " clients)");
-                if (client != null)
-                {
-                    client.Tcp.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                Log("OnAuthenticateAsServer general exception from " + client.IpPort + Environment.NewLine + ex.ToString());
-
-                if (client != null)
-                {
-                    client.Tcp.Close();
-                }
-            }
-        }
-
         private void FinaliseConnection(ClientMetadata client)
         {
-            var unawaited = Task.Run(() =>
+            #region Add-to-Client-List
+
+            if (!AddClient(client))
             {
-                #region Add-to-Client-List
+                Log("*** FinaliseConnection unable to add client " + client.IpPort);
+                client.Dispose();
+                return;
+            }
 
-                if (!AddClient(client))
-                {
-                    Log("*** FinaliseConnection unable to add client " + client.IpPort);
-                    client.Tcp.Close();
-                    return;
-                }
+            // Do not decrement in this block, decrement is done by the connection reader
+            int activeCount = Interlocked.Increment(ref _ActiveClients);
 
-                // Do not decrement in this block, decrement is done by the connection reader
-                _ActiveClients++;
+            #endregion
 
-                #endregion
+            #region Start-Data-Receiver
 
-                #region Start-Data-Receiver
+            Log("*** FinaliseConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
+            if (_ClientConnected != null)
+            {
+                Task.Run(() => _ClientConnected(client.IpPort));
+            }
 
-                CancellationToken dataReceiverToken = default(CancellationToken);
+            Task.Run(async () => await DataReceiver(client));
 
-                Log("FinaliseConnection starting data receiver for " + client.IpPort + " (now " + _ActiveClients + " clients)");
-                if (_ClientConnected != null)
-                {
-                    Task.Run(() => _ClientConnected(client.IpPort));
-                }
-
-                Task.Run(async () => await DataReceiver(client, dataReceiverToken), dataReceiverToken);
-
-                #endregion
-
-            }, _Token);
+            #endregion
         }
 
         private bool IsConnected(ClientMetadata client)
         {
-            if (client.Tcp.Connected)
+            if (client.TcpClient.Connected)
             {
-                if ((client.Tcp.Client.Poll(0, SelectMode.SelectWrite)) && (!client.Tcp.Client.Poll(0, SelectMode.SelectError)))
+                if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite)) && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
                 {
                     byte[] buffer = new byte[1];
-                    if (client.Tcp.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                    if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
                     {
                         return false;
                     }
@@ -446,7 +495,7 @@ namespace WatsonTcp
             }
         }
 
-        private async Task DataReceiver(ClientMetadata client, CancellationToken? cancelToken=null)
+        private async Task DataReceiver(ClientMetadata client)
         {
             try
             {
@@ -454,11 +503,12 @@ namespace WatsonTcp
 
                 while (true)
                 {
-                    cancelToken?.ThrowIfCancellationRequested();
-
                     try
                     {
-                        if (!IsConnected(client)) break;
+                        if (!IsConnected(client))
+                        {
+                            break;
+                        }
 
                         byte[] data = await MessageReadAsync(client);
                         if (data == null)
@@ -470,7 +520,7 @@ namespace WatsonTcp
 
                         if (_MessageReceived != null)
                         {
-                            var unawaited = Task.Run(() => _MessageReceived(client.IpPort, data));
+                            Task<bool> unawaited = Task.Run(() => _MessageReceived(client.IpPort, data));
                         }
                     }
                     catch (Exception)
@@ -483,40 +533,40 @@ namespace WatsonTcp
             }
             finally
             {
-                _ActiveClients--;
+                int activeCount = Interlocked.Decrement(ref _ActiveClients);
                 RemoveClient(client);
                 if (_ClientDisconnected != null)
                 {
-                    var unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
+                    Task<bool> unawaited = Task.Run(() => _ClientDisconnected(client.IpPort));
                 }
-                Log("DataReceiver client " + client.IpPort + " disconnected (now " + _ActiveClients + " clients active)");
+                Log("*** DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
+
+                client.Dispose();
             }
         }
 
         private bool AddClient(ClientMetadata client)
         {
-            ClientMetadata removed;
-            if (!_Clients.TryRemove(client.IpPort, out removed))
+            if (!_Clients.TryRemove(client.IpPort, out ClientMetadata removedClient))
             {
                 // do nothing, it probably did not exist anyway
             }
 
             _Clients.TryAdd(client.IpPort, client);
-            Log("AddClient added client " + client.IpPort);
+            Log("*** AddClient added client " + client.IpPort);
             return true;
         }
 
         private bool RemoveClient(ClientMetadata client)
         {
-            ClientMetadata removedClient;
-            if (!_Clients.TryRemove(client.IpPort, out removedClient))
+            if (!_Clients.TryRemove(client.IpPort, out ClientMetadata removedClient))
             {
-                Log("RemoveClient unable to remove client " + client.IpPort);
+                Log("*** RemoveClient unable to remove client " + client.IpPort);
                 return false;
             }
             else
             {
-                Log("RemoveClient removed client " + client.IpPort);
+                Log("*** RemoveClient removed client " + client.IpPort);
                 return true;
             }
         }
@@ -543,7 +593,10 @@ namespace WatsonTcp
             long contentLength;
             byte[] contentBytes;
 
-            if (!client.Ssl.CanRead) return null;
+            if (!client.SslStream.CanRead)
+            {
+                return null;
+            }
 
             #endregion
 
@@ -558,7 +611,7 @@ namespace WatsonTcp
                 currentTimeout = 0;
                 int read = 0;
 
-                while ((read = client.Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
+                while ((read = client.SslStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
                 {
                     if (read > 0)
                     {
@@ -569,7 +622,10 @@ namespace WatsonTcp
                         if (bytesRead > 1)
                         {
                             // check if end of headers reached
-                            if ((int)headerBuffer[0] == 58) break;
+                            if (headerBuffer[0] == 58)
+                            {
+                                break;
+                            }
                         }
                         else
                         {
@@ -628,10 +684,14 @@ namespace WatsonTcp
                 int read = 0;
                 byte[] buffer;
                 long bufferSize = 2048;
-                if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+                if (bufferSize > bytesRemaining)
+                {
+                    bufferSize = bytesRemaining;
+                }
+
                 buffer = new byte[bufferSize];
 
-                while ((read = client.Ssl.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
+                while ((read = client.SslStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
                 {
                     if (read > 0)
                     {
@@ -651,8 +711,15 @@ namespace WatsonTcp
                         buffer = new byte[bufferSize];
 
                         // check if read fully
-                        if (bytesRemaining == 0) break;
-                        if (bytesRead == contentLength) break;
+                        if (bytesRemaining == 0)
+                        {
+                            break;
+                        }
+
+                        if (bytesRead == contentLength)
+                        {
+                            break;
+                        }
                     }
                     else
                     {
@@ -721,7 +788,10 @@ namespace WatsonTcp
             long contentLength;
             byte[] contentBytes;
 
-            if (!client.Ssl.CanRead) return null;
+            if (!client.SslStream.CanRead)
+            {
+                return null;
+            }
 
             #endregion
 
@@ -736,7 +806,7 @@ namespace WatsonTcp
                 currentTimeout = 0;
                 int read = 0;
 
-                while ((read = await client.Ssl.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
+                while ((read = await client.SslStream.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
                 {
                     if (read > 0)
                     {
@@ -761,7 +831,10 @@ namespace WatsonTcp
                             await Task.Delay(sleepInterval);
                         }
 
-                        if (timeout) break;
+                        if (timeout)
+                        {
+                            break;
+                        }
 
                         #endregion
                     }
@@ -769,7 +842,10 @@ namespace WatsonTcp
                     if (bytesRead > 1)
                     {
                         // check if end of headers reached
-                        if ((int)headerBuffer[0] == 58) break;
+                        if (headerBuffer[0] == 58)
+                        {
+                            break;
+                        }
                     }
                     else
                     {
@@ -786,7 +862,10 @@ namespace WatsonTcp
                             await Task.Delay(sleepInterval);
                         }
 
-                        if (timeout) break;
+                        if (timeout)
+                        {
+                            break;
+                        }
 
                         #endregion
                     }
@@ -833,10 +912,14 @@ namespace WatsonTcp
                 int read = 0;
                 byte[] buffer;
                 long bufferSize = 2048;
-                if (bufferSize > bytesRemaining) bufferSize = bytesRemaining;
+                if (bufferSize > bytesRemaining)
+                {
+                    bufferSize = bytesRemaining;
+                }
+
                 buffer = new byte[bufferSize];
 
-                while ((read = await client.Ssl.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((read = await client.SslStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     if (read > 0)
                     {
@@ -849,12 +932,23 @@ namespace WatsonTcp
 
                         // reduce buffer size if number of bytes remaining is
                         // less than the pre-defined buffer size of 2KB
-                        if (bytesRemaining < bufferSize) bufferSize = bytesRemaining;
+                        if (bytesRemaining < bufferSize)
+                        {
+                            bufferSize = bytesRemaining;
+                        }
+
                         buffer = new byte[bufferSize];
 
                         // check if read fully
-                        if (bytesRemaining == 0) break;
-                        if (bytesRead == contentLength) break;
+                        if (bytesRemaining == 0)
+                        {
+                            break;
+                        }
+
+                        if (bytesRead == contentLength)
+                        {
+                            break;
+                        }
                     }
                     else
                     {
@@ -871,7 +965,10 @@ namespace WatsonTcp
                             await Task.Delay(sleepInterval);
                         }
 
-                        if (timeout) break;
+                        if (timeout)
+                        {
+                            break;
+                        }
 
                         #endregion
                     }
@@ -917,24 +1014,36 @@ namespace WatsonTcp
                 byte[] headerBytes;
                 byte[] message;
 
-                if (data == null || data.Length < 1) header += "0:";
-                else header += data.Length + ":";
+                if (data == null || data.Length < 1)
+                {
+                    header += "0:";
+                }
+                else
+                {
+                    header += data.Length + ":";
+                }
 
                 headerBytes = Encoding.UTF8.GetBytes(header);
                 int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0) messageLen += data.Length;
+                if (data != null && data.Length > 0)
+                {
+                    messageLen += data.Length;
+                }
 
                 message = new byte[messageLen];
                 Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
 
-                if (data != null && data.Length > 0) Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                if (data != null && data.Length > 0)
+                {
+                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                }
 
                 #endregion
 
                 #region Send-Message
 
-                client.Ssl.Write(message, 0, message.Length);
-                client.Ssl.Flush();
+                client.SslStream.Write(message, 0, message.Length);
+                client.SslStream.Flush();
                 return true;
 
                 #endregion
@@ -956,24 +1065,36 @@ namespace WatsonTcp
                 byte[] headerBytes;
                 byte[] message;
 
-                if (data == null || data.Length < 1) header += "0:";
-                else header += data.Length + ":";
+                if (data == null || data.Length < 1)
+                {
+                    header += "0:";
+                }
+                else
+                {
+                    header += data.Length + ":";
+                }
 
                 headerBytes = Encoding.UTF8.GetBytes(header);
                 int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0) messageLen += data.Length;
+                if (data != null && data.Length > 0)
+                {
+                    messageLen += data.Length;
+                }
 
                 message = new byte[messageLen];
                 Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
 
-                if (data != null && data.Length > 0) Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                if (data != null && data.Length > 0)
+                {
+                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
+                }
 
                 #endregion
 
                 #region Send-Message-Async
 
-                await client.Ssl.WriteAsync(message, 0, message.Length);
-                await client.Ssl.FlushAsync();
+                await client.SslStream.WriteAsync(message, 0, message.Length);
+                await client.SslStream.FlushAsync();
                 return true;
 
                 #endregion

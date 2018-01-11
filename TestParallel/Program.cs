@@ -27,21 +27,25 @@ namespace TestParallel
 
                 Console.WriteLine("Press ENTER to exit");
 
-                for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
-            } 
-          
+                for (int i = 0; i < clientThreads; i++)
+                {
+                    Task.Run(() => ClientTask());
+                }
+            }
+
             Console.ReadLine();
         }
 
         static void ClientTask()
         {
-            WatsonTcpClient c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
-
-            for (int i = 0; i < numIterations; i++)
+            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false))
             {
-                Task.Delay(rng.Next(0, 25)).Wait();
-                c.Send(data);
-            }
+                for (int i = 0; i < numIterations; i++)
+                {
+                    Task.Delay(rng.Next(0, 25)).Wait();
+                    client.Send(data);
+                }
+        }
 
             Console.WriteLine("[client] finished");
         }
@@ -92,15 +96,27 @@ namespace TestParallel
 
         static byte[] Md5(byte[] data)
         {
-            if (data == null || data.Length < 1) return null;
+            if (data == null || data.Length < 1)
+            {
+                return null;
+            }
+
             MD5 m = MD5.Create();
             return m.ComputeHash(data);
         }
 
         public static string BytesToHex(byte[] bytes)
         {
-            if (bytes == null) return null;
-            if (bytes.Length < 1) return null;
+            if (bytes == null)
+            {
+                return null;
+            }
+
+            if (bytes.Length < 1)
+            {
+                return null;
+            }
+
             return BitConverter.ToString(bytes).Replace("-", "");
         }
     }
