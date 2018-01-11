@@ -14,7 +14,6 @@ namespace TestMultiThread
         static Random rng;
         static byte[] data;
 
-        static WatsonTcpServer s;
         static WatsonTcpClient c;
 
         static void Main(string[] args)
@@ -23,13 +22,16 @@ namespace TestMultiThread
             data = InitByteArray(262144, 0x00);
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");
-            s = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false);
-            Thread.Sleep(3000);
 
-            c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
-            Console.WriteLine("Press ENTER to exit");
+            using (WatsonTcpServer server = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false))
+            {
+                Thread.Sleep(3000);
 
-            for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
+                c = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false);
+                Console.WriteLine("Press ENTER to exit");
+
+                for (int i = 0; i < clientThreads; i++) Task.Run(() => ClientTask());
+            }
 
             Console.ReadLine();
         }
