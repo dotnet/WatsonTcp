@@ -21,9 +21,8 @@ namespace WatsonTcp
         #endregion
 
         #region Private-Members
-
-        // Flag: Has Dispose already been called?
-        private bool disposed = false;
+         
+        private bool _Disposed = false;
 
         private string _SourceIp;
         private int _SourcePort;
@@ -224,7 +223,7 @@ namespace WatsonTcp
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposed)
+            if (_Disposed)
             {
                 return;
             }
@@ -255,7 +254,7 @@ namespace WatsonTcp
                 _Connected = false;
             }
 
-            disposed = true;
+            _Disposed = true;
         }
 
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)

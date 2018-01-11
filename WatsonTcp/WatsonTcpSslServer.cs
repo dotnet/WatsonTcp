@@ -24,9 +24,8 @@ namespace WatsonTcp
         #endregion
 
         #region Private-Members
-
-        // Flag: Has Dispose already been called?
-        private bool disposed = false;
+         
+        private bool _Disposed = false;
 
         private bool _Debug;
         private string _ListenerIp;
@@ -249,7 +248,7 @@ namespace WatsonTcp
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposed)
+            if (_Disposed)
             {
                 return;
             }
@@ -260,7 +259,7 @@ namespace WatsonTcp
                 _TokenSource.Dispose();
             }
 
-            disposed = true;
+            _Disposed = true;
         }
 
         private void Log(string msg)
@@ -352,7 +351,7 @@ namespace WatsonTcp
                         Task<bool> success = StartTls(client);
                         if (success.Result)
                         {
-                            FinaliseConnection(client);
+                            FinalizeConnection(client);
                         }
                     }, _Token);
                 }
@@ -439,13 +438,13 @@ namespace WatsonTcp
             return true;
         }
 
-        private void FinaliseConnection(ClientMetadata client)
+        private void FinalizeConnection(ClientMetadata client)
         {
             #region Add-to-Client-List
 
             if (!AddClient(client))
             {
-                Log("*** FinaliseConnection unable to add client " + client.IpPort);
+                Log("*** FinalizeConnection unable to add client " + client.IpPort);
                 client.Dispose();
                 return;
             }
@@ -457,7 +456,7 @@ namespace WatsonTcp
 
             #region Start-Data-Receiver
 
-            Log("*** FinaliseConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
+            Log("*** FinalizeConnection starting data receiver for " + client.IpPort + " (now " + activeCount + " clients)");
             if (_ClientConnected != null)
             {
                 Task.Run(() => _ClientConnected(client.IpPort));
