@@ -222,6 +222,14 @@ namespace WatsonTcp
             {
                 _TokenSource.Cancel();
                 _TokenSource.Dispose();
+
+                if (_Clients != null && _Clients.Count > 0)
+                {
+                    foreach (KeyValuePair<string, ClientMetadata> currMetadata in _Clients)
+                    {
+                        currMetadata.Value.Dispose();
+                    }
+                }
             }
 
             _Disposed = true;
