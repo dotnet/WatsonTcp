@@ -7,13 +7,18 @@
 
 A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data.  
 
+With release v1.1.7, Watson TCP has been targeted to both .NET Core 2.0 and .NET Framework 4.5.2.
+
 ## Test App
+
 A test project for both client and server are included which will help you understand and exercise the class library.
 
 ## SSL
+
 Two classes for each server and client are supplied, one without SSL support and one with.  The SSL server and client classes include fields for the PFX certificate file and password in the constructor.  An example certificate can be found in the TestSslClient and TestSslServer projects, which has a password of 'password'.
 
 ## Running under Mono
+
 Watson works well in Mono environments to the extent that we have tested it. It is recommended that when running under Mono, you execute the containing EXE using --server and after using the Mono Ahead-of-Time Compiler (AOT).  Note that TLS 1.2 is hard-coded, which may need to be downgraded to TLS in Mono environments.
 
 NOTE: Windows accepts '0.0.0.0' as an IP address representing any interface.  On Mac and Linux you must be specified ('127.0.0.1' is also acceptable, but '0.0.0.0' is NOT).
@@ -23,9 +28,11 @@ mono --server myapp.exe
 ```
 
 ## Contributions
+
 Thanks to @brudo for his contributions to add async support to WatsonTcp (pushed in v1.0.7).
 
 ## Example
+
 The following example shows a simple client and server example using WatsonTcp without SSL.
 
 ### Server
@@ -149,6 +156,7 @@ static bool ServerDisconnected()
 ```
 
 ## Example with SSL
+
 The examples above can be modified to use WatsonTcpSslServer and WatsonTcpSslClient as follows.  No other changes are needed.  Ensure that the certificate is exported as a PFX file and is resident in the directory of execution.
 
 ### Server

@@ -54,7 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WatsonTcp\WatsonTcp.csproj">
-      <Project>{d5b0d163-0754-45ab-b143-cbb2c0e708b8}</Project>
+      <Project>{716ccc25-bf6d-40fa-b256-daabca5f977b}</Project>
       <Name>WatsonTcp</Name>
     </ProjectReference>
   </ItemGroup>
