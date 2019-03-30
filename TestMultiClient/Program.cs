@@ -8,11 +8,12 @@ using System.Threading.Tasks;
 using WatsonTcp;
 using ConcurrentList;
 
-namespace TestMultiThread
+namespace TestMultiClient
 {
     class Program
     {
-        static int serverPort = 8000;
+        static int serverPort = 9000;
+        static WatsonTcpServer server = null;
         static int clientThreads = 16;
         static int numIterations = 1000;
         static int connectionCount = 0;
@@ -29,18 +30,21 @@ namespace TestMultiThread
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
 
             Console.WriteLine("Starting server");
-            using (WatsonTcpServer server = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false))
+            server = new WatsonTcpServer(null, serverPort);
+            server.ClientConnected = ServerClientConnected;
+            server.ClientDisconnected = ServerClientDisconnected;
+            server.MessageReceived = ServerMsgReceived;
+            server.Start();
+
+            Thread.Sleep(3000);
+
+            Console.WriteLine("Starting clients");
+            for (int i = 0; i < clientThreads; i++)
             {
-                Thread.Sleep(3000);
-
-                Console.WriteLine("Starting clients");
-                for (int i = 0; i < clientThreads; i++)
-                {
-                    Console.WriteLine("Starting client " + i);
-                    Task.Run(() => ClientTask());
-                }
+                Console.WriteLine("Starting client " + i);
+                Task.Run(() => ClientTask());
             }
-
+            
             Console.WriteLine("Press ENTER to exit");
             Console.ReadLine();
         }
@@ -48,8 +52,13 @@ namespace TestMultiThread
         static void ClientTask()
         {
             Console.WriteLine("ClientTask entering");
-            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false))
+            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
+                client.ServerConnected = ClientServerConnected;
+                client.ServerDisconnected = ClientServerDisconnected;
+                client.MessageReceived = ClientMsgReceived;
+                client.Start();
+
                 while (!clientsStarted)
                 {
                     Thread.Sleep(100);

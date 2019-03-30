@@ -12,14 +12,13 @@ namespace WatsonTcp
         #endregion
 
         #region Private-Members
+         
+        private bool _Disposed = false;
 
-        // Flag: Has Dispose already been called?
-        private bool disposed = false;
-
-        private TcpClient tcpClient;
-        private NetworkStream networkStream;
-        private SslStream sslStream;
-        private string ipPort;
+        private TcpClient _TcpClient;
+        private NetworkStream _NetworkStream;
+        private SslStream _SslStream;
+        private string _IpPort;
 
         #endregion
 
@@ -27,11 +26,11 @@ namespace WatsonTcp
 
         public ClientMetadata(TcpClient tcp)
         {
-            tcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
+            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
 
-            networkStream = tcp.GetStream();
+            _NetworkStream = tcp.GetStream();
 
-            ipPort = tcp.Client.RemoteEndPoint.ToString();
+            _IpPort = tcp.Client.RemoteEndPoint.ToString();
         }
 
         #endregion
@@ -46,23 +45,23 @@ namespace WatsonTcp
 
         public TcpClient TcpClient
         {
-            get { return tcpClient; }
+            get { return _TcpClient; }
         }
 
         public NetworkStream NetworkStream
         {
-            get { return networkStream; }
+            get { return _NetworkStream; }
         }
 
         public SslStream SslStream
         {
-            get { return sslStream; }
-            set { sslStream = value; }
+            get { return _SslStream; }
+            set { _SslStream = value; }
         }
 
         public string IpPort
         {
-            get { return ipPort; }
+            get { return _IpPort; }
         }
 
         #endregion
@@ -71,30 +70,30 @@ namespace WatsonTcp
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposed)
+            if (_Disposed)
             {
                 return;
             }
 
             if (disposing)
             {
-                if (sslStream != null)
+                if (_SslStream != null)
                 {
-                    sslStream.Close();
+                    _SslStream.Close();
                 }
 
-                if (networkStream != null)
+                if (_NetworkStream != null)
                 {
-                    networkStream.Close();
+                    _NetworkStream.Close();
                 }
 
-                if (tcpClient != null)
+                if (_TcpClient != null)
                 {
-                    tcpClient.Close();
+                    _TcpClient.Close();
                 }
             }
 
-            disposed = true;
+            _Disposed = true;
         }
 
         #endregion

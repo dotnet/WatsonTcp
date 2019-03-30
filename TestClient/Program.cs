@@ -2,22 +2,46 @@
 using System.Text;
 using WatsonTcp;
 
-namespace TestClientCore
+namespace TestClient
 {
     class TestClient
     {
         static string serverIp = "";
         static int serverPort = 0;
+        static bool useSsl = false;
+        static string certFile = "";
+        static string certPass = "";
+        static bool acceptInvalidCerts = true;
+        static bool mutualAuthentication = true;
+        static WatsonTcpClient client = null;
 
         static void Main(string[] args)
         {
-            Console.Write("Server IP    : ");
-            serverIp = Console.ReadLine();
+            serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
+            serverPort = Common.InputInteger("Server port:", 9000, true, false);
+            useSsl = Common.InputBoolean("Use SSL:", false);
 
-            Console.Write("Server Port  : ");
-            serverPort = Convert.ToInt32(Console.ReadLine());
+            if (!useSsl)
+            {
+                client = new WatsonTcpClient(serverIp, serverPort);
+            }
+            else
+            {
+                certFile = Common.InputString("Certificate file:", "test.pfx", false);
+                certPass = Common.InputString("Certificate password:", "password", false);
+                acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-            WatsonTcpClient client = new WatsonTcpClient(serverIp, serverPort, ServerConnected, ServerDisconnected, MessageReceived, true);
+                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.MutuallyAuthenticate = mutualAuthentication;
+            }
+
+            client.ServerConnected = ServerConnected;
+            client.ServerDisconnected = ServerDisconnected;
+            client.MessageReceived = MessageReceived;
+            // client.Debug = true;
+            client.Start();
 
             bool runForever = true;
             while (runForever)
@@ -42,6 +66,8 @@ namespace TestClientCore
                         Console.WriteLine("  dispose    dispose of the connection");
                         Console.WriteLine("  connect    connect to the server if not connected");
                         Console.WriteLine("  reconnect  disconnect if connected, then reconnect");
+                        Console.WriteLine("  auth       authenticate using preshared key");
+                        Console.WriteLine("  debug      enable/disable debug (currently " + client.Debug + ")");
                         break;
 
                     case "q":
@@ -71,7 +97,7 @@ namespace TestClientCore
                             break;
                         }
 
-                        client.SendAsync(Encoding.UTF8.GetBytes(userInput));
+                        bool success = client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
                         break;
 
                     case "status":
@@ -81,7 +107,7 @@ namespace TestClientCore
                         }
                         else
                         {
-                            Console.WriteLine("Connected: " + client.IsConnected());
+                            Console.WriteLine("Connected: " + client.Connected);
                         }
 
                         break;
@@ -91,23 +117,36 @@ namespace TestClientCore
                         break;
 
                     case "connect":
-                        if (client != null && client.IsConnected())
+                        if (client != null && client.Connected)
                         {
                             Console.WriteLine("Already connected");
                         }
                         else
                         {
-                            client = new WatsonTcpClient(serverIp, serverPort, ServerConnected, ServerDisconnected, MessageReceived, true);
+                            client = new WatsonTcpClient(serverIp, serverPort);
+                            client.ServerConnected = ServerConnected;
+                            client.ServerDisconnected = ServerDisconnected;
+                            client.MessageReceived = MessageReceived;
+                            client.Start(); 
                         }
                         break;
 
                     case "reconnect":
-                        if (client != null)
-                        {
-                            client.Dispose();
-                        }
+                        if (client != null) client.Dispose();
+                        client = new WatsonTcpClient(serverIp, serverPort);
+                        client.ServerConnected = ServerConnected;
+                        client.ServerDisconnected = ServerDisconnected;
+                        client.MessageReceived = MessageReceived;
+                        client.Start(); 
+                        break;
 
-                        client = new WatsonTcpClient(serverIp, serverPort, ServerConnected, ServerDisconnected, MessageReceived, true);
+                    case "auth":
+                        client.Authenticate(Common.InputString("Preshared key:", "12345678", false));
+                        break;
+
+                    case "debug":
+                        client.Debug = !client.Debug;
+                        Console.WriteLine("Debug set to: " + client.Debug);
                         break;
 
                     default:

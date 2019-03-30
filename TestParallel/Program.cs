@@ -13,6 +13,7 @@ namespace TestParallel
         static int numIterations = 10000;
         static Random rng;
         static byte[] data;
+        static WatsonTcpServer server;
 
         static void Main(string[] args)
         {
@@ -21,16 +22,19 @@ namespace TestParallel
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");
 
-            using (WatsonTcpServer server = new WatsonTcpServer(null, serverPort, ServerClientConnected, ServerClientDisconnected, ServerMsgReceived, false))
+            server = new WatsonTcpServer(null, serverPort);
+            server.ClientConnected = ServerClientConnected;
+            server.ClientDisconnected = ServerClientDisconnected;
+            server.MessageReceived = ServerMsgReceived;
+            server.Start();
+
+            Thread.Sleep(3000);
+
+            Console.WriteLine("Press ENTER to exit");
+
+            for (int i = 0; i < clientThreads; i++)
             {
-                Thread.Sleep(3000);
-
-                Console.WriteLine("Press ENTER to exit");
-
-                for (int i = 0; i < clientThreads; i++)
-                {
-                    Task.Run(() => ClientTask());
-                }
+                Task.Run(() => ClientTask());
             }
 
             Console.ReadLine();
@@ -38,14 +42,19 @@ namespace TestParallel
 
         static void ClientTask()
         {
-            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort, ClientServerConnected, ClientServerDisconnected, ClientMsgReceived, false))
+            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
+                client.ServerConnected = ClientServerConnected;
+                client.ServerDisconnected = ClientServerDisconnected;
+                client.MessageReceived = ClientMsgReceived;
+                client.Start();
+
                 for (int i = 0; i < numIterations; i++)
                 {
                     Task.Delay(rng.Next(0, 25)).Wait();
                     client.Send(data);
                 }
-        }
+            }
 
             Console.WriteLine("[client] finished");
         }

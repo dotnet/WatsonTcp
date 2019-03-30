@@ -1,37 +1,80 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using WatsonTcp.Message;
+
 namespace WatsonTcp
 {
     /// <summary>
-    /// Watson TCP client.
+    /// Watson TCP client, with or without SSL.
     /// </summary>
     public class WatsonTcpClient : IDisposable
     {
         #region Public-Members
 
+        /// <summary>
+        /// Enable or disable console debugging.
+        /// </summary>
+        public bool Debug = false;
+
+        /// <summary>
+        /// Function called when a message is received.  
+        /// A byte array containing the message data is passed to this function.
+        /// It is expected that 'true' will be returned.
+        /// </summary>
+        public Func<byte[], bool> MessageReceived = null;
+
+        /// <summary>
+        /// Function called when the client successfully connects to the server.
+        /// It is expected that 'true' will be returned.
+        /// </summary>
+        public Func<bool> ServerConnected = null;
+
+        /// <summary>
+        /// Function called when the client disconnects from the server.
+        /// It is expected that 'true' will be returned.
+        /// </summary>
+        public Func<bool> ServerDisconnected = null;
+
+        /// <summary>
+        /// Enable acceptance of SSL certificates from the server that cannot be validated.
+        /// </summary>
+        public bool AcceptInvalidCertificates = true;
+
+        /// <summary>
+        /// Require mutual authentication between the server and this client.
+        /// </summary>
+        public bool MutuallyAuthenticate = false;
+        
+        /// <summary>
+        /// Indicates whether or not the client is connected to the server.
+        /// </summary>
+        public bool Connected { get; private set; }
+
         #endregion
 
         #region Private-Members
-         
-        private bool _Disposed = false;
 
+        private bool _Disposed = false;
+        private Mode _Mode; 
         private string _SourceIp;
         private int _SourcePort;
         private string _ServerIp;
-        private int _ServerPort;
-        private bool _Debug;
+        private int _ServerPort; 
         private TcpClient _Client;
-        private bool _Connected;
-        private Func<byte[], bool> _MessageReceived = null;
-        private Func<bool> _ServerConnected = null;
-        private Func<bool> _ServerDisconnected = null;
 
+        private SslStream _Ssl;
+        private X509Certificate2 _SslCertificate;
+        private X509Certificate2Collection _SslCertificateCollection;
+        
         private readonly SemaphoreSlim _SendLock;
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
@@ -41,78 +84,53 @@ namespace WatsonTcp
         #region Constructors-and-Factories
 
         /// <summary>
-        /// Initialize the Watson TCP client.
+        /// Initialize the Watson TCP client without SSL.  Call Start() afterward to connect to the server.
         /// </summary>
         /// <param name="serverIp">The IP address or hostname of the server.</param>
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
-        /// <param name="serverConnected">Function to be called when the server connects.</param>
-        /// <param name="serverDisconnected">Function to be called when the connection is severed.</param>
-        /// <param name="messageReceived">Function to be called when a message is received.</param>
-        /// <param name="debug">Enable or debug logging messages.</param>
+        public WatsonTcpClient(
+            string serverIp,
+            int serverPort)
+        {
+            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp)); 
+            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
+
+            _Mode = Mode.Tcp;
+            _ServerIp = serverIp;
+            _ServerPort = serverPort;
+            _SendLock = new SemaphoreSlim(1);
+            _Ssl = null;
+        }
+         
+        /// <summary>
+        /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
+        /// </summary>
+        /// <param name="serverIp">The IP address or hostname of the server.</param>
+        /// <param name="serverPort">The TCP port on which the server is listening.</param>
+        /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
+        /// <param name="pfxCertPass">The password for the SSL certificate.</param>
         public WatsonTcpClient(
             string serverIp,
             int serverPort,
-            Func<bool> serverConnected,
-            Func<bool> serverDisconnected,
-            Func<byte[], bool> messageReceived,
-            bool debug)
+            string pfxCertFile,
+            string pfxCertPass)
         {
-            if (String.IsNullOrEmpty(serverIp))
-            {
-                throw new ArgumentNullException(nameof(serverIp));
-            }
+            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp)); 
+            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
 
-            if (serverPort < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(serverPort));
-            }
-
+            _Mode = Mode.Ssl;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
-
-            _ServerConnected = serverConnected;
-            _ServerDisconnected = serverDisconnected;
-            _MessageReceived = messageReceived ?? throw new ArgumentNullException(nameof(messageReceived));
-
-            _Debug = debug;
-
             _SendLock = new SemaphoreSlim(1);
+            _SslCertificate = null;
+            if (String.IsNullOrEmpty(pfxCertPass)) _SslCertificate = new X509Certificate2(pfxCertFile);
+            else _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
 
-            _Client = new TcpClient();
-            IAsyncResult ar = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
-            WaitHandle wh = ar.AsyncWaitHandle;
-
-            try
+            _SslCertificateCollection = new X509Certificate2Collection
             {
-                if (!ar.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
-                {
-                    _Client.Close();
-                    throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                }
+                _SslCertificate
+            };
 
-                _Client.EndConnect(ar);
-
-                _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
-                _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
-                _Connected = true;
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-            finally
-            {
-                wh.Close();
-            }
-
-            if (_ServerConnected != null)
-            {
-                Task.Run(() => _ServerConnected());
-            }
-
-            _TokenSource = new CancellationTokenSource();
-            _Token = _TokenSource.Token;
-            Task.Run(async () => await DataReceiver(_Token), _Token);
         }
 
         #endregion
@@ -129,6 +147,143 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Start the client and establish a connection to the server.
+        /// </summary>
+        public void Start()
+        {
+            _Client = new TcpClient();
+            IAsyncResult asyncResult = null;
+            WaitHandle waitHandle = null;
+
+            if (_Mode == Mode.Tcp)
+            {
+                #region TCP
+
+                Log("Watson TCP client connecting to " + _ServerIp + ":" + _ServerPort);
+                
+                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
+                waitHandle = asyncResult.AsyncWaitHandle;
+
+                try
+                {
+                    if (!asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
+                    {
+                        _Client.Close();
+                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
+                    }
+
+                    _Client.EndConnect(asyncResult);
+
+                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
+                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
+                    Connected = true;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    waitHandle.Close();
+                }
+
+                #endregion
+            }
+            else if (_Mode == Mode.Ssl)
+            {
+                #region SSL
+
+                Log("Watson TCP client connecting with SSL to " + _ServerIp + ":" + _ServerPort);
+                
+                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
+                waitHandle = asyncResult.AsyncWaitHandle;
+
+                try
+                {
+                    if (!asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
+                    {
+                        _Client.Close();
+                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
+                    }
+
+                    _Client.EndConnect(asyncResult);
+
+                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
+                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
+
+                    if (AcceptInvalidCertificates)
+                    {
+                        // accept invalid certs
+                        _Ssl = new SslStream(_Client.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                    }
+                    else
+                    {
+                        // do not accept invalid SSL certificates
+                        _Ssl = new SslStream(_Client.GetStream(), false);
+                    }
+
+                    _Ssl.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !AcceptInvalidCertificates);
+
+                    if (!_Ssl.IsEncrypted)
+                    {
+                        throw new AuthenticationException("Stream is not encrypted");
+                    }
+
+                    if (!_Ssl.IsAuthenticated)
+                    {
+                        throw new AuthenticationException("Stream is not authenticated");
+                    }
+
+                    if (MutuallyAuthenticate && !_Ssl.IsMutuallyAuthenticated)
+                    {
+                        throw new AuthenticationException("Mutual authentication failed");
+                    }
+
+                    Connected = true;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    waitHandle.Close();
+                } 
+
+                #endregion
+            }
+            else
+            {
+                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+            }
+            
+            if (ServerConnected != null)
+            {
+                Task.Run(() => ServerConnected());
+            }
+
+            _TokenSource = new CancellationTokenSource();
+            _Token = _TokenSource.Token;
+            Task.Run(async () => await DataReceiver(_Token), _Token);
+        }
+
+        /// <summary>
+        /// Send a pre-shared key to the server to authenticate.
+        /// </summary>
+        /// <param name="presharedKey">Up to 16-character string.</param>
+        public void Authenticate(string presharedKey)
+        {
+            if (String.IsNullOrEmpty(presharedKey)) throw new ArgumentNullException(nameof(presharedKey));
+            if (presharedKey.Length > 16) throw new ArgumentException("Preshared key length must be 16 or fewer characters");
+
+            presharedKey = presharedKey.PadRight(16, ' ');
+            WatsonMessage msg = new WatsonMessage(Encoding.UTF8.GetBytes(presharedKey), Debug);
+            msg.Status = MessageStatus.AuthRequired;
+            msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
+            Send(msg);
+        }
+
+        /// <summary>
         /// Send data to the server.
         /// </summary>
         /// <param name="data">Byte array containing data.</param>
@@ -136,6 +291,16 @@ namespace WatsonTcp
         public bool Send(byte[] data)
         {
             return MessageWrite(data);
+        }
+
+        /// <summary>
+        /// Send data to the server.
+        /// </summary>
+        /// <param name="msg">Populated message object.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(WatsonMessage msg)
+        {
+            return MessageWrite(msg);
         }
 
         /// <summary>
@@ -149,12 +314,13 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Determine whether or not the client is connected to the server.
+        /// Send data to the server asynchronously
         /// </summary>
-        /// <returns>Boolean indicating if the client is connected to the server.</returns>
-        public bool IsConnected()
+        /// <param name="msg">Populated message object.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(WatsonMessage msg)
         {
-            return _Connected;
+            return await MessageWriteAsync(msg);
         }
 
         #endregion
@@ -170,6 +336,8 @@ namespace WatsonTcp
 
             if (disposing)
             {
+                if (_Ssl != null) _Ssl.Close();  
+
                 if (_Client != null)
                 {
                     if (_Client.Connected)
@@ -181,7 +349,7 @@ namespace WatsonTcp
                         }
                     }
 
-                    _Client.Close();
+                    _Client.Close(); 
                 }
 
                 _TokenSource.Cancel();
@@ -189,15 +357,21 @@ namespace WatsonTcp
 
                 _SendLock.Dispose();
 
-                _Connected = false;
+                Connected = false;
             }
 
             _Disposed = true;
         }
+         
+        private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            // return true; // Allow untrusted certificates.
+            return AcceptInvalidCertificates;
+        }
 
         private void Log(string msg)
         {
-            if (_Debug)
+            if (Debug)
             {
                 Console.WriteLine(msg);
             }
@@ -215,17 +389,7 @@ namespace WatsonTcp
             Log(" = Exception StackTrace: " + e.StackTrace);
             Log("================================================================================");
         }
-
-        private string BytesToHex(byte[] data)
-        {
-            if (data == null || data.Length < 1)
-            {
-                return "(null)";
-            }
-
-            return BitConverter.ToString(data).Replace("-", "");
-        }
-
+         
         private async Task DataReceiver(CancellationToken? cancelToken=null)
         {
             try
@@ -236,7 +400,7 @@ namespace WatsonTcp
                 {
                     cancelToken?.ThrowIfCancellationRequested();
 
-                    #region Check-if-Client-Connected-to-Server
+                    #region Check-Connection
 
                     if (_Client == null)
                     {
@@ -249,19 +413,47 @@ namespace WatsonTcp
                         Log("*** DataReceiver server disconnected");
                         break;
                     }
+                     
+                    if (_Ssl != null && !_Ssl.CanRead)
+                    {
+                        Log("*** DataReceiver cannot read from SSL stream");
+                        break;
+                    }
 
                     #endregion
 
                     #region Read-Message-and-Handle
 
-                    byte[] data = await MessageReadAsync();
-                    if (data == null)
+                    WatsonMessage msg = null;
+
+                    if (_Ssl != null)
+                    {
+                        msg = new WatsonMessage(_Ssl, Debug);
+                        await msg.Build();
+                    }
+                    else
+                    {
+                        msg = new WatsonMessage(_Client.GetStream(), Debug);
+                        await msg.Build();
+                    }
+
+                    if (msg == null)
                     {
                         await Task.Delay(30);
                         continue;
                     }
 
-                    Task<bool> unawaited = Task.Run(() => _MessageReceived(data));
+                    if (msg.Status == MessageStatus.AuthSuccess)
+                    {
+                        Log("DataReceiver successfully authenticated");
+                    }
+
+                    if (msg.Status == MessageStatus.AuthRequired)
+                    {
+                        Log("DataReceiver received authentication request, please authenticate using pre-shared key");
+                    }
+
+                    Task<bool> unawaited = Task.Run(() => MessageReceived(msg.Data));
 
                     #endregion
                 }
@@ -278,463 +470,8 @@ namespace WatsonTcp
             }
             finally
             {
-                _Connected = false;
-                _ServerDisconnected?.Invoke();
-            }
-        }
-
-        private byte[] MessageRead()
-        {
-            string sourceIp = "";
-            int sourcePort = 0;
-
-            try
-            {
-                #region Check-for-Null-Values
-
-                if (_Client == null)
-                {
-                    Log("*** MessageRead null client supplied");
-                    return null;
-                }
-
-                if (!_Client.Connected)
-                {
-                    Log("*** MessageRead supplied client is not connected");
-                    return null;
-                }
-
-                #endregion
-
-                #region Variables
-
-                int bytesRead = 0;
-                int sleepInterval = 25;
-                int maxTimeout = 500;
-                int currentTimeout = 0;
-                bool timeout = false;
-
-                sourceIp = ((IPEndPoint)_Client.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)_Client.Client.RemoteEndPoint).Port;
-                NetworkStream ClientStream = null;
-
-                try
-                {
-                    ClientStream = _Client.GetStream();
-                }
-                catch (Exception e)
-                {
-                    Log("*** MessageRead disconnected while attaching to stream: " + e.Message);
-                    return null;
-                }
-
-                byte[] headerBytes;
-                string header = "";
-                long contentLength;
-                byte[] contentBytes;
-
-                #endregion
-
-                #region Read-Header
-
-                if (!ClientStream.CanRead && !ClientStream.DataAvailable)
-                {
-                    return null;
-                }
-
-                using (MemoryStream headerMs = new MemoryStream())
-                {
-                    #region Read-Header-Bytes
-
-                    byte[] headerBuffer = new byte[1];
-                    timeout = false;
-                    currentTimeout = 0;
-                    int read = 0;
-
-                    while ((read = ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length).Result) > 0)
-                    {
-                        if (read > 0)
-                        {
-                            headerMs.Write(headerBuffer, 0, read);
-                            bytesRead += read;
-                            currentTimeout = 0;
-
-                            if (bytesRead > 1)
-                            {
-                                // check if end of headers reached
-                                if (headerBuffer[0] == 58)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (currentTimeout >= maxTimeout)
-                            {
-                                timeout = true;
-                                break;
-                            }
-                            else
-                            {
-                                currentTimeout += sleepInterval;
-                                Task.Delay(sleepInterval).Wait();
-                            }
-                        }
-                    }
-
-                    if (timeout)
-                    {
-                        Log("*** MessageRead timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading header after reading " + bytesRead + " bytes");
-                        return null;
-                    }
-
-                    headerBytes = headerMs.ToArray();
-                    if (headerBytes == null || headerBytes.Length < 1)
-                    {
-                        return null;
-                    }
-
-                    #endregion
-
-                    #region Process-Header
-
-                    header = Encoding.UTF8.GetString(headerBytes);
-                    header = header.Replace(":", "");
-
-                    if (!Int64.TryParse(header, out contentLength))
-                    {
-                        Log("*** MessageRead malformed message from server (message header not an integer)");
-                        return null;
-                    }
-
-                    #endregion
-                }
-
-                #endregion
-
-                #region Read-Data
-
-                using (MemoryStream dataMs = new MemoryStream())
-                {
-                    long bytesRemaining = contentLength;
-                    timeout = false;
-                    currentTimeout = 0;
-
-                    int read = 0;
-                    byte[] buffer;
-                    long bufferSize = 2048;
-                    if (bufferSize > bytesRemaining)
-                    {
-                        bufferSize = bytesRemaining;
-                    }
-
-                    buffer = new byte[bufferSize];
-
-                    while ((read = ClientStream.ReadAsync(buffer, 0, buffer.Length).Result) > 0)
-                    {
-                        if (read > 0)
-                        {
-                            dataMs.Write(buffer, 0, read);
-                            bytesRead = bytesRead + read;
-                            bytesRemaining = bytesRemaining - read;
-
-                            // reduce buffer size if number of bytes remaining is
-                            // less than the pre-defined buffer size of 2KB
-                            if (bytesRemaining < bufferSize)
-                            {
-                                bufferSize = bytesRemaining;
-                                // Console.WriteLine("Adjusting buffer size to " + bytesRemaining);
-                            }
-
-                            buffer = new byte[bufferSize];
-
-                            // check if read fully
-                            if (bytesRemaining == 0)
-                            {
-                                break;
-                            }
-
-                            if (bytesRead == contentLength)
-                            {
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            if (currentTimeout >= maxTimeout)
-                            {
-                                timeout = true;
-                                break;
-                            }
-                            else
-                            {
-                                currentTimeout += sleepInterval;
-                                Task.Delay(sleepInterval).Wait();
-                            }
-                        }
-                    }
-
-                    if (timeout)
-                    {
-                        Log("*** MessageRead timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading content after reading " + bytesRead + " bytes");
-                        return null;
-                    }
-
-                    contentBytes = dataMs.ToArray();
-                }
-
-                #endregion
-
-                #region Check-Content-Bytes
-
-                if (contentBytes == null || contentBytes.Length < 1)
-                {
-                    Log("*** MessageRead no content read");
-                    return null;
-                }
-
-                if (contentBytes.Length != contentLength)
-                {
-                    Log("*** MessageRead content length " + contentBytes.Length + " bytes does not match header value of " + contentLength);
-                    return null;
-                }
-
-                #endregion
-
-                return contentBytes;
-            }
-            catch (Exception)
-            {
-                Log("*** MessageRead server disconnected");
-                return null;
-            }
-        }
-
-        private async Task<byte[]> MessageReadAsync()
-        {
-            string sourceIp = "";
-            int sourcePort = 0;
-
-            try
-            {
-                #region Check-for-Null-Values
-
-                if (_Client == null)
-                {
-                    Log("*** MessageReadAsync null client supplied");
-                    return null;
-                }
-
-                if (!_Client.Connected)
-                {
-                    Log("*** MessageReadAsync supplied client is not connected");
-                    return null;
-                }
-
-                #endregion
-
-                #region Variables
-
-                int bytesRead = 0;
-                int sleepInterval = 25;
-                int maxTimeout = 500;
-                int currentTimeout = 0;
-                bool timeout = false;
-
-                sourceIp = ((IPEndPoint)_Client.Client.RemoteEndPoint).Address.ToString();
-                sourcePort = ((IPEndPoint)_Client.Client.RemoteEndPoint).Port;
-                NetworkStream ClientStream = null;
-
-                try
-                {
-                    ClientStream = _Client.GetStream();
-                }
-                catch (Exception e)
-                {
-                    Log("*** MessageRead disconnected while attaching to stream: " + e.Message);
-                    return null;
-                }
-
-                byte[] headerBytes;
-                string header = "";
-                long contentLength;
-                byte[] contentBytes;
-
-                #endregion
-
-                #region Read-Header
-
-                if (!ClientStream.CanRead && !ClientStream.DataAvailable)
-                {
-                    return null;
-                }
-
-                using (MemoryStream headerMs = new MemoryStream())
-                {
-                    #region Read-Header-Bytes
-
-                    byte[] headerBuffer = new byte[1];
-                    timeout = false;
-                    currentTimeout = 0;
-                    int read = 0;
-
-                    while ((read = await ClientStream.ReadAsync(headerBuffer, 0, headerBuffer.Length)) > 0)
-                    {
-                        if (read > 0)
-                        {
-                            await headerMs.WriteAsync(headerBuffer, 0, read);
-                            bytesRead += read;
-                            currentTimeout = 0;
-
-                            if (bytesRead > 1)
-                            {
-                                // check if end of headers reached
-                                if (headerBuffer[0] == 58)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (currentTimeout >= maxTimeout)
-                            {
-                                timeout = true;
-                                break;
-                            }
-                            else
-                            {
-                                currentTimeout += sleepInterval;
-                                await Task.Delay(sleepInterval);
-                            }
-                        }
-                    }
-
-                    if (timeout)
-                    {
-                        Log("*** MessageRead timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading header after reading " + bytesRead + " bytes");
-                        return null;
-                    }
-
-                    headerBytes = headerMs.ToArray();
-                    if (headerBytes == null || headerBytes.Length < 1)
-                    {
-                        return null;
-                    }
-
-                    #endregion
-
-                    #region Process-Header
-
-                    header = Encoding.UTF8.GetString(headerBytes);
-                    header = header.Replace(":", "");
-
-                    if (!Int64.TryParse(header, out contentLength))
-                    {
-                        Log("*** MessageRead malformed message from server (message header not an integer)");
-                        return null;
-                    }
-
-                    #endregion
-                }
-
-                #endregion
-
-                #region Read-Data
-
-                using (MemoryStream dataMs = new MemoryStream())
-                {
-                    long bytesRemaining = contentLength;
-                    timeout = false;
-                    currentTimeout = 0;
-
-                    int read = 0;
-                    byte[] buffer;
-                    long bufferSize = 2048;
-                    if (bufferSize > bytesRemaining)
-                    {
-                        bufferSize = bytesRemaining;
-                    }
-
-                    buffer = new byte[bufferSize];
-
-                    while ((read = await ClientStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                    {
-                        if (read > 0)
-                        {
-                            await dataMs.WriteAsync(buffer, 0, read);
-                            bytesRead = bytesRead + read;
-                            bytesRemaining = bytesRemaining - read;
-
-                            // reduce buffer size if number of bytes remaining is
-                            // less than the pre-defined buffer size of 2KB
-                            if (bytesRemaining < bufferSize)
-                            {
-                                bufferSize = bytesRemaining;
-                            }
-
-                            buffer = new byte[bufferSize];
-
-                            // check if read fully
-                            if (bytesRemaining == 0)
-                            {
-                                break;
-                            }
-
-                            if (bytesRead == contentLength)
-                            {
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            if (currentTimeout >= maxTimeout)
-                            {
-                                timeout = true;
-                                break;
-                            }
-                            else
-                            {
-                                currentTimeout += sleepInterval;
-                                await Task.Delay(sleepInterval);
-                            }
-                        }
-                    }
-
-                    if (timeout)
-                    {
-                        Log("*** MessageReadAsync timeout " + currentTimeout + "ms/" + maxTimeout + "ms exceeded while reading content after reading " + bytesRead + " bytes");
-                        return null;
-                    }
-
-                    contentBytes = dataMs.ToArray();
-                }
-
-                #endregion
-
-                #region Check-Content-Bytes
-
-                if (contentBytes == null || contentBytes.Length < 1)
-                {
-                    Log("*** MessageRead no content read");
-                    return null;
-                }
-
-                if (contentBytes.Length != contentLength)
-                {
-                    Log("*** MessageRead content length " + contentBytes.Length + " bytes does not match header value of " + contentLength);
-                    return null;
-                }
-
-                #endregion
-
-                return contentBytes;
-            }
-            catch (Exception)
-            {
-                Log("*** MessageRead server disconnected");
-                return null;
+                Connected = false;
+                ServerDisconnected?.Invoke();
             }
         }
 
@@ -755,45 +492,28 @@ namespace WatsonTcp
 
                 #endregion
 
-                #region Format-Message
-
-                string header = "";
-                byte[] headerBytes;
-                byte[] message;
-
-                if (data == null || data.Length < 1)
-                {
-                    header += "0:";
-                }
-                else
-                {
-                    header += data.Length + ":";
-                }
-
-                headerBytes = Encoding.UTF8.GetBytes(header);
-                int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0)
-                {
-                    messageLen += data.Length;
-                }
-
-                message = new byte[messageLen];
-                Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
-
-                if (data != null && data.Length > 0)
-                {
-                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
-                }
-
-                #endregion
-
                 #region Send-Message
+
+                WatsonMessage msg = new WatsonMessage(data, Debug);
+                byte[] msgBytes = msg.ToBytes();
 
                 _SendLock.Wait();
                 try
                 {
-                    _Client.GetStream().Write(message, 0, message.Length);
-                    _Client.GetStream().Flush();
+                    if (_Mode == Mode.Tcp)
+                    {
+                        _Client.GetStream().Write(msgBytes, 0, msgBytes.Length);
+                        _Client.GetStream().Flush();
+                    }
+                    else if (_Mode == Mode.Ssl)
+                    {
+                        _Ssl.Write(msgBytes, 0, msgBytes.Length);
+                        _Ssl.Flush();
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                    }
                 }
                 finally
                 {
@@ -838,7 +558,95 @@ namespace WatsonTcp
             {
                 if (disconnectDetected)
                 {
-                    _Connected = false;
+                    Connected = false;
+                    Dispose();
+                }
+            }
+        }
+
+        private bool MessageWrite(WatsonMessage msg)
+        {
+            bool disconnectDetected = false;
+
+            try
+            {
+                #region Check-if-Connected
+
+                if (_Client == null)
+                {
+                    Log("MessageWrite client is null");
+                    disconnectDetected = true;
+                    return false;
+                }
+
+                #endregion
+
+                #region Send-Message
+                 
+                byte[] msgBytes = msg.ToBytes();
+
+                _SendLock.Wait();
+                try
+                {
+                    if (_Mode == Mode.Tcp)
+                    {
+                        _Client.GetStream().Write(msgBytes, 0, msgBytes.Length);
+                        _Client.GetStream().Flush();
+                    }
+                    else if (_Mode == Mode.Ssl)
+                    {
+                        _Ssl.Write(msgBytes, 0, msgBytes.Length);
+                        _Ssl.Flush();
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                    }
+                }
+                finally
+                {
+                    _SendLock.Release();
+                }
+
+                return true;
+
+                #endregion
+            }
+            catch (ObjectDisposedException ObjDispInner)
+            {
+                Log("*** MessageWrite server disconnected (obj disposed exception): " + ObjDispInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (SocketException SockInner)
+            {
+                Log("*** MessageWrite server disconnected (socket exception): " + SockInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (InvalidOperationException InvOpInner)
+            {
+                Log("*** MessageWrite server disconnected (invalid operation exception): " + InvOpInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (IOException IOInner)
+            {
+                Log("*** MessageWrite server disconnected (IO exception): " + IOInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (Exception e)
+            {
+                LogException("MessageWrite", e);
+                disconnectDetected = true;
+                return false;
+            }
+            finally
+            {
+                if (disconnectDetected)
+                {
+                    Connected = false;
                     Dispose();
                 }
             }
@@ -859,47 +667,32 @@ namespace WatsonTcp
                     return false;
                 }
 
-                #endregion
-
-                #region Format-Message
-
-                string header = "";
-                byte[] headerBytes;
-                byte[] message;
-
-                if (data == null || data.Length < 1)
-                {
-                    header += "0:";
-                }
-                else
-                {
-                    header += data.Length + ":";
-                }
-
-                headerBytes = Encoding.UTF8.GetBytes(header);
-                int messageLen = headerBytes.Length;
-                if (data != null && data.Length > 0)
-                {
-                    messageLen += data.Length;
-                }
-
-                message = new byte[messageLen];
-                Buffer.BlockCopy(headerBytes, 0, message, 0, headerBytes.Length);
-
-                if (data != null && data.Length > 0)
-                {
-                    Buffer.BlockCopy(data, 0, message, headerBytes.Length, data.Length);
-                }
-
-                #endregion
+                #endregion 
 
                 #region Send-Message
+
+                WatsonMessage msg = new WatsonMessage(data, Debug);
+                byte[] msgBytes = msg.ToBytes();
+
+                if (Debug) Log(msg.ToString());
 
                 await _SendLock.WaitAsync();
                 try
                 {
-                    _Client.GetStream().Write(message, 0, message.Length);
-                    _Client.GetStream().Flush();
+                    if (_Mode == Mode.Tcp)
+                    {
+                        await _Client.GetStream().WriteAsync(msgBytes, 0, msgBytes.Length);
+                        await _Client.GetStream().FlushAsync();
+                    }
+                    else if (_Mode == Mode.Ssl)
+                    {
+                        await _Ssl.WriteAsync(msgBytes, 0, msgBytes.Length);
+                        await _Ssl.FlushAsync();
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                    }
                 }
                 finally
                 {
@@ -944,7 +737,97 @@ namespace WatsonTcp
             {
                 if (disconnectDetected)
                 {
-                    _Connected = false;
+                    Connected = false;
+                    Dispose();
+                }
+            }
+        }
+
+        private async Task<bool> MessageWriteAsync(WatsonMessage msg)
+        {
+            bool disconnectDetected = false;
+
+            try
+            {
+                #region Check-if-Connected
+
+                if (_Client == null)
+                {
+                    Log("MessageWriteAsync client is null");
+                    disconnectDetected = true;
+                    return false;
+                }
+
+                #endregion 
+
+                #region Send-Message
+                
+                byte[] msgBytes = msg.ToBytes();
+
+                if (Debug) Log(msg.ToString());
+
+                await _SendLock.WaitAsync();
+                try
+                {
+                    if (_Mode == Mode.Tcp)
+                    {
+                        await _Client.GetStream().WriteAsync(msgBytes, 0, msgBytes.Length);
+                        await _Client.GetStream().FlushAsync();
+                    }
+                    else if (_Mode == Mode.Ssl)
+                    {
+                        await _Ssl.WriteAsync(msgBytes, 0, msgBytes.Length);
+                        await _Ssl.FlushAsync();
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                    }
+                }
+                finally
+                {
+                    _SendLock.Release();
+                }
+
+                return true;
+
+                #endregion
+            }
+            catch (ObjectDisposedException ObjDispInner)
+            {
+                Log("*** MessageWriteAsync server disconnected (obj disposed exception): " + ObjDispInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (SocketException SockInner)
+            {
+                Log("*** MessageWriteAsync server disconnected (socket exception): " + SockInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (InvalidOperationException InvOpInner)
+            {
+                Log("*** MessageWriteAsync server disconnected (invalid operation exception): " + InvOpInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (IOException IOInner)
+            {
+                Log("*** MessageWriteAsync server disconnected (IO exception): " + IOInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (Exception e)
+            {
+                LogException("MessageWriteAsync", e);
+                disconnectDetected = true;
+                return false;
+            }
+            finally
+            {
+                if (disconnectDetected)
+                {
+                    Connected = false;
                     Dispose();
                 }
             }
