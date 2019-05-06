@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net452</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageLicenseUrl>https://github.com/jchristn/WatsonTcp/blob/master/LICENSE.TXT</PackageLicenseUrl>
-    <PackageReleaseNotes>Breaking changes, major refactor, extensible framing to support future fields, authentication using pre-shared key</PackageReleaseNotes>
+    <PackageReleaseNotes>Breaking changes, stream support, please see the project site README.md for examples</PackageReleaseNotes>
   </PropertyGroup>
 
 </Project>

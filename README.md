@@ -7,21 +7,18 @@
 
 A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data.  
 
-## New in v1.2.x
+## New in v1.3.x
 
-- Breaking changes for assigning callbacks, various server/client class variables, and starting them
-- Consolidated SSL and non-SSL clients and servers into single classes for each
-- Retargeted test projects to both .NET Core and .NET Framework
-- Added more extensible framing support to later carry more metadata as needed
-- Added authentication via pre-shared key (set Server.PresharedKey class variable, and use Client.Authenticate() method)
+- Support for sending and receiving larger messages by using streams instead of byte arrays
+- Refer to ```TestServerStream``` and ```TestClientStream``` for a reference implementation.  You must set ```client.ReadDataStream = false``` and ```server.ReadDataStream = false``` and use the ```StreamReceived``` callback instead of ```MessageReceived```
 
-## Test App
+## Test Applications
 
-A test project for both client and server are included which will help you understand and exercise the class library.
+Test projects for both client and server are included which will help you understand and exercise the class library.
 
 ## SSL
 
-Two classes for each server and client are supplied, one without SSL support and one with.  The SSL server and client classes include fields for the PFX certificate file and password in the constructor.  An example certificate can be found in the TestSslClient and TestSslServer projects, which has a password of 'password'.
+WatsonTcp supports data exchange with or without SSL.  The server and client classes include constructors that allow you to include fields for the PFX certificate file and password.  An example certificate can be found in the test projects, which has a password of 'password'.
 
 ## Running under Mono
 
@@ -41,7 +38,7 @@ If you'd like to contribute, please jump right into the source code and create a
 
 ## Examples
 
-The following example shows a simple client and server example using WatsonTcp without SSL.
+The following examples show a simple client and server example using WatsonTcp without SSL.
 
 ### Server
 ```
@@ -202,7 +199,47 @@ client.MutuallyAuthenticate = true;
 client.Start();
 ```
 
+## Example with Streams
+
+Refer to the ```TestClientStream``` and ```TestServerStream``` projects for a full example
+```
+// server
+WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000);
+server.ClientConnected = ClientConnected;
+server.ClientDisconnected = ClientDisconnected;
+server.StreamReceived = StreamReceived;
+server.ReadDataStream = false;
+server.Start();
+
+static bool StreamReceived(string ipPort, long contentLength, Stream stream)
+{
+    // read contentLength bytes from the stream from client ipPort and process
+    return true;
+}
+
+// client
+WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
+client.ServerConnected = ServerConnected;
+client.ServerDisconnected = ServerDisconnected;
+client.StreamReceived = StreamReceived;
+client.ReadDataStream = false;
+client.Start();
+
+static bool StreamReceived(long contentLength, Stream stream)
+{
+    // read contentLength bytes from the stream and process
+    return true;
+}
+```
+
 ## Version History
+
+v1.2.x
+- Breaking changes for assigning callbacks, various server/client class variables, and starting them
+- Consolidated SSL and non-SSL clients and servers into single classes for each
+- Retargeted test projects to both .NET Core and .NET Framework
+- Added more extensible framing support to later carry more metadata as needed
+- Added authentication via pre-shared key (set Server.PresharedKey class variable, and use Client.Authenticate() method)
 
 v1.1.x
 - Re-targeted to both .NET Core 2.0 and .NET Framework 4.5.2

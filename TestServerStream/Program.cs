@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using WatsonTcp;
 
-namespace TestServer
+namespace TestServerStream
 {
-    class TestServer
+    class TestServerStream
     {
         static string serverIp = "";
         static int serverPort = 0;
@@ -24,7 +25,7 @@ namespace TestServer
 
             if (!useSsl)
             {
-                server = new WatsonTcpServer(serverIp, serverPort); 
+                server = new WatsonTcpServer(serverIp, serverPort);
             }
             else
             {
@@ -40,7 +41,8 @@ namespace TestServer
 
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
-            server.MessageReceived = MessageReceived;
+            server.StreamReceived = StreamReceived;
+            server.ReadDataStream = false;
 
             // server.Debug = true;
             server.Start();
@@ -51,9 +53,12 @@ namespace TestServer
                 Console.Write("Command [? for help]: ");
                 string userInput = Console.ReadLine();
 
+                byte[] data = null;
+                MemoryStream ms = null;
+                bool success = false;
+
                 List<string> clients;
                 string ipPort;
-                bool success = false;
 
                 if (String.IsNullOrEmpty(userInput)) continue;
 
@@ -65,7 +70,7 @@ namespace TestServer
                         Console.WriteLine("  q          quit");
                         Console.WriteLine("  cls        clear screen");
                         Console.WriteLine("  list       list clients");
-                        Console.WriteLine("  send       send message to client");
+                        Console.WriteLine("  send       send message to a client");
                         Console.WriteLine("  sendasync  send message to a client asynchronously");
                         Console.WriteLine("  remove     disconnect client");
                         Console.WriteLine("  psk        set preshared key");
@@ -102,9 +107,11 @@ namespace TestServer
                         if (String.IsNullOrEmpty(ipPort)) break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break; 
-                        success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
-                        Console.WriteLine(success);
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        data = Encoding.UTF8.GetBytes(userInput);
+                        ms = new MemoryStream(data);
+                        success = server.Send(ipPort, data.Length, ms);
+                        Console.WriteLine(success); 
                         break;
 
                     case "sendasync":
@@ -114,7 +121,9 @@ namespace TestServer
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput)).Result;
+                        data = Encoding.UTF8.GetBytes(userInput);
+                        ms = new MemoryStream(data);
+                        success = server.SendAsync(ipPort, data.Length, ms).Result;
                         Console.WriteLine(success);
                         break;
 
@@ -136,7 +145,7 @@ namespace TestServer
                     default:
                         break;
                 }
-            } 
+            }
         }
 
         static bool ClientConnected(string ipPort)
@@ -151,16 +160,60 @@ namespace TestServer
             return true;
         }
 
-        static bool MessageReceived(string ipPort, byte[] data)
+        static bool StreamReceived(string ipPort, long contentLength, Stream stream)
         {
-            string msg = "";
-            if (data != null && data.Length > 0)
+            try
             {
-                msg = Encoding.UTF8.GetString(data);
-            }
+                Console.Write("Stream from " + ipPort + " [" + contentLength + " bytes]: ");
 
-            Console.WriteLine("Message received from " + ipPort + ": " + msg);
-            return true;
+                int bytesRead = 0;
+                int bufferSize = 65536;
+                byte[] buffer = new byte[bufferSize];
+                long bytesRemaining = contentLength;
+
+                if (stream != null && stream.CanRead)
+                { 
+                    while (bytesRemaining > 0)
+                    { 
+                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        Console.WriteLine("Read " + bytesRead);
+
+                        if (bytesRead > 0)
+                        {
+                            byte[] consoleBuffer = new byte[bytesRead];
+                            Buffer.BlockCopy(buffer, 0, consoleBuffer, 0, bytesRead);
+                            Console.Write(Encoding.UTF8.GetString(consoleBuffer));
+                        }
+
+                        bytesRemaining -= bytesRead;
+                    }
+
+                    Console.WriteLine("");
+                }
+                else
+                {
+                    Console.WriteLine("[null]");
+                }
+                 
+                return true;
+            }
+            catch (Exception e)
+            {
+                LogException(e);
+                return false;
+            }
         }
+
+        static void LogException(Exception e)
+        {
+            Console.WriteLine("================================================================================");
+            Console.WriteLine(" = Exception Type: " + e.GetType().ToString());
+            Console.WriteLine(" = Exception Data: " + e.Data);
+            Console.WriteLine(" = Inner Exception: " + e.InnerException);
+            Console.WriteLine(" = Exception Message: " + e.Message);
+            Console.WriteLine(" = Exception Source: " + e.Source);
+            Console.WriteLine(" = Exception StackTrace: " + e.StackTrace);
+            Console.WriteLine("================================================================================");
+        } 
     }
 }
