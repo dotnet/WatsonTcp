@@ -192,5 +192,16 @@ namespace WatsonTcp
             return ret;
         }
 
+        public static void LogException(Exception e)
+        {
+            Console.WriteLine("================================================================================");
+            Console.WriteLine(" = Exception Type: " + e.GetType().ToString());
+            Console.WriteLine(" = Exception Data: " + e.Data);
+            Console.WriteLine(" = Inner Exception: " + e.InnerException);
+            Console.WriteLine(" = Exception Message: " + e.Message);
+            Console.WriteLine(" = Exception Source: " + e.Source);
+            Console.WriteLine(" = Exception StackTrace: " + e.StackTrace);
+            Console.WriteLine("================================================================================");
+        }
     }
 }
