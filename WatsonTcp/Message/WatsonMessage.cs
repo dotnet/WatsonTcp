@@ -279,7 +279,7 @@ namespace WatsonTcp.Message
             }
             catch (Exception e)
             {
-                if (_Debug) Console.WriteLine("Message build exception: " + e.Message);
+                if (_Debug) Common.LogException(e);
                 throw;
             }
             finally
