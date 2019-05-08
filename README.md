@@ -9,6 +9,11 @@ A simple C# async TCP server and client with integrated framing for reliable tra
 
 ## New in v1.3.x
 
+- Numerous fixes to authentication using preshared keys
+- Authentication callbacks in the client to handle authentication events
+  - ```AuthenticationRequested``` - authentication requested by the server, return the preshared key string (16 bytes)
+  - ```AuthenticationSucceeded``` - authentication has succeeded, return true
+  - ```AuthenticationFailure``` - authentication has failed, return true
 - Support for sending and receiving larger messages by using streams instead of byte arrays
 - Refer to ```TestServerStream``` and ```TestClientStream``` for a reference implementation.  You must set ```client.ReadDataStream = false``` and ```server.ReadDataStream = false``` and use the ```StreamReceived``` callback instead of ```MessageReceived```
 

@@ -47,6 +47,21 @@ namespace WatsonTcp
         public bool Debug = false;
 
         /// <summary>
+        /// Function called when authentication is requested from the server.  Expects the 16-byte preshared key.
+        /// </summary>
+        public Func<string> AuthenticationRequested = null;
+
+        /// <summary>
+        /// Function called when authentication has succeeded.  Expects a response of 'true'.
+        /// </summary>
+        public Func<bool> AuthenticationSucceeded = null;
+
+        /// <summary>
+        /// Function called when authentication has failed.  Expects a response of 'true'.
+        /// </summary>
+        public Func<bool> AuthenticationFailure = null;
+
+        /// <summary>
         /// Function called when a message is received.  
         /// A byte array containing the message data is passed to this function.
         /// It is expected that 'true' will be returned.
@@ -301,16 +316,17 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="presharedKey">Up to 16-character string.</param>
         public void Authenticate(string presharedKey)
-        {
+        { 
             if (String.IsNullOrEmpty(presharedKey)) throw new ArgumentNullException(nameof(presharedKey));
-            if (presharedKey.Length > 16) throw new ArgumentException("Preshared key length must be 16 or fewer characters");
+            if (presharedKey.Length != 16) throw new ArgumentException("Preshared key length must be 16 bytes.");
 
             presharedKey = presharedKey.PadRight(16, ' ');
-            WatsonMessage msg = new WatsonMessage(Encoding.UTF8.GetBytes(presharedKey), Debug);
-            msg.Status = MessageStatus.AuthRequired;
+            WatsonMessage msg = new WatsonMessage();
+            msg.Status = MessageStatus.AuthRequested;
             msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
-
-            Send(msg.ToHeaderBytes(0));
+            msg.Data = null;
+            msg.ContentLength = 0;
+            MessageWrite(msg);
         }
 
         /// <summary>
@@ -494,11 +510,28 @@ namespace WatsonTcp
                     if (msg.Status == MessageStatus.AuthSuccess)
                     {
                         Log("DataReceiver successfully authenticated");
+                        AuthenticationSucceeded?.Invoke();
+                        continue;
+                    }
+                    else if (msg.Status == MessageStatus.AuthFailure)
+                    {
+                        Log("DataReceiver authentication failed, please authenticate using pre-shared key");
+                        AuthenticationFailure?.Invoke();
+                        continue;
                     }
 
                     if (msg.Status == MessageStatus.AuthRequired)
                     {
-                        Log("DataReceiver received authentication request, please authenticate using pre-shared key");
+                        Log("DataReceiver authentication required, please authenticate using pre-shared key");
+                        if (AuthenticationRequested != null)
+                        {
+                            string psk = AuthenticationRequested();
+                            if (!String.IsNullOrEmpty(psk))
+                            {
+                                Authenticate(psk);
+                            }
+                        }
+                        continue;
                     }
 
                     if (ReadDataStream)
@@ -510,10 +543,7 @@ namespace WatsonTcp
                     }
                     else
                     {
-                        if (StreamReceived != null)
-                        {
-                            StreamReceived(msg.ContentLength, msg.DataStream);
-                        }
+                        StreamReceived?.Invoke(msg.ContentLength, msg.DataStream);
                     }
 
                     #endregion
@@ -523,16 +553,117 @@ namespace WatsonTcp
             }
             catch (OperationCanceledException)
             {
-                throw; // normal cancellation
+
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Log("*** DataReceiver server disconnected");
+                if (Debug)
+                {
+                    Log("*** DataReceiver server disconnected");
+                    Log(Common.SerializeJson(e));
+                }
             }
             finally
             {
                 Connected = false;
                 ServerDisconnected?.Invoke();
+            }
+        }
+
+        private bool MessageWrite(WatsonMessage msg)
+        {
+            bool disconnectDetected = false;
+            long dataLen = 0;
+            if (msg.Data != null) dataLen = msg.Data.Length;
+
+            try
+            {
+                #region Check-if-Connected
+
+                if (_Client == null)
+                {
+                    Log("MessageWrite client is null");
+                    disconnectDetected = true;
+                    return false;
+                }
+
+                #endregion
+
+                #region Send-Message
+                 
+                byte[] headerBytes = msg.ToHeaderBytes(dataLen);
+
+                _SendLock.Wait();
+                try
+                {
+                    if (_Mode == Mode.Tcp)
+                    {
+                        NetworkStream ns = _Client.GetStream();
+                        ns.Write(headerBytes, 0, headerBytes.Length);
+                        if (msg.Data != null && msg.Data.Length > 0) ns.Write(msg.Data, 0, msg.Data.Length);
+                        ns.Flush();
+                    }
+                    else if (_Mode == Mode.Ssl)
+                    {
+                        _Ssl.Write(headerBytes, 0, headerBytes.Length);
+                        if (msg.Data != null && msg.Data.Length > 0) _Ssl.Write(msg.Data, 0, msg.Data.Length);
+                        _Ssl.Flush();
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                    }
+
+                    string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes);
+                    if (msg.Data != null && msg.Data.Length > 0) logMessage += Encoding.UTF8.GetString(msg.Data);
+                    Log(logMessage);
+                }
+                finally
+                {
+                    _SendLock.Release();
+                }
+
+                return true;
+
+                #endregion
+            }
+            catch (ObjectDisposedException ObjDispInner)
+            {
+                Log("*** MessageWrite server disconnected (obj disposed exception): " + ObjDispInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (SocketException SockInner)
+            {
+                Log("*** MessageWrite server disconnected (socket exception): " + SockInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (InvalidOperationException InvOpInner)
+            {
+                Log("*** MessageWrite server disconnected (invalid operation exception): " + InvOpInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (IOException IOInner)
+            {
+                Log("*** MessageWrite server disconnected (IO exception): " + IOInner.Message);
+                disconnectDetected = true;
+                return false;
+            }
+            catch (Exception e)
+            {
+                Log(Common.SerializeJson(e));
+                disconnectDetected = true;
+                return false;
+            }
+            finally
+            {
+                if (disconnectDetected)
+                {
+                    Connected = false;
+                    Dispose();
+                }
             }
         }
 
@@ -580,6 +711,8 @@ namespace WatsonTcp
                     {
                         throw new ArgumentException("Unknown mode: " + _Mode.ToString());
                     }
+
+                    Log("MessageWrite sent " + Encoding.UTF8.GetString(headerBytes) + Encoding.UTF8.GetString(data));
                 }
                 finally
                 {

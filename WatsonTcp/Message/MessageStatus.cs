@@ -10,6 +10,7 @@ namespace WatsonTcp.Message
         Success,
         Failure,
         AuthRequired,
+        AuthRequested,
         AuthSuccess,
         AuthFailure
     }

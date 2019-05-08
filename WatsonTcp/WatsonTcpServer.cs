@@ -574,9 +574,11 @@ namespace WatsonTcp
                 _UnauthenticatedClients.TryAdd(client.IpPort, DateTime.Now);
 
                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
-                WatsonMessage authMsg = new WatsonMessage(data, Debug);
+                WatsonMessage authMsg = new WatsonMessage();
                 authMsg.Status = MessageStatus.AuthRequired;
-                Send(client.IpPort, authMsg.ToHeaderBytes(0));
+                authMsg.Data = null;
+                authMsg.ContentLength = 0;
+                MessageWrite(client, authMsg, null);
             }
 
             #endregion
@@ -651,7 +653,7 @@ namespace WatsonTcp
                             { 
                                 Log("*** DataReceiver message received from unauthenticated endpoint: " + client.IpPort);
 
-                                if (msg.Status == MessageStatus.AuthRequired)
+                                if (msg.Status == MessageStatus.AuthRequested)
                                 {
                                     // check preshared key 
                                     if (msg.PresharedKey != null && msg.PresharedKey.Length > 0)
@@ -664,7 +666,7 @@ namespace WatsonTcp
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
                                             WatsonMessage authMsg = new WatsonMessage(data, Debug);
                                             authMsg.Status = MessageStatus.AuthSuccess;
-                                            Send(client.IpPort, authMsg.ToHeaderBytes(0));
+                                            MessageWrite(client, authMsg, null);
                                             continue;
                                         }
                                         else
@@ -673,7 +675,7 @@ namespace WatsonTcp
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
                                             WatsonMessage authMsg = new WatsonMessage(data, Debug);
                                             authMsg.Status = MessageStatus.AuthFailure;
-                                            Send(client.IpPort, authMsg.ToHeaderBytes(0));
+                                            MessageWrite(client, authMsg, null);
                                             continue;
                                         }
                                     }
@@ -683,7 +685,7 @@ namespace WatsonTcp
                                         byte[] data = Encoding.UTF8.GetBytes("No authentication material");
                                         WatsonMessage authMsg = new WatsonMessage(data, Debug);
                                         authMsg.Status = MessageStatus.AuthFailure;
-                                        Send(client.IpPort, authMsg.ToHeaderBytes(0));
+                                        MessageWrite(client, authMsg, null);
                                         continue;
                                     }
                                 }
@@ -694,7 +696,7 @@ namespace WatsonTcp
                                     byte[] data = Encoding.UTF8.GetBytes("Authentication required");
                                     WatsonMessage authMsg = new WatsonMessage(data, Debug);
                                     authMsg.Status = MessageStatus.AuthRequired;
-                                    Send(client.IpPort, authMsg.ToHeaderBytes(0));
+                                    MessageWrite(client, authMsg, null);
                                     continue;
                                 }
                             }
@@ -710,7 +712,7 @@ namespace WatsonTcp
                         else
                         {
                             if (StreamReceived != null)
-                            {
+                            { 
                                 StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
                             }
                         }

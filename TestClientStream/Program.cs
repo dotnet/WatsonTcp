@@ -15,6 +15,7 @@ namespace TestClientStream
         static bool acceptInvalidCerts = true;
         static bool mutualAuthentication = true;
         static WatsonTcpClient client = null;
+        static string presharedKey = null;
 
         static void Main(string[] args)
         {
@@ -22,29 +23,7 @@ namespace TestClientStream
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
             useSsl = Common.InputBoolean("Use SSL:", false);
 
-            if (!useSsl)
-            {
-                client = new WatsonTcpClient(serverIp, serverPort);
-            }
-            else
-            {
-                certFile = Common.InputString("Certificate file:", "test.pfx", false);
-                certPass = Common.InputString("Certificate password:", "password", false);
-                acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
-                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
-
-                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
-                client.AcceptInvalidCertificates = acceptInvalidCerts;
-                client.MutuallyAuthenticate = mutualAuthentication;
-            }
-
-            client.ServerConnected = ServerConnected;
-            client.ServerDisconnected = ServerDisconnected;
-            client.StreamReceived = StreamReceived;
-            client.ReadDataStream = false;
-
-            // client.Debug = true;
-            client.Start();
+            InitializeClient();
 
             bool runForever = true;
             while (runForever)
@@ -73,7 +52,8 @@ namespace TestClientStream
                         Console.WriteLine("  dispose    dispose of the connection");
                         Console.WriteLine("  connect    connect to the server if not connected");
                         Console.WriteLine("  reconnect  disconnect if connected, then reconnect");
-                        Console.WriteLine("  auth       authenticate using preshared key");
+                        Console.WriteLine("  psk        set the preshared key");
+                        Console.WriteLine("  auth       authenticate using the preshared key");
                         Console.WriteLine("  debug      enable/disable debug (currently " + client.Debug + ")");
                         break;
 
@@ -145,8 +125,12 @@ namespace TestClientStream
                         client.Start();
                         break;
 
+                    case "psk":
+                        presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
+                        break;
+
                     case "auth":
-                        client.Authenticate(Common.InputString("Preshared key:", "12345678", false));
+                        client.Authenticate(presharedKey);
                         break;
 
                     case "debug":
@@ -202,6 +186,57 @@ namespace TestClientStream
                 LogException(e);
                 return false;
             }
+        }
+
+        static void InitializeClient()
+        {
+            if (!useSsl)
+            {
+                client = new WatsonTcpClient(serverIp, serverPort);
+            }
+            else
+            {
+                certFile = Common.InputString("Certificate file:", "test.pfx", false);
+                certPass = Common.InputString("Certificate password:", "password", false);
+                acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
+
+                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.MutuallyAuthenticate = mutualAuthentication;
+            }
+
+            client.AuthenticationFailure = AuthenticationFailure;
+            client.AuthenticationRequested = AuthenticationRequested;
+            client.AuthenticationSucceeded = AuthenticationSucceeded;
+            client.ServerConnected = ServerConnected;
+            client.ServerDisconnected = ServerDisconnected;
+            client.StreamReceived = StreamReceived;
+            client.ReadDataStream = false;
+            // client.Debug = true;
+            client.Start(); 
+        }
+
+        static string AuthenticationRequested()
+        {
+            Console.WriteLine("");
+            Console.WriteLine("");
+            Console.WriteLine("Server requests authentication");
+            Console.WriteLine("Press ENTER and THEN enter your preshared key");
+            if (String.IsNullOrEmpty(presharedKey)) presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
+            return presharedKey;
+        }
+
+        static bool AuthenticationSucceeded()
+        {
+            Console.WriteLine("Authentication succeeded");
+            return true;
+        }
+
+        static bool AuthenticationFailure()
+        {
+            Console.WriteLine("Authentication failed");
+            return true;
         }
 
         static bool ServerConnected()

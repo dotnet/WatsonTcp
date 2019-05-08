@@ -41,7 +41,6 @@ namespace TestServer
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
             server.MessageReceived = MessageReceived;
-
             // server.Debug = true;
             server.Start();
 
@@ -125,7 +124,7 @@ namespace TestServer
                         break;
 
                     case "psk":
-                        server.PresharedKey = Common.InputString("Preshared key:", "12345678", false);
+                        server.PresharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "debug":
