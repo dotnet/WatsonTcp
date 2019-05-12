@@ -204,7 +204,8 @@ namespace WatsonTcp
                 #region TCP
 
                 Log("Watson TCP client connecting to " + _ServerIp + ":" + _ServerPort);
-                
+
+                _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
                 waitHandle = asyncResult.AsyncWaitHandle;
 
@@ -384,20 +385,41 @@ namespace WatsonTcp
 
             if (disposing)
             {
-                if (_Ssl != null) _Ssl.Close();  
+                if (_Ssl != null)
+                {
+                    try
+                    {
+                        _Ssl.Close();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
 
                 if (_Client != null)
                 {
                     if (_Client.Connected)
                     {
-                        NetworkStream ns = _Client.GetStream();
-                        if (ns != null)
+                        try
                         {
-                            ns.Close();
+                            NetworkStream ns = _Client.GetStream();
+                            if (ns != null) ns.Close();
+                        }
+                        catch (Exception)
+                        {
+
                         }
                     }
 
-                    _Client.Close(); 
+                    try
+                    {
+                        _Client.Close();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
                 }
 
                 _TokenSource.Cancel();
@@ -555,6 +577,10 @@ namespace WatsonTcp
             {
 
             }
+            catch (ObjectDisposedException)
+            {
+
+            }
             catch (Exception e)
             {
                 if (Debug)
@@ -566,7 +592,7 @@ namespace WatsonTcp
             finally
             {
                 Connected = false;
-                ServerDisconnected?.Invoke();
+                ServerDisconnected?.Invoke(); 
             }
         }
 
