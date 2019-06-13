@@ -1,3 +1,5 @@
+![alt tag](https://github.com/jchristn/watsontcp/blob/master/assets/watson.ico)
+
 # Watson TCP
 
 [![][nuget-img]][nuget]
