@@ -600,22 +600,45 @@ namespace WatsonTcp
         {
             if (client.TcpClient.Connected)
             {
-                if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite)) 
-                    && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
+                byte[] tmp = new byte[1];
+                bool success = false;
+
+                lock (_SendLock)
                 {
-                    byte[] buffer = new byte[1];
-                    if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                    try
                     {
-                        return false;
+                        client.TcpClient.Client.Send(tmp, 0, 0);
+                        success = true;
                     }
-                    else
+                    catch (SocketException e)
                     {
-                        return true;
+                        if (e.NativeErrorCode.Equals(10035)) success = true;
                     }
+                }
+
+                if (success)
+                {
+                    return true;
                 }
                 else
                 {
-                    return false;
+                    if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
+                        && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
+                    {
+                        byte[] buffer = new byte[1];
+                        if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                        {
+                            return false;
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
             }
             else
