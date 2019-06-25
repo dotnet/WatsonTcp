@@ -603,25 +603,25 @@ namespace WatsonTcp
                 byte[] tmp = new byte[1];
                 bool success = false;
 
-                lock (_SendLock)
+                try
                 {
-                    try
+                    lock (_SendLock)
                     {
                         client.TcpClient.Client.Send(tmp, 0, 0);
                         success = true;
                     }
-                    catch (SocketException e)
-                    {
-                        if (e.NativeErrorCode.Equals(10035)) success = true;
-                    }
                 }
+                catch (SocketException e)
+                {
+                    if (e.NativeErrorCode.Equals(10035)) success = true;
+                } 
 
-                if (success)
+                if (success) return true;
+
+                try
                 {
-                    return true;
-                }
-                else
-                {
+                    _SendLock.Wait();
+
                     if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
                         && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
                     {
@@ -639,6 +639,10 @@ namespace WatsonTcp
                     {
                         return false;
                     }
+                }
+                finally
+                {
+                    _SendLock.Release();
                 }
             }
             else
