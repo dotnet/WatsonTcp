@@ -118,8 +118,8 @@ namespace WatsonTcp
         private SslStream _Ssl;
         private X509Certificate2 _SslCertificate;
         private X509Certificate2Collection _SslCertificateCollection;
-        
-        private readonly SemaphoreSlim _SendLock;
+
+        private SemaphoreSlim _SendLock;
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
 
@@ -143,7 +143,7 @@ namespace WatsonTcp
             _ServerIp = serverIp;
             _ServerPort = serverPort;
             _SendLock = new SemaphoreSlim(1);
-            _Ssl = null;
+            _Ssl = null; 
         }
          
         /// <summary>
@@ -173,8 +173,7 @@ namespace WatsonTcp
             _SslCertificateCollection = new X509Certificate2Collection
             {
                 _SslCertificate
-            };
-
+            }; 
         }
 
         #endregion
@@ -423,9 +422,7 @@ namespace WatsonTcp
                 }
 
                 _TokenSource.Cancel();
-                _TokenSource.Dispose();
-
-                _SendLock.Dispose();
+                _TokenSource.Dispose(); 
 
                 Connected = false;
             }
@@ -607,25 +604,20 @@ namespace WatsonTcp
             if (msg.Data != null) dataLen = msg.Data.Length;
 
             try
-            {
-                #region Check-if-Connected
-
+            { 
                 if (_Client == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
                     return false;
-                }
+                } 
 
-                #endregion
-
-                #region Send-Message
-                 
                 byte[] headerBytes = msg.ToHeaderBytes(dataLen);
 
-                _SendLock.Wait();
+                _SendLock.Wait(1);
+
                 try
-                {
+                { 
                     if (_Mode == Mode.Tcp)
                     {
                         NetworkStream ns = _Client.GetStream();
@@ -642,20 +634,16 @@ namespace WatsonTcp
                     else
                     {
                         throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
-
-                    string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes);
-                    if (msg.Data != null && msg.Data.Length > 0) logMessage += Encoding.UTF8.GetString(msg.Data);
-                    Log(logMessage);
+                    } 
                 }
                 finally
                 {
                     _SendLock.Release();
                 }
 
-                return true;
-
-                #endregion
+                string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes); 
+                Log(logMessage);
+                return true; 
             }
             catch (ObjectDisposedException ObjDispInner)
             {
@@ -699,98 +687,16 @@ namespace WatsonTcp
 
         private bool MessageWrite(byte[] data)
         {
-            bool disconnectDetected = false;
             long dataLen = 0;
-            if (data != null) dataLen = data.Length;
-
-            try
+            MemoryStream ms = new MemoryStream();
+            if (data != null && data.Length > 0)
             {
-                #region Check-if-Connected
-
-                if (_Client == null)
-                {
-                    Log("MessageWrite client is null");
-                    disconnectDetected = true;
-                    return false;
-                }
-
-                #endregion
-
-                #region Send-Message
-
-                WatsonMessage msg = new WatsonMessage(data, Debug);
-                byte[] headerBytes = msg.ToHeaderBytes(dataLen);
-
-                _SendLock.Wait();
-                try
-                {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        NetworkStream ns = _Client.GetStream();
-                        ns.Write(headerBytes, 0, headerBytes.Length);
-                        if (data != null && data.Length > 0) ns.Write(data, 0, data.Length);
-                        ns.Flush();
-                    }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        _Ssl.Write(headerBytes, 0, headerBytes.Length);
-                        if (data != null && data.Length > 0) _Ssl.Write(data, 0, data.Length);
-                        _Ssl.Flush();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
-
-                    Log("MessageWrite sent " + Encoding.UTF8.GetString(headerBytes) + Encoding.UTF8.GetString(data));
-                }
-                finally
-                {
-                    _SendLock.Release();
-                }
-
-                return true;
-
-                #endregion
+                dataLen = data.Length;
+                ms.Write(data, 0, data.Length);
+                ms.Seek(0, SeekOrigin.Begin);
             }
-            catch (ObjectDisposedException ObjDispInner)
-            {
-                Log("*** MessageWrite server disconnected (obj disposed exception): " + ObjDispInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (SocketException SockInner)
-            {
-                Log("*** MessageWrite server disconnected (socket exception): " + SockInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (InvalidOperationException InvOpInner)
-            {
-                Log("*** MessageWrite server disconnected (invalid operation exception): " + InvOpInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (IOException IOInner)
-            {
-                Log("*** MessageWrite server disconnected (IO exception): " + IOInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (Exception e)
-            {
-                LogException("MessageWrite", e);
-                disconnectDetected = true;
-                return false;
-            }
-            finally
-            {
-                if (disconnectDetected)
-                {
-                    Connected = false;
-                    Dispose();
-                }
-            }
+
+            return MessageWrite(dataLen, ms); 
         }
 
         private bool MessageWrite(long contentLength, Stream stream)
@@ -807,20 +713,14 @@ namespace WatsonTcp
             bool disconnectDetected = false;
 
             try
-            {
-                #region Check-if-Connected
-
+            { 
                 if (_Client == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
                     return false;
                 }
-
-                #endregion
-
-                #region Send-Message
-
+                 
                 WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
                 byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
@@ -828,12 +728,13 @@ namespace WatsonTcp
                 long bytesRemaining = contentLength;
                 byte[] buffer = new byte[_ReadStreamBufferSize];
 
-                _SendLock.Wait();
+                _SendLock.Wait(1);
+
                 try
                 {
                     if (_Mode == Mode.Tcp)
                     {
-                        NetworkStream ns = _Client.GetStream(); 
+                        NetworkStream ns = _Client.GetStream();
                         ns.Write(headerBytes, 0, headerBytes.Length);
 
                         if (contentLength > 0)
@@ -878,11 +779,11 @@ namespace WatsonTcp
                 finally
                 {
                     _SendLock.Release();
-                } 
+                }
 
+                string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes);
+                Log(logMessage);
                 return true;
-
-                #endregion
             }
             catch (ObjectDisposedException ObjDispInner)
             {
@@ -926,98 +827,16 @@ namespace WatsonTcp
 
         private async Task<bool> MessageWriteAsync(byte[] data)
         {
-            bool disconnectDetected = false;
             long dataLen = 0;
-            if (data != null) dataLen = data.Length;
-
-            try
+            MemoryStream ms = new MemoryStream();
+            if (data != null)
             {
-                #region Check-if-Connected
-
-                if (_Client == null)
-                {
-                    Log("MessageWriteAsync client is null");
-                    disconnectDetected = true;
-                    return false;
-                }
-
-                #endregion 
-
-                #region Send-Message
-
-                WatsonMessage msg = new WatsonMessage(data, Debug);
-                byte[] headerBytes = msg.ToHeaderBytes(dataLen);
-
-                if (Debug) Log(msg.ToString());
-
-                await _SendLock.WaitAsync();
-                try
-                {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        NetworkStream ns = _Client.GetStream();
-                        await ns.WriteAsync(headerBytes, 0, headerBytes.Length);
-                        if (data != null && data.Length > 0) await ns.WriteAsync(data, 0, data.Length);
-                        await ns.FlushAsync();
-                    }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        await _Ssl.WriteAsync(headerBytes, 0, headerBytes.Length);
-                        if (data != null && data.Length > 0) await _Ssl.WriteAsync(data, 0, data.Length);
-                        await _Ssl.FlushAsync();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
-                }
-                finally
-                {
-                    _SendLock.Release();
-                }
-
-                return true;
-
-                #endregion
+                dataLen = data.Length;
+                ms.Write(data, 0, data.Length);
+                ms.Seek(0, SeekOrigin.Begin);
             }
-            catch (ObjectDisposedException ObjDispInner)
-            {
-                Log("*** MessageWriteAsync server disconnected (obj disposed exception): " + ObjDispInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (SocketException SockInner)
-            {
-                Log("*** MessageWriteAsync server disconnected (socket exception): " + SockInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (InvalidOperationException InvOpInner)
-            {
-                Log("*** MessageWriteAsync server disconnected (invalid operation exception): " + InvOpInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (IOException IOInner)
-            {
-                Log("*** MessageWriteAsync server disconnected (IO exception): " + IOInner.Message);
-                disconnectDetected = true;
-                return false;
-            }
-            catch (Exception e)
-            {
-                LogException("MessageWriteAsync", e);
-                disconnectDetected = true;
-                return false;
-            }
-            finally
-            {
-                if (disconnectDetected)
-                {
-                    Connected = false;
-                    Dispose();
-                }
-            }
+
+            return await MessageWriteAsync(dataLen, ms); 
         }
 
         private async Task<bool> MessageWriteAsync(long contentLength, Stream stream)
@@ -1034,20 +853,14 @@ namespace WatsonTcp
             bool disconnectDetected = false;
 
             try
-            {
-                #region Check-if-Connected
-
+            { 
                 if (_Client == null)
                 {
                     Log("MessageWriteAsync client is null");
                     disconnectDetected = true;
                     return false;
                 }
-
-                #endregion
-
-                #region Send-Message
-
+                 
                 WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
                 byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
@@ -1056,6 +869,7 @@ namespace WatsonTcp
                 byte[] buffer = new byte[_ReadStreamBufferSize];
 
                 await _SendLock.WaitAsync();
+
                 try
                 {
                     if (_Mode == Mode.Tcp)
@@ -1107,9 +921,9 @@ namespace WatsonTcp
                     _SendLock.Release();
                 }
 
+                string logMessage = "MessageWriteAsync sent " + Encoding.UTF8.GetString(headerBytes);
+                Log(logMessage);
                 return true;
-
-                #endregion
             }
             catch (ObjectDisposedException ObjDispInner)
             {

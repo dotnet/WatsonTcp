@@ -602,25 +602,44 @@ namespace WatsonTcp
             {
                 byte[] tmp = new byte[1];
                 bool success = false;
+                bool sendLocked = false;
+                bool readLocked = false;
 
                 try
                 {
-                    lock (_SendLock)
-                    {
-                        client.TcpClient.Client.Send(tmp, 0, 0);
-                        success = true;
-                    }
+                    client.SendLock.Wait(1);
+                    sendLocked = true;
+                    client.TcpClient.Client.Send(tmp, 0, 0);
+                    success = true;
                 }
-                catch (SocketException e)
+                catch (ObjectDisposedException)
                 {
-                    if (e.NativeErrorCode.Equals(10035)) success = true;
+
+                }
+                catch (IOException)
+                {
+
+                }
+                catch (SocketException se)
+                {
+                    if (se.NativeErrorCode.Equals(10035)) success = true;
                 } 
+                catch (Exception e)
+                {
+                    Log("*** IsConnected " + client.IpPort + " exception using send: " + e.Message);
+                    success = false;
+                }
+                finally
+                {
+                    if (sendLocked) client.SendLock.Release();
+                }
 
                 if (success) return true;
 
                 try
                 {
-                    _SendLock.Wait();
+                    client.ReadLock.Wait(1);
+                    readLocked = true;
 
                     if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
                         && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
@@ -640,9 +659,14 @@ namespace WatsonTcp
                         return false;
                     }
                 }
+                catch (Exception e)
+                {
+                    Log("*** IsConnected " + client.IpPort + " exception using poll/peek: " + e.Message);
+                    return false;
+                } 
                 finally
                 {
-                    _SendLock.Release();
+                    if (readLocked) client.ReadLock.Release();
                 }
             }
             else
@@ -832,46 +856,16 @@ namespace WatsonTcp
 
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, byte[] data)
         {
-            if (client == null) throw new ArgumentNullException(nameof(client));
-            if (msg == null) throw new ArgumentNullException(nameof(msg));
-
             int dataLen = 0;
-            if (data != null) dataLen = data.Length;
-
-            byte[] headerBytes = msg.ToHeaderBytes(dataLen);
-
-            _SendLock.Wait();
-
-            try
+            MemoryStream ms = new MemoryStream();
+            if (data != null && data.Length > 0)
             {
-                if (_Mode == Mode.Tcp)
-                {
-                    client.NetworkStream.Write(headerBytes, 0, headerBytes.Length);
-                    if (dataLen > 0) client.NetworkStream.Write(data, 0, dataLen);
-                    client.NetworkStream.Flush();
-                }
-                else if (_Mode == Mode.Ssl)
-                {
-                    client.SslStream.Write(headerBytes, 0, headerBytes.Length);
-                    if (dataLen > 0) client.SslStream.Write(data, 0, dataLen);
-                    client.SslStream.Flush();
-                }
-                else
-                {
-                    throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                }
+                dataLen = data.Length;
+                ms.Write(data, 0, data.Length);
+                ms.Seek(0, SeekOrigin.Begin);
+            }
 
-                return true;
-            }
-            catch (Exception)
-            {
-                Log("*** MessageWrite " + client.IpPort + " disconnected due to exception");
-                return false;
-            }
-            finally
-            {
-                _SendLock.Release();
-            }
+            return MessageWrite(client, msg, dataLen, ms); 
         }
 
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
@@ -892,8 +886,8 @@ namespace WatsonTcp
             int bytesRead = 0;
             long bytesRemaining = contentLength;
             byte[] buffer = new byte[_ReadStreamBufferSize];
-
-            _SendLock.Wait();
+             
+            client.SendLock.Wait(1);
 
             try
             {
@@ -942,59 +936,29 @@ namespace WatsonTcp
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Log("*** MessageWrite " + client.IpPort + " disconnected due to exception");
+                Log("*** MessageWrite " + client.IpPort + " disconnected due to exception: " + e.Message);
                 return false;
             }
             finally
             {
-                _SendLock.Release();
+                client.SendLock.Release();
             }
         }
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, WatsonMessage msg, byte[] data)
-        {
-            if (client == null) throw new ArgumentNullException(nameof(client));
-            if (msg == null) throw new ArgumentNullException(nameof(msg));
-
+        { 
             int dataLen = 0;
-            if (data != null) dataLen = data.Length;
-
-            byte[] headerBytes = msg.ToHeaderBytes(dataLen);
-
-            await _SendLock.WaitAsync();
-
-            try
+            MemoryStream ms = new MemoryStream();
+            if (data != null && data.Length > 0)
             {
-                if (_Mode == Mode.Tcp)
-                {
-                    await client.NetworkStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-                    if (dataLen > 0) await client.NetworkStream.WriteAsync(data, 0, dataLen);
-                    await client.NetworkStream.FlushAsync();
-                }
-                else if (_Mode == Mode.Ssl)
-                {
-                    await client.SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-                    if (dataLen > 0) await client.SslStream.WriteAsync(data, 0, dataLen);
-                    await client.SslStream.FlushAsync();
-                }
-                else
-                {
-                    throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                }
+                dataLen = data.Length;
+                ms.Write(data, 0, data.Length);
+                ms.Seek(0, SeekOrigin.Begin);
+            }
 
-                return true;
-            }
-            catch (Exception)
-            {
-                Log("*** MessageWriteAsync " + client.IpPort + " disconnected due to exception");
-                return false;
-            }
-            finally
-            {
-                _SendLock.Release();
-            }
+            return await MessageWriteAsync(client, msg, dataLen, ms); 
         }
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
@@ -1016,7 +980,7 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             byte[] buffer = new byte[_ReadStreamBufferSize];
 
-            await _SendLock.WaitAsync();
+            client.SendLock.Wait(1);
 
             try
             {
@@ -1065,14 +1029,14 @@ namespace WatsonTcp
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Log("*** MessageWriteAsync " + client.IpPort + " disconnected due to exception");
+                Log("*** MessageWriteAsync " + client.IpPort + " disconnected due to exception: " + e.Message);
                 return false;
             }
             finally
             {
-                _SendLock.Release();
+                client.SendLock.Release();
             }
         }
 

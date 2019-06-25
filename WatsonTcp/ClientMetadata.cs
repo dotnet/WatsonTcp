@@ -2,46 +2,14 @@
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace WatsonTcp
 {
     public class ClientMetadata : IDisposable
     {
         #region Public-Members
-
-        #endregion
-
-        #region Private-Members
-         
-        private bool _Disposed = false;
-
-        private TcpClient _TcpClient;
-        private NetworkStream _NetworkStream;
-        private SslStream _SslStream;
-        private string _IpPort;
-
-        #endregion
-
-        #region Constructors-and-Factories
-
-        public ClientMetadata(TcpClient tcp)
-        {
-            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
-
-            _NetworkStream = tcp.GetStream();
-
-            _IpPort = tcp.Client.RemoteEndPoint.ToString();
-        }
-
-        #endregion
-
-        #region Public-Methods
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
 
         public TcpClient TcpClient
         {
@@ -62,6 +30,45 @@ namespace WatsonTcp
         public string IpPort
         {
             get { return _IpPort; }
+        }
+
+        public SemaphoreSlim ReadLock { get; set; }
+
+        public SemaphoreSlim SendLock { get; set; }
+
+        #endregion
+
+        #region Private-Members
+
+        private bool _Disposed = false;
+
+        private TcpClient _TcpClient;
+        private NetworkStream _NetworkStream;
+        private SslStream _SslStream;
+        private string _IpPort;
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        public ClientMetadata(TcpClient tcp)
+        {
+            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp)); 
+            _NetworkStream = tcp.GetStream(); 
+            _IpPort = tcp.Client.RemoteEndPoint.ToString();
+
+            ReadLock = new SemaphoreSlim(1);
+            SendLock = new SemaphoreSlim(1);
+        }
+
+        #endregion
+
+        #region Public-Methods
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         #endregion
@@ -92,6 +99,9 @@ namespace WatsonTcp
                     _TcpClient.Close();
                 }
             }
+
+            ReadLock.Dispose();
+            SendLock.Dispose();
 
             _Disposed = true;
         }
