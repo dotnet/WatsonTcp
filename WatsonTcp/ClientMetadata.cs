@@ -34,7 +34,7 @@ namespace WatsonTcp
 
         public SemaphoreSlim ReadLock { get; set; }
 
-        public SemaphoreSlim SendLock { get; set; }
+        public SemaphoreSlim WriteLock { get; set; }
 
         #endregion
 
@@ -58,7 +58,7 @@ namespace WatsonTcp
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
             ReadLock = new SemaphoreSlim(1);
-            SendLock = new SemaphoreSlim(1);
+            WriteLock = new SemaphoreSlim(1);
         }
 
         #endregion
@@ -101,7 +101,7 @@ namespace WatsonTcp
             }
 
             ReadLock.Dispose();
-            SendLock.Dispose();
+            WriteLock.Dispose();
 
             _Disposed = true;
         }

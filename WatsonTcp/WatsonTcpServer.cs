@@ -112,8 +112,7 @@ namespace WatsonTcp
         private int _ActiveClients;
         private ConcurrentDictionary<string, ClientMetadata> _Clients;
         private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients;
-
-        private readonly SemaphoreSlim _SendLock;
+         
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
 
@@ -154,8 +153,7 @@ namespace WatsonTcp
 
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
-            _SendLock = new SemaphoreSlim(1);
+            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>(); 
         }
         
         /// <summary>
@@ -203,8 +201,7 @@ namespace WatsonTcp
             _Token = _TokenSource.Token;
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
-            _SendLock = new SemaphoreSlim(1); 
+            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>(); 
         }
         
         #endregion
@@ -384,8 +381,7 @@ namespace WatsonTcp
                     }
                 }
             }
-
-            _SendLock.Dispose(); 
+             
             _Disposed = true;
         }
 
@@ -607,7 +603,7 @@ namespace WatsonTcp
 
                 try
                 {
-                    client.SendLock.Wait(1);
+                    client.WriteLock.Wait(1);
                     sendLocked = true;
                     client.TcpClient.Client.Send(tmp, 0, 0);
                     success = true;
@@ -631,7 +627,7 @@ namespace WatsonTcp
                 }
                 finally
                 {
-                    if (sendLocked) client.SendLock.Release();
+                    if (sendLocked) client.WriteLock.Release();
                 }
 
                 if (success) return true;
@@ -887,7 +883,7 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             byte[] buffer = new byte[_ReadStreamBufferSize];
              
-            client.SendLock.Wait(1);
+            client.WriteLock.Wait(1);
 
             try
             {
@@ -943,7 +939,7 @@ namespace WatsonTcp
             }
             finally
             {
-                client.SendLock.Release();
+                client.WriteLock.Release();
             }
         }
 
@@ -980,7 +976,7 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             byte[] buffer = new byte[_ReadStreamBufferSize];
 
-            client.SendLock.Wait(1);
+            client.WriteLock.Wait(1);
 
             try
             {
@@ -1036,7 +1032,7 @@ namespace WatsonTcp
             }
             finally
             {
-                client.SendLock.Release();
+                client.WriteLock.Release();
             }
         }
 

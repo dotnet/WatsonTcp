@@ -174,7 +174,7 @@ namespace WatsonTcp.Message
         }
 
         /// <summary>
-        /// Read from a TCP-based stream and construct a message.  Call Build() to populate.
+        /// Read from a stream and construct a message.  Call Build() to populate.
         /// </summary>
         /// <param name="stream">NetworkStream.</param>
         /// <param name="debug">Enable or disable console debugging.</param>
