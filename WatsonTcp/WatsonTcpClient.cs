@@ -581,11 +581,15 @@ namespace WatsonTcp
             {
 
             }
+            catch (IOException)
+            {
+
+            }
             catch (Exception e)
             {
                 if (Debug)
                 {
-                    Log("*** DataReceiver server disconnected");
+                    Log("*** DataReceiver server disconnected unexpectedly");
                     Log(Common.SerializeJson(e));
                 }
             }
