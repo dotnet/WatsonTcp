@@ -408,6 +408,7 @@
                 {
                     Console.WriteLine(Common.SerializeJson(e));
                 }
+
                 throw e;
             }
             finally
@@ -711,6 +712,7 @@
                     Array.Reverse(ca);
                     ret += new string(ca) + " ";
                 }
+
                 return ret;
             }
             else

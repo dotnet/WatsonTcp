@@ -125,6 +125,7 @@
 
                             client.Start();
                         }
+
                         break;
 
                     case "reconnect":

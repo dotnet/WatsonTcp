@@ -609,6 +609,7 @@
                                 Authenticate(psk);
                             }
                         }
+
                         continue;
                     }
 
