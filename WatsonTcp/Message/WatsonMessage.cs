@@ -226,8 +226,7 @@
                     byte[] msgLengthBytes = msgLengthMs.ToArray();
                     if (msgLengthBytes == null || msgLengthBytes.Length < 1) return false;
                     string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", "");
-                    long length;
-                    Int64.TryParse(msgLengthString, out length);
+                    Int64.TryParse(msgLengthString, out long length);
                     Length = length;
 
                     if (_Debug) Console.WriteLine("Message payload length: " + Length + " bytes");
@@ -304,8 +303,7 @@
                     if (msgLengthBytes == null || msgLengthBytes.Length < 1) return false;
                     string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", "");
 
-                    long length;
-                    Int64.TryParse(msgLengthString, out length);
+                    Int64.TryParse(msgLengthString, out long length);
                     Length = length;
 
                     if (_Debug) Console.WriteLine("Message payload length: " + Length + " bytes");

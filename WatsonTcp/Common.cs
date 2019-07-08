@@ -146,8 +146,7 @@
                     return defaultAnswer;
                 }
 
-                int ret = 0;
-                if (!Int32.TryParse(userInput, out ret))
+                if (!Int32.TryParse(userInput, out int ret))
                 {
                     Console.WriteLine("Please enter a valid integer.");
                     continue;
