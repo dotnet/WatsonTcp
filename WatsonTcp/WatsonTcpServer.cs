@@ -441,10 +441,7 @@
                     {
                         #region Tcp
 
-                        Task unawaited = Task.Run(() =>
-                        {
-                            FinalizeConnection(client);
-                        }, _Token);
+                        Task unawaited = Task.Run(() => FinalizeConnection(client), _Token);
 
                         #endregion
                     }
