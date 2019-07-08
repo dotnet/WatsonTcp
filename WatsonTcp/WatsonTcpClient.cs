@@ -313,7 +313,6 @@
                         throw new AuthenticationException("Mutual authentication failed");
                     }
 
-
                     Connected = true;
                 }
                 catch (Exception)
