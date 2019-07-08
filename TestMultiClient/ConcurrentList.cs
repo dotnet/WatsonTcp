@@ -46,7 +46,7 @@
             {
                 if (index < 0 || index >= _count)
                 {
-                    throw new ArgumentOutOfRangeException("index");
+                    throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
                 int arrayIndex = GetArrayIndex(index + 1);
@@ -92,7 +92,7 @@
         {
             if (array == null)
             {
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array));
             }
 
             int count = _count;
