@@ -43,10 +43,10 @@
             }
             catch (Exception e)
             {
-                Console.WriteLine("");
+                Console.WriteLine(string.Empty);
                 Console.WriteLine("Exception while deserializing:");
                 Console.WriteLine(json);
-                Console.WriteLine("");
+                Console.WriteLine(string.Empty);
                 throw e;
             }
         }

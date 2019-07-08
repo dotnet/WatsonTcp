@@ -7,12 +7,12 @@
 
     internal class TestServer
     {
-        private static string serverIp = "";
+        private static string serverIp = string.Empty;
         private static int serverPort = 0;
         private static bool useSsl = false;
         private static WatsonTcpServer server = null;
-        private static string certFile = "";
-        private static string certPass = "";
+        private static string certFile = string.Empty;
+        private static string certPass = string.Empty;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
 
@@ -154,7 +154,7 @@
 
         private static bool MessageReceived(string ipPort, byte[] data)
         {
-            string msg = "";
+            string msg = string.Empty;
             if (data != null && data.Length > 0)
             {
                 msg = Encoding.UTF8.GetString(data);

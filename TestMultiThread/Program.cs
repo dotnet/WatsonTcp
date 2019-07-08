@@ -131,7 +131,7 @@
                 return null;
             }
 
-            return BitConverter.ToString(bytes).Replace("-", "");
+            return BitConverter.ToString(bytes).Replace("-", string.Empty);
         }
     }
 }

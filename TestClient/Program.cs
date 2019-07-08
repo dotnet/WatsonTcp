@@ -6,11 +6,11 @@
 
     internal class TestClient
     {
-        private static string serverIp = "";
+        private static string serverIp = string.Empty;
         private static int serverPort = 0;
         private static bool useSsl = false;
-        private static string certFile = "";
-        private static string certPass = "";
+        private static string certFile = string.Empty;
+        private static string certPass = string.Empty;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
         private static WatsonTcpClient client = null;
@@ -181,8 +181,8 @@
 
         private static string AuthenticationRequested()
         {
-            Console.WriteLine("");
-            Console.WriteLine("");
+            Console.WriteLine(string.Empty);
+            Console.WriteLine(string.Empty);
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
             if (String.IsNullOrEmpty(presharedKey)) presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
