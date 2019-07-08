@@ -15,8 +15,8 @@
 
         public SslStream SslStream
         {
-            get { return _SslStream; }
-            set { _SslStream = value; }
+            get => _SslStream;
+            set => _SslStream = value;
         }
 
         public string IpPort => _IpPort;

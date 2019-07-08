@@ -223,8 +223,8 @@
 
         T IList<T>.this[int index]
         {
-            get { return this[index]; }
-            set { throw new NotSupportedException(); }
+            get => this[index];
+            set => throw new NotSupportedException();
         }
 
         void IList<T>.Insert(int index, T item)
@@ -255,8 +255,8 @@
 
         object IList.this[int index]
         {
-            get { return this[index]; }
-            set { throw new NotSupportedException(); }
+            get => this[index];
+            set => throw new NotSupportedException();
         }
 
         void IList.RemoveAt(int index)

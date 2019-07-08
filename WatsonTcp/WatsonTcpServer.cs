@@ -33,13 +33,11 @@
         /// </summary>
         public int ReadStreamBufferSize
         {
-            get
-            {
-                return _ReadStreamBufferSize;
-            }
+            get => _ReadStreamBufferSize;
             set
             {
-                if (value < 1) throw new ArgumentException("Read stream buffer size must be greater than zero.");
+                if (value < 1)
+                    throw new ArgumentException("Read stream buffer size must be greater than zero.");
                 _ReadStreamBufferSize = value;
             }
         }

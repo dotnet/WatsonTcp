@@ -36,13 +36,11 @@
         /// </summary>
         internal byte[] PresharedKey
         {
-            get
-            {
-                return _PresharedKey;
-            }
+            get => _PresharedKey;
             set
             {
-                if (value != null && value.Length != 16) throw new ArgumentException("PresharedKey must be 16 bytes.");
+                if (value != null && value.Length != 16)
+                    throw new ArgumentException("PresharedKey must be 16 bytes.");
                 _PresharedKey = new byte[16];
                 Buffer.BlockCopy(value, 0, _PresharedKey, 0, 16);
                 HeaderFields[0] = true;
@@ -54,10 +52,7 @@
         /// </summary>
         internal MessageStatus Status
         {
-            get
-            {
-                return _Status;
-            }
+            get => _Status;
             set
             {
                 _Status = value;
@@ -80,13 +75,11 @@
         /// </summary>
         internal int ReadStreamBuffer
         {
-            get
-            {
-                return _ReadStreamBuffer;
-            }
+            get => _ReadStreamBuffer;
             set
             {
-                if (value < 1) throw new ArgumentException("ReadStreamBuffer must be greater than zero bytes.");
+                if (value < 1)
+                    throw new ArgumentException("ReadStreamBuffer must be greater than zero bytes.");
                 _ReadStreamBuffer = value;
             }
         }
