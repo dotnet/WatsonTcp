@@ -8,12 +8,12 @@
 
     internal class TestServerStream
     {
-        private static string serverIp = string.Empty;
+        private static string serverIp = String.Empty;
         private static int serverPort = 0;
         private static bool useSsl = false;
         private static WatsonTcpServer server = null;
-        private static string certFile = string.Empty;
-        private static string certPass = string.Empty;
+        private static string certFile = String.Empty;
+        private static string certPass = String.Empty;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
 
@@ -189,7 +189,7 @@
                         bytesRemaining -= bytesRead;
                     }
 
-                    Console.WriteLine(string.Empty);
+                    Console.WriteLine(String.Empty);
                 }
                 else
                 {

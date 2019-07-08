@@ -225,7 +225,7 @@
 
                     byte[] msgLengthBytes = msgLengthMs.ToArray();
                     if (msgLengthBytes == null || msgLengthBytes.Length < 1) return false;
-                    string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", string.Empty);
+                    string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", String.Empty);
                     Int64.TryParse(msgLengthString, out long length);
                     Length = length;
 
@@ -301,7 +301,7 @@
 
                     byte[] msgLengthBytes = msgLengthMs.ToArray();
                     if (msgLengthBytes == null || msgLengthBytes.Length < 1) return false;
-                    string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", string.Empty);
+                    string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", String.Empty);
 
                     Int64.TryParse(msgLengthString, out long length);
                     Length = length;
@@ -530,14 +530,14 @@
             if (fieldType == FieldType.Int32)
             {
                 int intVar = Convert.ToInt32(data);
-                string lengthVar = string.Empty;
+                string lengthVar = String.Empty;
                 for (int i = 0; i < maxLength; i++) lengthVar += "0";
                 return Encoding.UTF8.GetBytes(intVar.ToString(lengthVar));
             }
             else if (fieldType == FieldType.Int64)
             {
                 long longVar = Convert.ToInt64(data);
-                string lengthVar = string.Empty;
+                string lengthVar = String.Empty;
                 for (int i = 0; i < maxLength; i++) lengthVar += "0";
                 return Encoding.UTF8.GetBytes(longVar.ToString(lengthVar));
             }

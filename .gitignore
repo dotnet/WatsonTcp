@@ -267,3 +267,4 @@ __pycache__/
 # tools/
 
 /.editorconfig
+/WatsonTcp.ruleset
