@@ -27,11 +27,19 @@
         public MessageField(int bitNumber, string name, FieldType fieldType, int length)
         {
             if (bitNumber < 0)
+            {
                 throw new ArgumentException("Invalid bit number.");
+            }
+
             if (String.IsNullOrEmpty(name))
+            {
                 throw new ArgumentNullException(nameof(name));
+            }
+
             if (length < 0)
+            {
                 throw new ArgumentException("Invalid length.");
+            }
 
             BitNumber = bitNumber;
             Name = name;

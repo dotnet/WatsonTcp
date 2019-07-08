@@ -69,7 +69,10 @@
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput))
+                        {
                             break;
+                        }
+
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = client.Send(data.Length, ms);
@@ -80,7 +83,10 @@
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput))
+                        {
                             break;
+                        }
+
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = client.SendAsync(data.Length, ms).Result;
@@ -123,7 +129,10 @@
 
                     case "reconnect":
                         if (client != null)
+                        {
                             client.Dispose();
+                        }
+
                         client = new WatsonTcpClient(serverIp, serverPort)
                         {
                             ServerConnected = ServerConnected,
@@ -235,7 +244,10 @@
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
             if (String.IsNullOrEmpty(presharedKey))
+            {
                 presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
+            }
+
             return presharedKey;
         }
 

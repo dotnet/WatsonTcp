@@ -62,7 +62,9 @@
                 string ipPort;
 
                 if (String.IsNullOrEmpty(userInput))
+                {
                     continue;
+                }
 
                 switch (userInput)
                 {
@@ -107,11 +109,17 @@
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
                         if (String.IsNullOrEmpty(ipPort))
+                        {
                             break;
+                        }
+
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput))
+                        {
                             break;
+                        }
+
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = server.Send(ipPort, data.Length, ms);
@@ -122,11 +130,17 @@
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
                         if (String.IsNullOrEmpty(ipPort))
+                        {
                             break;
+                        }
+
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput))
+                        {
                             break;
+                        }
+
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = server.SendAsync(ipPort, data.Length, ms).Result;

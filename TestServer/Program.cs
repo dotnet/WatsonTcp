@@ -57,7 +57,9 @@
                 bool success = false;
 
                 if (String.IsNullOrEmpty(userInput))
+                {
                     continue;
+                }
 
                 switch (userInput)
                 {
@@ -102,11 +104,17 @@
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
                         if (String.IsNullOrEmpty(ipPort))
+                        {
                             break;
+                        }
+
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput))
+                        {
                             break;
+                        }
+
                         success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
                         Console.WriteLine(success);
                         break;
@@ -115,11 +123,17 @@
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
                         if (String.IsNullOrEmpty(ipPort))
+                        {
                             break;
+                        }
+
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput))
+                        {
                             break;
+                        }
+
                         success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput)).Result;
                         Console.WriteLine(success);
                         break;
