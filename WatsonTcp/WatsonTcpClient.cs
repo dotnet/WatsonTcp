@@ -62,7 +62,7 @@ namespace WatsonTcp
         public Func<bool> AuthenticationFailure = null;
 
         /// <summary>
-        /// Function called when a message is received.  
+        /// Function called when a message is received.
         /// A byte array containing the message data is passed to this function.
         /// It is expected that 'true' will be returned.
         /// </summary>
@@ -96,7 +96,7 @@ namespace WatsonTcp
         /// Require mutual authentication between the server and this client.
         /// </summary>
         public bool MutuallyAuthenticate = false;
-        
+
         /// <summary>
         /// Indicates whether or not the client is connected to the server.
         /// </summary>
@@ -108,13 +108,13 @@ namespace WatsonTcp
 
         private bool _Disposed = false;
         private int _ReadStreamBufferSize = 65536;
-        private Mode _Mode; 
+        private Mode _Mode;
         private string _SourceIp;
         private int _SourcePort;
         private string _ServerIp;
-        private int _ServerPort; 
+        private int _ServerPort;
         private TcpClient _Client;
-        private NetworkStream _TcpStream;  
+        private NetworkStream _TcpStream;
         private SslStream _SslStream;
 
         private X509Certificate2 _SslCertificate;
@@ -139,7 +139,7 @@ namespace WatsonTcp
             string serverIp,
             int serverPort)
         {
-            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp)); 
+            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
 
             _Mode = Mode.Tcp;
@@ -147,9 +147,9 @@ namespace WatsonTcp
             _ServerPort = serverPort;
             _WriteLock = new SemaphoreSlim(1);
             _ReadLock = new SemaphoreSlim(1);
-            _SslStream = null; 
+            _SslStream = null;
         }
-         
+
         /// <summary>
         /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
         /// </summary>
@@ -163,7 +163,7 @@ namespace WatsonTcp
             string pfxCertFile,
             string pfxCertPass)
         {
-            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp)); 
+            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
 
             _Mode = Mode.Ssl;
@@ -179,7 +179,7 @@ namespace WatsonTcp
             _SslCertificateCollection = new X509Certificate2Collection
             {
                 _SslCertificate
-            }; 
+            };
         }
 
         #endregion
@@ -247,7 +247,7 @@ namespace WatsonTcp
                 #region SSL
 
                 Log("Watson TCP client connecting with SSL to " + _ServerIp + ":" + _ServerPort);
-                
+
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
                 waitHandle = asyncResult.AsyncWaitHandle;
 
@@ -302,7 +302,7 @@ namespace WatsonTcp
                 finally
                 {
                     waitHandle.Close();
-                } 
+                }
 
                 #endregion
             }
@@ -310,7 +310,7 @@ namespace WatsonTcp
             {
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
-            
+
             if (ServerConnected != null)
             {
                 Task.Run(() => ServerConnected());
@@ -326,7 +326,7 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="presharedKey">Up to 16-character string.</param>
         public void Authenticate(string presharedKey)
-        { 
+        {
             if (String.IsNullOrEmpty(presharedKey)) throw new ArgumentNullException(nameof(presharedKey));
             if (presharedKey.Length != 16) throw new ArgumentException("Preshared key length must be 16 bytes.");
 
@@ -359,7 +359,7 @@ namespace WatsonTcp
         {
             return MessageWrite(contentLength, stream);
         }
-         
+
         /// <summary>
         /// Send data to the server asynchronously
         /// </summary>
@@ -380,7 +380,7 @@ namespace WatsonTcp
         {
             return await MessageWriteAsync(contentLength, stream);
         }
-         
+
         #endregion
 
         #region Private-Methods
@@ -414,17 +414,17 @@ namespace WatsonTcp
                 }
 
                 if (_TcpStream != null)
-                { 
+                {
                     try
                     {
                         _WriteLock.Wait(1);
                         _ReadLock.Wait(1);
-                        if (_TcpStream != null) _TcpStream.Close(); 
+                        if (_TcpStream != null) _TcpStream.Close();
                     }
                     catch (Exception)
                     {
 
-                    } 
+                    }
 
                     try
                     {
@@ -442,14 +442,14 @@ namespace WatsonTcp
                 }
 
                 _TokenSource.Cancel();
-                _TokenSource.Dispose(); 
+                _TokenSource.Dispose();
 
                 Connected = false;
             }
 
             _Disposed = true;
         }
-         
+
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
@@ -500,7 +500,7 @@ namespace WatsonTcp
                         Log("*** DataReceiver server disconnected");
                         break;
                     }
-                     
+
                     if (_SslStream != null && !_SslStream.CanRead)
                     {
                         Log("*** DataReceiver cannot read from SSL stream");
@@ -622,7 +622,7 @@ namespace WatsonTcp
             finally
             {
                 Connected = false;
-                ServerDisconnected?.Invoke(); 
+                ServerDisconnected?.Invoke();
             }
         }
 
@@ -633,22 +633,22 @@ namespace WatsonTcp
             if (msg.Data != null) dataLen = msg.Data.Length;
 
             try
-            { 
+            {
                 if (_Client == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
                     return false;
-                } 
+                }
 
                 byte[] headerBytes = msg.ToHeaderBytes(dataLen);
 
                 _WriteLock.Wait(1);
 
                 try
-                { 
+                {
                     if (_Mode == Mode.Tcp)
-                    { 
+                    {
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
                         if (msg.Data != null && msg.Data.Length > 0) _TcpStream.Write(msg.Data, 0, msg.Data.Length);
                         _TcpStream.Flush();
@@ -662,16 +662,16 @@ namespace WatsonTcp
                     else
                     {
                         throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    } 
+                    }
                 }
                 finally
                 {
                     _WriteLock.Release();
                 }
 
-                string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes); 
+                string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes);
                 Log(logMessage);
-                return true; 
+                return true;
             }
             catch (ObjectDisposedException ObjDispInner)
             {
@@ -724,7 +724,7 @@ namespace WatsonTcp
                 ms.Seek(0, SeekOrigin.Begin);
             }
 
-            return MessageWrite(dataLen, ms); 
+            return MessageWrite(dataLen, ms);
         }
 
         private bool MessageWrite(long contentLength, Stream stream)
@@ -741,14 +741,14 @@ namespace WatsonTcp
             bool disconnectDetected = false;
 
             try
-            { 
+            {
                 if (_Client == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
                     return false;
                 }
-                 
+
                 WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
                 byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
@@ -761,7 +761,7 @@ namespace WatsonTcp
                 try
                 {
                     if (_Mode == Mode.Tcp)
-                    { 
+                    {
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
 
                         if (contentLength > 0)
@@ -863,7 +863,7 @@ namespace WatsonTcp
                 ms.Seek(0, SeekOrigin.Begin);
             }
 
-            return await MessageWriteAsync(dataLen, ms); 
+            return await MessageWriteAsync(dataLen, ms);
         }
 
         private async Task<bool> MessageWriteAsync(long contentLength, Stream stream)
@@ -875,19 +875,19 @@ namespace WatsonTcp
                 {
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
-            } 
+            }
 
             bool disconnectDetected = false;
 
             try
-            { 
+            {
                 if (_Client == null)
                 {
                     Log("MessageWriteAsync client is null");
                     disconnectDetected = true;
                     return false;
                 }
-                 
+
                 WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
                 byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
@@ -900,7 +900,7 @@ namespace WatsonTcp
                 try
                 {
                     if (_Mode == Mode.Tcp)
-                    { 
+                    {
                         await _TcpStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
                         if (contentLength > 0)

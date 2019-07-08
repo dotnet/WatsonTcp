@@ -109,7 +109,7 @@ namespace TestClient
                             client.ServerConnected = ServerConnected;
                             client.ServerDisconnected = ServerDisconnected;
                             client.MessageReceived = MessageReceived;
-                            client.Start(); 
+                            client.Start();
                         }
                         break;
 
@@ -119,7 +119,7 @@ namespace TestClient
                         client.ServerConnected = ServerConnected;
                         client.ServerDisconnected = ServerDisconnected;
                         client.MessageReceived = MessageReceived;
-                        client.Start(); 
+                        client.Start();
                         break;
 
                     case "psk":
@@ -142,7 +142,7 @@ namespace TestClient
         }
 
         static void InitializeClient()
-        { 
+        {
             if (!useSsl)
             {
                 client = new WatsonTcpClient(serverIp, serverPort);

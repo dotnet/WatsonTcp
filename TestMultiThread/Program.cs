@@ -36,7 +36,7 @@ namespace TestMultiThread
             c.ServerConnected = ClientServerConnected;
             c.ServerDisconnected = ClientServerDisconnected;
             c.MessageReceived = ClientMsgReceived;
-            c.Start(); 
+            c.Start();
 
             Console.WriteLine("Press ENTER to exit");
 

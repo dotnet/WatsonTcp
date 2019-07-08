@@ -48,5 +48,5 @@ namespace WatsonTcp.Message
         #region Private-Methods
 
         #endregion
-    } 
+    }
 }

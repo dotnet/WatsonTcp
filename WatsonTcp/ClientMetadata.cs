@@ -53,8 +53,8 @@ namespace WatsonTcp
 
         public ClientMetadata(TcpClient tcp)
         {
-            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp)); 
-            _NetworkStream = tcp.GetStream(); 
+            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
+            _NetworkStream = tcp.GetStream();
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
             ReadLock = new SemaphoreSlim(1);

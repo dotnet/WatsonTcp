@@ -42,7 +42,7 @@ namespace TestServerStream
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
             server.StreamReceived = StreamReceived;
-            server.ReadDataStream = false; 
+            server.ReadDataStream = false;
             // server.Debug = true;
             server.Start();
 
@@ -110,7 +110,7 @@ namespace TestServerStream
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = server.Send(ipPort, data.Length, ms);
-                        Console.WriteLine(success); 
+                        Console.WriteLine(success);
                         break;
 
                     case "sendasync":
@@ -171,9 +171,9 @@ namespace TestServerStream
                 long bytesRemaining = contentLength;
 
                 if (stream != null && stream.CanRead)
-                { 
+                {
                     while (bytesRemaining > 0)
-                    { 
+                    {
                         bytesRead = stream.Read(buffer, 0, buffer.Length);
                         Console.WriteLine("Read " + bytesRead);
 
@@ -193,7 +193,7 @@ namespace TestServerStream
                 {
                     Console.WriteLine("[null]");
                 }
-                 
+
                 return true;
             }
             catch (Exception e)
@@ -213,6 +213,6 @@ namespace TestServerStream
             Console.WriteLine(" = Exception Source: " + e.Source);
             Console.WriteLine(" = Exception StackTrace: " + e.StackTrace);
             Console.WriteLine("================================================================================");
-        } 
+        }
     }
 }

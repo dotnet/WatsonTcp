@@ -24,7 +24,7 @@ namespace TestServer
 
             if (!useSsl)
             {
-                server = new WatsonTcpServer(serverIp, serverPort); 
+                server = new WatsonTcpServer(serverIp, serverPort);
             }
             else
             {
@@ -101,7 +101,7 @@ namespace TestServer
                         if (String.IsNullOrEmpty(ipPort)) break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break; 
+                        if (String.IsNullOrEmpty(userInput)) break;
                         success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
                         Console.WriteLine(success);
                         break;
@@ -135,7 +135,7 @@ namespace TestServer
                     default:
                         break;
                 }
-            } 
+            }
         }
 
         static bool ClientConnected(string ipPort)

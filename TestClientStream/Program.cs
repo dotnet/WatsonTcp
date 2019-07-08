@@ -156,9 +156,9 @@ namespace TestClientStream
                 long bytesRemaining = contentLength;
 
                 if (stream != null && stream.CanRead)
-                { 
+                {
                     while (bytesRemaining > 0)
-                    { 
+                    {
                         bytesRead = stream.Read(buffer, 0, buffer.Length);
                         Console.WriteLine("Read " + bytesRead);
 
@@ -178,9 +178,9 @@ namespace TestClientStream
                 {
                     Console.WriteLine("[null]");
                 }
-                 
+
                 return true;
-            } 
+            }
             catch (Exception e)
             {
                 LogException(e);
@@ -214,7 +214,7 @@ namespace TestClientStream
             client.StreamReceived = StreamReceived;
             client.ReadDataStream = false;
             // client.Debug = true;
-            client.Start(); 
+            client.Start();
         }
 
         static string AuthenticationRequested()

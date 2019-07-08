@@ -22,7 +22,7 @@ namespace TestMultiClient
 
         static Random rng;
         static byte[] data;
-        
+
         static void Main(string[] args)
         {
             rng = new Random((int)DateTime.Now.Ticks);
@@ -44,7 +44,7 @@ namespace TestMultiClient
                 Console.WriteLine("Starting client " + i);
                 Task.Run(() => ClientTask());
             }
-            
+
             Console.WriteLine("Press ENTER to exit");
             Console.ReadLine();
         }
