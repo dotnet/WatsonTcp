@@ -9,12 +9,12 @@
 
     internal class Program
     {
-        private static int serverPort = 9000;
+        private static readonly int serverPort = 9000;
         private static WatsonTcpServer server = null;
-        private static int clientThreads = 16;
-        private static int numIterations = 1000;
+        private static readonly int clientThreads = 16;
+        private static readonly int numIterations = 1000;
         private static int connectionCount = 0;
-        private static ConcurrentList<string> connections = new ConcurrentList<string>();
+        private static readonly ConcurrentList<string> connections = new ConcurrentList<string>();
         private static bool clientsStarted = false;
         private static Random rng;
         private static byte[] data;

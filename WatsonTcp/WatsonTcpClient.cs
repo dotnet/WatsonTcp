@@ -106,20 +106,20 @@
 
         private bool _Disposed = false;
         private int _ReadStreamBufferSize = 65536;
-        private Mode _Mode;
+        private readonly Mode _Mode;
         private string _SourceIp;
         private int _SourcePort;
-        private string _ServerIp;
-        private int _ServerPort;
+        private readonly string _ServerIp;
+        private readonly int _ServerPort;
         private TcpClient _Client;
         private NetworkStream _TcpStream;
         private SslStream _SslStream;
 
-        private X509Certificate2 _SslCertificate;
-        private X509Certificate2Collection _SslCertificateCollection;
+        private readonly X509Certificate2 _SslCertificate;
+        private readonly X509Certificate2Collection _SslCertificateCollection;
 
-        private SemaphoreSlim _WriteLock;
-        private SemaphoreSlim _ReadLock;
+        private readonly SemaphoreSlim _WriteLock;
+        private readonly SemaphoreSlim _ReadLock;
 
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;

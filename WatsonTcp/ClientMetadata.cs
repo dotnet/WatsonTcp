@@ -31,10 +31,10 @@
 
         private bool _Disposed = false;
 
-        private TcpClient _TcpClient;
-        private NetworkStream _NetworkStream;
+        private readonly TcpClient _TcpClient;
+        private readonly NetworkStream _NetworkStream;
         private SslStream _SslStream;
-        private string _IpPort;
+        private readonly string _IpPort;
 
         #endregion
 

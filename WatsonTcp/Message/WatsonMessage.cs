@@ -88,13 +88,13 @@
 
         #region Private-Members
 
-        private bool _Debug = false;
+        private readonly bool _Debug = false;
 
         //                                123456789012345678901234567890
-        private string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
+        private readonly string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
 
-        private NetworkStream _NetworkStream;
-        private SslStream _SslStream;
+        private readonly NetworkStream _NetworkStream;
+        private readonly SslStream _SslStream;
         private int _ReadStreamBuffer = 65536;
         private byte[] _PresharedKey;
         private MessageStatus _Status;

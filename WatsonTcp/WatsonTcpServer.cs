@@ -99,20 +99,20 @@
 
         private bool _Disposed = false;
         private int _ReadStreamBufferSize = 65536;
-        private Mode _Mode;
-        private string _ListenerIp;
-        private int _ListenerPort;
-        private IPAddress _ListenerIpAddress;
-        private TcpListener _Listener;
+        private readonly Mode _Mode;
+        private readonly string _ListenerIp;
+        private readonly int _ListenerPort;
+        private readonly IPAddress _ListenerIpAddress;
+        private readonly TcpListener _Listener;
 
-        private X509Certificate2 _SslCertificate;
+        private readonly X509Certificate2 _SslCertificate;
 
         private int _ActiveClients;
-        private ConcurrentDictionary<string, ClientMetadata> _Clients;
-        private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients;
+        private readonly ConcurrentDictionary<string, ClientMetadata> _Clients;
+        private readonly ConcurrentDictionary<string, DateTime> _UnauthenticatedClients;
 
-        private CancellationTokenSource _TokenSource;
-        private CancellationToken _Token;
+        private readonly CancellationTokenSource _TokenSource;
+        private readonly CancellationToken _Token;
 
         #endregion
 

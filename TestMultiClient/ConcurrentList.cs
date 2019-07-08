@@ -33,7 +33,7 @@
         private int _index;
         private int _fuzzyCount;
         private int _count;
-        private T[][] _array;
+        private readonly T[][] _array;
 
         public ConcurrentList()
         {

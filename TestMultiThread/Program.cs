@@ -8,9 +8,9 @@
 
     internal class Program
     {
-        private static int serverPort = 8000;
-        private static int clientThreads = 128;
-        private static int numIterations = 10000;
+        private static readonly int serverPort = 8000;
+        private static readonly int clientThreads = 128;
+        private static readonly int numIterations = 10000;
         private static Random rng;
         private static byte[] data;
         private static WatsonTcpServer server;
