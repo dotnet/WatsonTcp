@@ -59,13 +59,7 @@
             }
         }
 
-        public override int Count
-        {
-            get
-            {
-                return _count;
-            }
-        }
+        public override int Count => _count;
 
         public override void Add(T element)
         {
@@ -160,10 +154,7 @@
 
         #region "Protected methods"
 
-        protected override bool IsSynchronizedBase
-        {
-            get { return false; }
-        }
+        protected override bool IsSynchronizedBase => false;
 
         #endregion
     }
@@ -246,10 +237,7 @@
             throw new NotSupportedException();
         }
 
-        bool ICollection<T>.IsReadOnly
-        {
-            get { return false; }
-        }
+        bool ICollection<T>.IsReadOnly => false;
 
         void ICollection<T>.Clear()
         {
@@ -261,15 +249,9 @@
             throw new NotSupportedException();
         }
 
-        bool IList.IsFixedSize
-        {
-            get { return false; }
-        }
+        bool IList.IsFixedSize => false;
 
-        bool IList.IsReadOnly
-        {
-            get { return false; }
-        }
+        bool IList.IsReadOnly => false;
 
         object IList.this[int index]
         {
@@ -312,15 +294,9 @@
             return AddBase(value);
         }
 
-        bool ICollection.IsSynchronized
-        {
-            get { return IsSynchronizedBase; }
-        }
+        bool ICollection.IsSynchronized => IsSynchronizedBase;
 
-        object ICollection.SyncRoot
-        {
-            get { return null; }
-        }
+        object ICollection.SyncRoot => null;
 
         void ICollection.CopyTo(Array array, int arrayIndex)
         {

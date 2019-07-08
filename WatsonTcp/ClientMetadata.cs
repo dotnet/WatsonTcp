@@ -9,15 +9,9 @@
     {
         #region Public-Members
 
-        public TcpClient TcpClient
-        {
-            get { return _TcpClient; }
-        }
+        public TcpClient TcpClient => _TcpClient;
 
-        public NetworkStream NetworkStream
-        {
-            get { return _NetworkStream; }
-        }
+        public NetworkStream NetworkStream => _NetworkStream;
 
         public SslStream SslStream
         {
@@ -25,10 +19,7 @@
             set { _SslStream = value; }
         }
 
-        public string IpPort
-        {
-            get { return _IpPort; }
-        }
+        public string IpPort => _IpPort;
 
         public SemaphoreSlim ReadLock { get; set; }
 
