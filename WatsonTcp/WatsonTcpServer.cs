@@ -621,11 +621,9 @@
                 }
                 catch (ObjectDisposedException)
                 {
-
                 }
                 catch (IOException)
                 {
-
                 }
                 catch (SocketException se)
                 {

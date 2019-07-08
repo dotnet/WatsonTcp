@@ -435,7 +435,6 @@
                     }
                     catch (Exception)
                     {
-
                     }
                     finally
                     {
@@ -457,7 +456,6 @@
                     }
                     catch (Exception)
                     {
-
                     }
 
                     try
@@ -466,7 +464,6 @@
                     }
                     catch (Exception)
                     {
-
                     }
                     finally
                     {
@@ -635,15 +632,12 @@
             }
             catch (OperationCanceledException)
             {
-
             }
             catch (ObjectDisposedException)
             {
-
             }
             catch (IOException)
             {
-
             }
             catch (Exception e)
             {
