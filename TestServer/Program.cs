@@ -33,9 +33,11 @@
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
                 mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
-                server.AcceptInvalidCertificates = acceptInvalidCerts;
-                server.MutuallyAuthenticate = mutualAuthentication;
+                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass)
+                {
+                    AcceptInvalidCertificates = acceptInvalidCerts,
+                    MutuallyAuthenticate = mutualAuthentication
+                };
             }
 
             server.ClientConnected = ClientConnected;

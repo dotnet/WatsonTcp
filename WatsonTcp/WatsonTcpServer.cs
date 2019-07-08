@@ -570,10 +570,13 @@
                 _UnauthenticatedClients.TryAdd(client.IpPort, DateTime.Now);
 
                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
-                WatsonMessage authMsg = new WatsonMessage();
-                authMsg.Status = MessageStatus.AuthRequired;
-                authMsg.Data = null;
-                authMsg.ContentLength = 0;
+                WatsonMessage authMsg = new WatsonMessage
+                {
+                    Status = MessageStatus.AuthRequired,
+                    Data = null,
+                    ContentLength = 0
+                };
+
                 MessageWrite(client, authMsg, null);
             }
 
@@ -711,8 +714,11 @@
                                             if (Debug) Log("DataReceiver accepted authentication from " + client.IpPort);
                                             _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime dt);
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
-                                            WatsonMessage authMsg = new WatsonMessage(data, Debug);
-                                            authMsg.Status = MessageStatus.AuthSuccess;
+                                            WatsonMessage authMsg = new WatsonMessage(data, Debug)
+                                            {
+                                                Status = MessageStatus.AuthSuccess
+                                            };
+
                                             MessageWrite(client, authMsg, null);
                                             continue;
                                         }
@@ -720,8 +726,11 @@
                                         {
                                             if (Debug) Log("DataReceiver declined authentication from " + client.IpPort);
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
-                                            WatsonMessage authMsg = new WatsonMessage(data, Debug);
-                                            authMsg.Status = MessageStatus.AuthFailure;
+                                            WatsonMessage authMsg = new WatsonMessage(data, Debug)
+                                            {
+                                                Status = MessageStatus.AuthFailure
+                                            };
+
                                             MessageWrite(client, authMsg, null);
                                             continue;
                                         }
@@ -730,8 +739,11 @@
                                     {
                                         if (Debug) Log("DataReceiver no authentication material from " + client.IpPort);
                                         byte[] data = Encoding.UTF8.GetBytes("No authentication material");
-                                        WatsonMessage authMsg = new WatsonMessage(data, Debug);
-                                        authMsg.Status = MessageStatus.AuthFailure;
+                                        WatsonMessage authMsg = new WatsonMessage(data, Debug)
+                                        {
+                                            Status = MessageStatus.AuthFailure
+                                        };
+
                                         MessageWrite(client, authMsg, null);
                                         continue;
                                     }
@@ -741,8 +753,11 @@
                                     // decline the message
                                     if (Debug) Log("DataReceiver no authentication material from " + client.IpPort);
                                     byte[] data = Encoding.UTF8.GetBytes("Authentication required");
-                                    WatsonMessage authMsg = new WatsonMessage(data, Debug);
-                                    authMsg.Status = MessageStatus.AuthRequired;
+                                    WatsonMessage authMsg = new WatsonMessage(data, Debug)
+                                    {
+                                        Status = MessageStatus.AuthRequired
+                                    };
+
                                     MessageWrite(client, authMsg, null);
                                     continue;
                                 }

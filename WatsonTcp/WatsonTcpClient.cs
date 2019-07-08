@@ -331,11 +331,14 @@
             if (presharedKey.Length != 16) throw new ArgumentException("Preshared key length must be 16 bytes.");
 
             presharedKey = presharedKey.PadRight(16, ' ');
-            WatsonMessage msg = new WatsonMessage();
-            msg.Status = MessageStatus.AuthRequested;
-            msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
-            msg.Data = null;
-            msg.ContentLength = 0;
+            WatsonMessage msg = new WatsonMessage
+            {
+                Status = MessageStatus.AuthRequested,
+                PresharedKey = Encoding.UTF8.GetBytes(presharedKey),
+                Data = null,
+                ContentLength = 0
+            };
+
             MessageWrite(msg);
         }
 

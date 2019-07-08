@@ -108,20 +108,26 @@
                         }
                         else
                         {
-                            client = new WatsonTcpClient(serverIp, serverPort);
-                            client.ServerConnected = ServerConnected;
-                            client.ServerDisconnected = ServerDisconnected;
-                            client.StreamReceived = StreamReceived;
+                            client = new WatsonTcpClient(serverIp, serverPort)
+                            {
+                                ServerConnected = ServerConnected,
+                                ServerDisconnected = ServerDisconnected,
+                                StreamReceived = StreamReceived
+                            };
+
                             client.Start();
                         }
                         break;
 
                     case "reconnect":
                         if (client != null) client.Dispose();
-                        client = new WatsonTcpClient(serverIp, serverPort);
-                        client.ServerConnected = ServerConnected;
-                        client.ServerDisconnected = ServerDisconnected;
-                        client.StreamReceived = StreamReceived;
+                        client = new WatsonTcpClient(serverIp, serverPort)
+                        {
+                            ServerConnected = ServerConnected,
+                            ServerDisconnected = ServerDisconnected,
+                            StreamReceived = StreamReceived
+                        };
+
                         client.Start();
                         break;
 
@@ -201,9 +207,11 @@
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
                 mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
-                client.AcceptInvalidCertificates = acceptInvalidCerts;
-                client.MutuallyAuthenticate = mutualAuthentication;
+                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass)
+                {
+                    AcceptInvalidCertificates = acceptInvalidCerts,
+                    MutuallyAuthenticate = mutualAuthentication
+                };
             }
 
             client.AuthenticationFailure = AuthenticationFailure;

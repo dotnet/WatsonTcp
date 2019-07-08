@@ -27,10 +27,13 @@
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
 
             Console.WriteLine("Starting server");
-            server = new WatsonTcpServer(null, serverPort);
-            server.ClientConnected = ServerClientConnected;
-            server.ClientDisconnected = ServerClientDisconnected;
-            server.MessageReceived = ServerMsgReceived;
+            server = new WatsonTcpServer(null, serverPort)
+            {
+                ClientConnected = ServerClientConnected,
+                ClientDisconnected = ServerClientDisconnected,
+                MessageReceived = ServerMsgReceived
+            };
+
             server.Start();
 
             Thread.Sleep(3000);
