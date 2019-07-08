@@ -1,10 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using WatsonTcp;
-
-namespace TestClientStream
+﻿namespace TestClientStream
 {
+    using System;
+    using System.IO;
+    using System.Text;
+    using WatsonTcp;
+
     class TestClientStream
     {
         static string serverIp = "";

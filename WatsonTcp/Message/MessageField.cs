@@ -1,7 +1,7 @@
-﻿using System;
-
-namespace WatsonTcp.Message
+﻿namespace WatsonTcp.Message
 {
+    using System;
+
     public class MessageField
     {
         #region Public-Members

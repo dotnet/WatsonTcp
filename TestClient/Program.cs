@@ -1,9 +1,9 @@
-﻿using System;
-using System.Text;
-using WatsonTcp;
-
-namespace TestClient
+﻿namespace TestClient
 {
+    using System;
+    using System.Text;
+    using WatsonTcp;
+
     class TestClient
     {
         static string serverIp = "";

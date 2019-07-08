@@ -1,12 +1,12 @@
-﻿using System;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
-using WatsonTcp;
-using ConcurrentList;
-
-namespace TestMultiClient
+﻿namespace TestMultiClient
 {
+    using System;
+    using System.Security.Cryptography;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+    using ConcurrentList;
+
     class Program
     {
         static int serverPort = 9000;

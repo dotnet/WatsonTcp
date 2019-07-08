@@ -1,11 +1,11 @@
-﻿using System;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace TestMultiThread
+﻿namespace TestMultiThread
 {
+    using System;
+    using System.Security.Cryptography;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     class Program
     {
         static int serverPort = 8000;

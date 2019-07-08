@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections;
-using System.Text;
-using Newtonsoft.Json;
-
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.Collections;
+    using System.Text;
+    using Newtonsoft.Json;
+
     public static class Common
     {
         /// <summary>

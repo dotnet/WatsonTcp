@@ -1,10 +1,10 @@
-﻿using System;
-using System.Net.Security;
-using System.Net.Sockets;
-using System.Threading;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.Net.Security;
+    using System.Net.Sockets;
+    using System.Threading;
+
     public class ClientMetadata : IDisposable
     {
         #region Public-Members
