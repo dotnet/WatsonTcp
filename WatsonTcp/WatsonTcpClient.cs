@@ -474,6 +474,16 @@
                 _TokenSource.Cancel();
                 _TokenSource.Dispose();
 
+                if (_WriteLock != null)
+                {
+                    _WriteLock.Dispose();
+                }
+
+                if (_ReadLock != null)
+                {
+                    _ReadLock.Dispose();
+                }
+
                 Connected = false;
             }
 
