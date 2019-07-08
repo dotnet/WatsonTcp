@@ -234,7 +234,7 @@
 
         public static byte ReverseByte(byte b)
         {
-            return (byte)(((b * 0x0802u & 0x22110u) | (b * 0x8020u & 0x88440u)) * 0x10101u >> 16);
+            return (byte)(((((b * 0x0802u) & 0x22110u) | ((b * 0x8020u) & 0x88440u)) * 0x10101u) >> 16);
         }
 
         public static byte[] BitArrayToBytes(BitArray bits)
@@ -242,7 +242,7 @@
             if (bits == null || bits.Length < 1) throw new ArgumentNullException(nameof(bits));
             if (bits.Length % 8 != 0) throw new ArgumentException("BitArray length must be divisible by 8.");
 
-            byte[] ret = new byte[(bits.Length - 1) / 8 + 1];
+            byte[] ret = new byte[((bits.Length - 1) / 8) + 1];
             bits.CopyTo(ret, 0);
             return ret;
         }
