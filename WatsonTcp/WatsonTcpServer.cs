@@ -77,7 +77,7 @@
         /// <summary>
         /// Method to call when a message is received from a client.
         /// The IP:port is passed to this method as a string, along with a long indicating the number of bytes to read from the stream.
-        /// It is expected that the method will return true;
+        /// It is expected that the method will return true.
         /// </summary>
         public Func<string, long, Stream, bool> StreamReceived = null;
 

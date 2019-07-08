@@ -72,7 +72,7 @@
         /// <summary>
         /// Method to call when a message is received from a client.
         /// The IP:port is passed to this method as a string, along with a long indicating the number of bytes to read from the stream.
-        /// It is expected that the method will return true;
+        /// It is expected that the method will return true.
         /// </summary>
         public Func<long, Stream, bool> StreamReceived = null;
 
@@ -391,7 +391,7 @@
         }
 
         /// <summary>
-        /// Send data to the server asynchronously
+        /// Send data to the server asynchronously.
         /// </summary>
         /// <param name="data">Byte array containing data.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
