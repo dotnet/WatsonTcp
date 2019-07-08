@@ -209,7 +209,7 @@
         public static void ReverseBitArray(BitArray array)
         {
             int length = array.Length;
-            int mid = (length / 2);
+            int mid = length / 2;
 
             for (int i = 0; i < mid; i++)
             {

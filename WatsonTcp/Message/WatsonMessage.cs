@@ -691,10 +691,10 @@
 
             string stringVal = i.ToString("0000");
 
-            ret[3] = (byte)(Convert.ToInt32(stringVal[3]));
-            ret[2] = (byte)(Convert.ToInt32(stringVal[2]));
-            ret[1] = (byte)(Convert.ToInt32(stringVal[1]));
-            ret[0] = (byte)(Convert.ToInt32(stringVal[0]));
+            ret[3] = (byte)Convert.ToInt32(stringVal[3]);
+            ret[2] = (byte)Convert.ToInt32(stringVal[2]);
+            ret[1] = (byte)Convert.ToInt32(stringVal[1]);
+            ret[0] = (byte)Convert.ToInt32(stringVal[0]);
 
             return ret;
         }
@@ -770,7 +770,7 @@
         private void ReverseBitArray(BitArray array)
         {
             int length = array.Length;
-            int mid = (length / 2);
+            int mid = length / 2;
 
             for (int i = 0; i < mid; i++)
             {
@@ -835,7 +835,7 @@
                     if (_Debug) Console.WriteLine("PresharedKey set: " + Encoding.UTF8.GetString(PresharedKey));
                     return;
                 case 1:
-                    Status = (MessageStatus)((int)val);
+                    Status = (MessageStatus)(int)val;
                     if (_Debug) Console.WriteLine("Status set: " + Status.ToString());
                     return;
                 default:

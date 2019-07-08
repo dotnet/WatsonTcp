@@ -52,7 +52,7 @@
                 int arrayIndex = GetArrayIndex(index + 1);
                 if (arrayIndex > 0)
                 {
-                    index -= ((int)Math.Pow(2, arrayIndex) - 1);
+                    index -= (int)Math.Pow(2, arrayIndex) - 1;
                 }
 
                 return _array[arrayIndex][index];

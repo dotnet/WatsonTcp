@@ -316,7 +316,7 @@
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
         public bool IsClientConnected(string ipPort)
         {
-            return (_Clients.TryGetValue(ipPort, out ClientMetadata client));
+            return _Clients.TryGetValue(ipPort, out ClientMetadata client);
         }
 
         /// <summary>
@@ -638,7 +638,7 @@
                     client.ReadLock.Wait(1);
                     readLocked = true;
 
-                    if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
+                    if (client.TcpClient.Client.Poll(0, SelectMode.SelectWrite)
                         && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
                     {
                         byte[] buffer = new byte[1];
