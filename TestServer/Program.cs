@@ -16,7 +16,7 @@
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
 
-        private static void Main(string[] args)
+        private static void Main()
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);

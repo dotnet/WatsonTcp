@@ -19,7 +19,7 @@
         private static Random rng;
         private static byte[] data;
 
-        private static void Main(string[] args)
+        private static void Main()
         {
             rng = new Random((int)DateTime.Now.Ticks);
             data = InitByteArray(65536, 0x00);

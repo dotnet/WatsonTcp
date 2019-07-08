@@ -16,7 +16,7 @@
         private static WatsonTcpClient client = null;
         private static string presharedKey = null;
 
-        private static void Main(string[] args)
+        private static void Main()
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);

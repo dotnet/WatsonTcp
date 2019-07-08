@@ -16,7 +16,7 @@
         private static WatsonTcpServer server;
         private static WatsonTcpClient c;
 
-        private static void Main(string[] args)
+        private static void Main()
         {
             rng = new Random((int)DateTime.Now.Ticks);
             data = InitByteArray(262144, 0x00);
