@@ -794,7 +794,7 @@
             }
         }
 
-        private byte[] IntegerToBytes(int i)
+        private static byte[] IntegerToBytes(int i)
         {
             if (i < 0 || i > 9999)
             {
@@ -852,7 +852,7 @@
             return result;
         }
 
-        private void InitByteArray(byte[] data)
+        private static void InitByteArray(byte[] data)
         {
             if (data == null || data.Length < 1)
             {
@@ -865,7 +865,7 @@
             }
         }
 
-        private void InitBitArray(BitArray data)
+        private static void InitBitArray(BitArray data)
         {
             if (data == null || data.Length < 1)
             {
@@ -878,7 +878,7 @@
             }
         }
 
-        private byte[] AppendBytes(byte[] head, byte[] tail)
+        private static byte[] AppendBytes(byte[] head, byte[] tail)
         {
             byte[] arrayCombined = new byte[head.Length + tail.Length];
             Array.Copy(head, 0, arrayCombined, 0, head.Length);
@@ -886,7 +886,7 @@
             return arrayCombined;
         }
 
-        private string ByteArrayToHex(byte[] data)
+        private static string ByteArrayToHex(byte[] data)
         {
             StringBuilder hex = new StringBuilder(data.Length * 2);
             foreach (byte b in data)
@@ -910,7 +910,7 @@
             }
         }
 
-        private byte[] ReverseByteArray(byte[] bytes)
+        private static byte[] ReverseByteArray(byte[] bytes)
         {
             if (bytes == null || bytes.Length < 1)
             {
@@ -926,12 +926,12 @@
             return ret;
         }
 
-        private byte ReverseByte(byte b)
+        private static byte ReverseByte(byte b)
         {
             return (byte)(((((b * 0x0802u) & 0x22110u) | ((b * 0x8020u) & 0x88440u)) * 0x10101u) >> 16);
         }
 
-        private byte[] BitArrayToBytes(BitArray bits)
+        private static byte[] BitArrayToBytes(BitArray bits)
         {
             if (bits == null || bits.Length < 1)
             {
