@@ -768,10 +768,7 @@
                         }
                         else
                         {
-                            if (StreamReceived != null)
-                            {
-                                StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
-                            }
+                            StreamReceived?.Invoke(client.IpPort, msg.ContentLength, msg.DataStream);
                         }
                     }
                     catch (Exception)
