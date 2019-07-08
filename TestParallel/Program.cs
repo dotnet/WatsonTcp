@@ -6,16 +6,16 @@
     using System.Threading.Tasks;
     using WatsonTcp;
 
-    class Program
+    internal class Program
     {
-        static int serverPort = 8000;
-        static int clientThreads = 8;
-        static int numIterations = 10000;
-        static Random rng;
-        static byte[] data;
-        static WatsonTcpServer server;
+        private static int serverPort = 8000;
+        private static int clientThreads = 8;
+        private static int numIterations = 10000;
+        private static Random rng;
+        private static byte[] data;
+        private static WatsonTcpServer server;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             rng = new Random((int)DateTime.Now.Ticks);
             data = InitByteArray(262144, 0x00);
@@ -43,7 +43,7 @@
             Console.ReadLine();
         }
 
-        static void ClientTask()
+        private static void ClientTask()
         {
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
@@ -62,35 +62,35 @@
             Console.WriteLine("[client] finished");
         }
 
-        static bool ServerClientConnected(string ipPort)
+        private static bool ServerClientConnected(string ipPort)
         {
             Console.WriteLine("[server] connection from " + ipPort);
             return true;
         }
 
-        static bool ServerClientDisconnected(string ipPort)
+        private static bool ServerClientDisconnected(string ipPort)
         {
             Console.WriteLine("[server] disconnection from " + ipPort);
             return true;
         }
 
-        static bool ServerMsgReceived(string ipPort, byte[] data)
+        private static bool ServerMsgReceived(string ipPort, byte[] data)
         {
             Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
 
-        static bool ClientServerConnected()
+        private static bool ClientServerConnected()
         {
             return true;
         }
 
-        static bool ClientServerDisconnected()
+        private static bool ClientServerDisconnected()
         {
             return true;
         }
 
-        static bool ClientMsgReceived(byte[] data)
+        private static bool ClientMsgReceived(byte[] data)
         {
             Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
@@ -106,7 +106,7 @@
             return ret;
         }
 
-        static byte[] Md5(byte[] data)
+        private static byte[] Md5(byte[] data)
         {
             if (data == null || data.Length < 1)
             {

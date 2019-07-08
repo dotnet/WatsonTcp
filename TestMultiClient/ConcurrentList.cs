@@ -7,8 +7,8 @@
 
     public sealed class ConcurrentList<T> : ThreadSafeList<T>
     {
-        static readonly int[] Sizes;
-        static readonly int[] Counts;
+        private static readonly int[] Sizes;
+        private static readonly int[] Counts;
 
         static ConcurrentList()
         {
@@ -30,10 +30,10 @@
             }
         }
 
-        int _index;
-        int _fuzzyCount;
-        int _count;
-        T[][] _array;
+        private int _index;
+        private int _fuzzyCount;
+        private int _count;
+        private T[][] _array;
 
         public ConcurrentList()
         {

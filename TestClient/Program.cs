@@ -4,19 +4,19 @@
     using System.Text;
     using WatsonTcp;
 
-    class TestClient
+    internal class TestClient
     {
-        static string serverIp = "";
-        static int serverPort = 0;
-        static bool useSsl = false;
-        static string certFile = "";
-        static string certPass = "";
-        static bool acceptInvalidCerts = true;
-        static bool mutualAuthentication = true;
-        static WatsonTcpClient client = null;
-        static string presharedKey = null;
+        private static string serverIp = "";
+        private static int serverPort = 0;
+        private static bool useSsl = false;
+        private static string certFile = "";
+        private static string certPass = "";
+        private static bool acceptInvalidCerts = true;
+        private static bool mutualAuthentication = true;
+        private static WatsonTcpClient client = null;
+        private static string presharedKey = null;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -147,7 +147,7 @@
             }
         }
 
-        static void InitializeClient()
+        private static void InitializeClient()
         {
             if (!useSsl)
             {
@@ -179,7 +179,7 @@
             client.Start();
         }
 
-        static string AuthenticationRequested()
+        private static string AuthenticationRequested()
         {
             Console.WriteLine("");
             Console.WriteLine("");
@@ -189,31 +189,31 @@
             return presharedKey;
         }
 
-        static bool AuthenticationSucceeded()
+        private static bool AuthenticationSucceeded()
         {
             Console.WriteLine("Authentication succeeded");
             return true;
         }
 
-        static bool AuthenticationFailure()
+        private static bool AuthenticationFailure()
         {
             Console.WriteLine("Authentication failed");
             return true;
         }
 
-        static bool MessageReceived(byte[] data)
+        private static bool MessageReceived(byte[] data)
         {
             Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(data));
             return true;
         }
 
-        static bool ServerConnected()
+        private static bool ServerConnected()
         {
             Console.WriteLine("Server connected");
             return true;
         }
 
-        static bool ServerDisconnected()
+        private static bool ServerDisconnected()
         {
             Console.WriteLine("Server disconnected");
             return true;

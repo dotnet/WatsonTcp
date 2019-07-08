@@ -7,20 +7,19 @@
     using WatsonTcp;
     using ConcurrentList;
 
-    class Program
+    internal class Program
     {
-        static int serverPort = 9000;
-        static WatsonTcpServer server = null;
-        static int clientThreads = 16;
-        static int numIterations = 1000;
-        static int connectionCount = 0;
-        static ConcurrentList<string> connections = new ConcurrentList<string>();
-        static bool clientsStarted = false;
+        private static int serverPort = 9000;
+        private static WatsonTcpServer server = null;
+        private static int clientThreads = 16;
+        private static int numIterations = 1000;
+        private static int connectionCount = 0;
+        private static ConcurrentList<string> connections = new ConcurrentList<string>();
+        private static bool clientsStarted = false;
+        private static Random rng;
+        private static byte[] data;
 
-        static Random rng;
-        static byte[] data;
-
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             rng = new Random((int)DateTime.Now.Ticks);
             data = InitByteArray(65536, 0x00);
@@ -49,7 +48,7 @@
             Console.ReadLine();
         }
 
-        static void ClientTask()
+        private static void ClientTask()
         {
             Console.WriteLine("ClientTask entering");
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
@@ -74,7 +73,7 @@
             Console.WriteLine("[client] finished");
         }
 
-        static bool ServerClientConnected(string ipPort)
+        private static bool ServerClientConnected(string ipPort)
         {
             connectionCount++;
             Console.WriteLine("[server] connection from " + ipPort + " (now " + connectionCount + ")");
@@ -88,30 +87,30 @@
             return true;
         }
 
-        static bool ServerClientDisconnected(string ipPort)
+        private static bool ServerClientDisconnected(string ipPort)
         {
             connectionCount--;
             Console.WriteLine("[server] disconnection from " + ipPort + " (now " + connectionCount + ")");
             return true;
         }
 
-        static bool ServerMsgReceived(string ipPort, byte[] data)
+        private static bool ServerMsgReceived(string ipPort, byte[] data)
         {
             // Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
 
-        static bool ClientServerConnected()
+        private static bool ClientServerConnected()
         {
             return true;
         }
 
-        static bool ClientServerDisconnected()
+        private static bool ClientServerDisconnected()
         {
             return true;
         }
 
-        static bool ClientMsgReceived(byte[] data)
+        private static bool ClientMsgReceived(byte[] data)
         {
             // Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
@@ -127,7 +126,7 @@
             return ret;
         }
 
-        static byte[] Md5(byte[] data)
+        private static byte[] Md5(byte[] data)
         {
             if (data == null || data.Length < 1)
             {

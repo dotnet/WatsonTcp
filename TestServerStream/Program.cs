@@ -6,18 +6,18 @@
     using System.Text;
     using WatsonTcp;
 
-    class TestServerStream
+    internal class TestServerStream
     {
-        static string serverIp = "";
-        static int serverPort = 0;
-        static bool useSsl = false;
-        static WatsonTcpServer server = null;
-        static string certFile = "";
-        static string certPass = "";
-        static bool acceptInvalidCerts = true;
-        static bool mutualAuthentication = true;
+        private static string serverIp = "";
+        private static int serverPort = 0;
+        private static bool useSsl = false;
+        private static WatsonTcpServer server = null;
+        private static string certFile = "";
+        private static string certPass = "";
+        private static bool acceptInvalidCerts = true;
+        private static bool mutualAuthentication = true;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -149,19 +149,19 @@
             }
         }
 
-        static bool ClientConnected(string ipPort)
+        private static bool ClientConnected(string ipPort)
         {
             Console.WriteLine("Client connected: " + ipPort);
             return true;
         }
 
-        static bool ClientDisconnected(string ipPort)
+        private static bool ClientDisconnected(string ipPort)
         {
             Console.WriteLine("Client disconnected: " + ipPort);
             return true;
         }
 
-        static bool StreamReceived(string ipPort, long contentLength, Stream stream)
+        private static bool StreamReceived(string ipPort, long contentLength, Stream stream)
         {
             try
             {
@@ -205,7 +205,7 @@
             }
         }
 
-        static void LogException(Exception e)
+        private static void LogException(Exception e)
         {
             Console.WriteLine("================================================================================");
             Console.WriteLine(" = Exception Type: " + e.GetType().ToString());
