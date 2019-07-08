@@ -116,8 +116,10 @@
                 return null;
             }
 
-            MD5 m = MD5.Create();
-            return m.ComputeHash(data);
+            using (MD5 m = MD5.Create())
+            {
+                return m.ComputeHash(data);
+            }
         }
 
         public static string BytesToHex(byte[] bytes)
