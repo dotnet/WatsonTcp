@@ -127,7 +127,8 @@
             string listenerIp,
             int listenerPort)
         {
-            if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
+            if (listenerPort < 1)
+                throw new ArgumentOutOfRangeException(nameof(listenerPort));
 
             _Mode = Mode.Tcp;
 
@@ -167,7 +168,8 @@
             string pfxCertFile,
             string pfxCertPass)
         {
-            if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
+            if (listenerPort < 1)
+                throw new ArgumentOutOfRangeException(nameof(listenerPort));
 
             _Mode = Mode.Ssl;
 
@@ -385,7 +387,8 @@
 
         private void Log(string msg)
         {
-            if (Debug) Console.WriteLine(msg);
+            if (Debug)
+                Console.WriteLine(msg);
         }
 
         private void LogException(string method, Exception e)
@@ -458,7 +461,8 @@
                             client.SslStream = new SslStream(client.NetworkStream, false);
                         }
 
-                        Task unawaited = Task.Run(() => {
+                        Task unawaited = Task.Run(() =>
+                        {
                             Task<bool> success = StartTls(client);
                             if (success.Result)
                             {
@@ -616,7 +620,8 @@
                 }
                 catch (SocketException se)
                 {
-                    if (se.NativeErrorCode.Equals(10035)) success = true;
+                    if (se.NativeErrorCode.Equals(10035))
+                        success = true;
                 }
                 catch (Exception e)
                 {
@@ -625,10 +630,12 @@
                 }
                 finally
                 {
-                    if (sendLocked) client.WriteLock.Release();
+                    if (sendLocked)
+                        client.WriteLock.Release();
                 }
 
-                if (success) return true;
+                if (success)
+                    return true;
 
                 try
                 {
@@ -660,7 +667,8 @@
                 }
                 finally
                 {
-                    if (readLocked) client.ReadLock.Release();
+                    if (readLocked)
+                        client.ReadLock.Release();
                 }
             }
             else
@@ -706,7 +714,8 @@
                                         string clientPsk = Encoding.UTF8.GetString(msg.PresharedKey).Trim();
                                         if (PresharedKey.Trim().Equals(clientPsk))
                                         {
-                                            if (Debug) Log("DataReceiver accepted authentication from " + client.IpPort);
+                                            if (Debug)
+                                                Log("DataReceiver accepted authentication from " + client.IpPort);
                                             _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime dt);
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
                                             WatsonMessage authMsg = new WatsonMessage(data, Debug)
@@ -719,7 +728,8 @@
                                         }
                                         else
                                         {
-                                            if (Debug) Log("DataReceiver declined authentication from " + client.IpPort);
+                                            if (Debug)
+                                                Log("DataReceiver declined authentication from " + client.IpPort);
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
                                             WatsonMessage authMsg = new WatsonMessage(data, Debug)
                                             {
@@ -732,7 +742,8 @@
                                     }
                                     else
                                     {
-                                        if (Debug) Log("DataReceiver no authentication material from " + client.IpPort);
+                                        if (Debug)
+                                            Log("DataReceiver no authentication material from " + client.IpPort);
                                         byte[] data = Encoding.UTF8.GetBytes("No authentication material");
                                         WatsonMessage authMsg = new WatsonMessage(data, Debug)
                                         {
@@ -746,7 +757,8 @@
                                 else
                                 {
                                     // decline the message
-                                    if (Debug) Log("DataReceiver no authentication material from " + client.IpPort);
+                                    if (Debug)
+                                        Log("DataReceiver no authentication material from " + client.IpPort);
                                     byte[] data = Encoding.UTF8.GetBytes("Authentication required");
                                     WatsonMessage authMsg = new WatsonMessage(data, Debug)
                                     {
@@ -873,8 +885,10 @@
 
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
         {
-            if (client == null) throw new ArgumentNullException(nameof(client));
-            if (msg == null) throw new ArgumentNullException(nameof(msg));
+            if (client == null)
+                throw new ArgumentNullException(nameof(client));
+            if (msg == null)
+                throw new ArgumentNullException(nameof(msg));
 
             if (contentLength > 0)
             {
@@ -966,8 +980,10 @@
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
         {
-            if (client == null) throw new ArgumentNullException(nameof(client));
-            if (msg == null) throw new ArgumentNullException(nameof(msg));
+            if (client == null)
+                throw new ArgumentNullException(nameof(client));
+            if (msg == null)
+                throw new ArgumentNullException(nameof(msg));
 
             if (contentLength > 0)
             {

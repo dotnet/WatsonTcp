@@ -14,7 +14,8 @@
         /// <returns>JSON string.</returns>
         public static string SerializeJson(object obj)
         {
-            if (obj == null) return null;
+            if (obj == null)
+                return null;
             string json = JsonConvert.SerializeObject(
                 obj,
                 Newtonsoft.Json.Formatting.Indented,
@@ -35,7 +36,8 @@
         /// <returns>An object of the specified type.</returns>
         public static T DeserializeJson<T>(string json)
         {
-            if (String.IsNullOrEmpty(json)) throw new ArgumentNullException(nameof(json));
+            if (String.IsNullOrEmpty(json))
+                throw new ArgumentNullException(nameof(json));
 
             try
             {
@@ -59,7 +61,8 @@
         /// <returns>An object of the specified type.</returns>
         public static T DeserializeJson<T>(byte[] data)
         {
-            if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
+            if (data == null || data.Length < 1)
+                throw new ArgumentNullException(nameof(data));
             return DeserializeJson<T>(Encoding.UTF8.GetString(data));
         }
 
@@ -67,14 +70,17 @@
         {
             Console.Write(question);
 
-            if (yesDefault) Console.Write(" [Y/n]? ");
-            else Console.Write(" [y/N]? ");
+            if (yesDefault)
+                Console.Write(" [Y/n]? ");
+            else
+                Console.Write(" [y/N]? ");
 
             string userInput = Console.ReadLine();
 
             if (String.IsNullOrEmpty(userInput))
             {
-                if (yesDefault) return true;
+                if (yesDefault)
+                    return true;
                 return false;
             }
 
@@ -123,9 +129,12 @@
 
                 if (String.IsNullOrEmpty(userInput))
                 {
-                    if (!String.IsNullOrEmpty(defaultAnswer)) return defaultAnswer;
-                    if (allowNull) return null;
-                    else continue;
+                    if (!String.IsNullOrEmpty(defaultAnswer))
+                        return defaultAnswer;
+                    if (allowNull)
+                        return null;
+                    else
+                        continue;
                 }
 
                 return userInput;
@@ -175,7 +184,8 @@
 
         public static void InitByteArray(byte[] data)
         {
-            if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
+            if (data == null || data.Length < 1)
+                throw new ArgumentNullException(nameof(data));
             for (int i = 0; i < data.Length; i++)
             {
                 data[i] = 0x00;
@@ -184,7 +194,8 @@
 
         public static void InitBitArray(BitArray data)
         {
-            if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
+            if (data == null || data.Length < 1)
+                throw new ArgumentNullException(nameof(data));
             for (int i = 0; i < data.Length; i++)
             {
                 data[i] = false;
@@ -202,7 +213,8 @@
         public static string ByteArrayToHex(byte[] data)
         {
             StringBuilder hex = new StringBuilder(data.Length * 2);
-            foreach (byte b in data) hex.AppendFormat("{0:x2}", b);
+            foreach (byte b in data)
+                hex.AppendFormat("{0:x2}", b);
             return hex.ToString();
         }
 
@@ -221,7 +233,8 @@
 
         public static byte[] ReverseByteArray(byte[] bytes)
         {
-            if (bytes == null || bytes.Length < 1) throw new ArgumentNullException(nameof(bytes));
+            if (bytes == null || bytes.Length < 1)
+                throw new ArgumentNullException(nameof(bytes));
 
             byte[] ret = new byte[bytes.Length];
             for (int i = 0; i < bytes.Length; i++)
@@ -239,8 +252,10 @@
 
         public static byte[] BitArrayToBytes(BitArray bits)
         {
-            if (bits == null || bits.Length < 1) throw new ArgumentNullException(nameof(bits));
-            if (bits.Length % 8 != 0) throw new ArgumentException("BitArray length must be divisible by 8.");
+            if (bits == null || bits.Length < 1)
+                throw new ArgumentNullException(nameof(bits));
+            if (bits.Length % 8 != 0)
+                throw new ArgumentException("BitArray length must be divisible by 8.");
 
             byte[] ret = new byte[((bits.Length - 1) / 8) + 1];
             bits.CopyTo(ret, 0);

@@ -117,7 +117,8 @@
                         break;
 
                     case "reconnect":
-                        if (client != null) client.Dispose();
+                        if (client != null)
+                            client.Dispose();
                         client = new WatsonTcpClient(serverIp, serverPort)
                         {
                             ServerConnected = ServerConnected,
@@ -185,7 +186,8 @@
             Console.WriteLine(String.Empty);
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(presharedKey)) presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
+            if (String.IsNullOrEmpty(presharedKey))
+                presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
             return presharedKey;
         }
 

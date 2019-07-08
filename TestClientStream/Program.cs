@@ -68,7 +68,8 @@
                     case "send":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (String.IsNullOrEmpty(userInput))
+                            break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = client.Send(data.Length, ms);
@@ -78,7 +79,8 @@
                     case "sendasync":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (String.IsNullOrEmpty(userInput))
+                            break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = client.SendAsync(data.Length, ms).Result;
@@ -120,7 +122,8 @@
                         break;
 
                     case "reconnect":
-                        if (client != null) client.Dispose();
+                        if (client != null)
+                            client.Dispose();
                         client = new WatsonTcpClient(serverIp, serverPort)
                         {
                             ServerConnected = ServerConnected,
@@ -231,7 +234,8 @@
             Console.WriteLine(String.Empty);
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(presharedKey)) presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
+            if (String.IsNullOrEmpty(presharedKey))
+                presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
             return presharedKey;
         }
 

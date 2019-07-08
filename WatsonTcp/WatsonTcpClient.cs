@@ -137,8 +137,10 @@
             string serverIp,
             int serverPort)
         {
-            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
-            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
+            if (String.IsNullOrEmpty(serverIp))
+                throw new ArgumentNullException(nameof(serverIp));
+            if (serverPort < 1)
+                throw new ArgumentOutOfRangeException(nameof(serverPort));
 
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
@@ -161,8 +163,10 @@
             string pfxCertFile,
             string pfxCertPass)
         {
-            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
-            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
+            if (String.IsNullOrEmpty(serverIp))
+                throw new ArgumentNullException(nameof(serverIp));
+            if (serverPort < 1)
+                throw new ArgumentOutOfRangeException(nameof(serverPort));
 
             _Mode = Mode.Ssl;
             _ServerIp = serverIp;
@@ -171,8 +175,10 @@
             _ReadLock = new SemaphoreSlim(1);
             _TcpStream = null;
             _SslCertificate = null;
-            if (String.IsNullOrEmpty(pfxCertPass)) _SslCertificate = new X509Certificate2(pfxCertFile);
-            else _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
+            if (String.IsNullOrEmpty(pfxCertPass))
+                _SslCertificate = new X509Certificate2(pfxCertFile);
+            else
+                _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
 
             _SslCertificateCollection = new X509Certificate2Collection
             {
@@ -325,8 +331,10 @@
         /// <param name="presharedKey">Up to 16-character string.</param>
         public void Authenticate(string presharedKey)
         {
-            if (String.IsNullOrEmpty(presharedKey)) throw new ArgumentNullException(nameof(presharedKey));
-            if (presharedKey.Length != 16) throw new ArgumentException("Preshared key length must be 16 bytes.");
+            if (String.IsNullOrEmpty(presharedKey))
+                throw new ArgumentNullException(nameof(presharedKey));
+            if (presharedKey.Length != 16)
+                throw new ArgumentException("Preshared key length must be 16 bytes.");
 
             presharedKey = presharedKey.PadRight(16, ' ');
             WatsonMessage msg = new WatsonMessage
@@ -420,7 +428,8 @@
                     {
                         _WriteLock.Wait(1);
                         _ReadLock.Wait(1);
-                        if (_TcpStream != null) _TcpStream.Close();
+                        if (_TcpStream != null)
+                            _TcpStream.Close();
                     }
                     catch (Exception)
                     {
@@ -478,7 +487,7 @@
             Log("================================================================================");
         }
 
-        private async Task DataReceiver(CancellationToken? cancelToken=null)
+        private async Task DataReceiver(CancellationToken? cancelToken = null)
         {
             try
             {
@@ -631,7 +640,8 @@
         {
             bool disconnectDetected = false;
             long dataLen = 0;
-            if (msg.Data != null) dataLen = msg.Data.Length;
+            if (msg.Data != null)
+                dataLen = msg.Data.Length;
 
             try
             {
@@ -651,13 +661,15 @@
                     if (_Mode == Mode.Tcp)
                     {
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-                        if (msg.Data != null && msg.Data.Length > 0) _TcpStream.Write(msg.Data, 0, msg.Data.Length);
+                        if (msg.Data != null && msg.Data.Length > 0)
+                            _TcpStream.Write(msg.Data, 0, msg.Data.Length);
                         _TcpStream.Flush();
                     }
                     else if (_Mode == Mode.Ssl)
                     {
                         _SslStream.Write(headerBytes, 0, headerBytes.Length);
-                        if (msg.Data != null && msg.Data.Length > 0) _SslStream.Write(msg.Data, 0, msg.Data.Length);
+                        if (msg.Data != null && msg.Data.Length > 0)
+                            _SslStream.Write(msg.Data, 0, msg.Data.Length);
                         _SslStream.Flush();
                     }
                     else
@@ -730,7 +742,8 @@
 
         private bool MessageWrite(long contentLength, Stream stream)
         {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater bytes.");
+            if (contentLength < 0)
+                throw new ArgumentException("Content length must be zero or greater bytes.");
             if (contentLength > 0)
             {
                 if (stream == null || !stream.CanRead)
@@ -869,7 +882,8 @@
 
         private async Task<bool> MessageWriteAsync(long contentLength, Stream stream)
         {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater bytes.");
+            if (contentLength < 0)
+                throw new ArgumentException("Content length must be zero or greater bytes.");
             if (contentLength > 0)
             {
                 if (stream == null || !stream.CanRead)

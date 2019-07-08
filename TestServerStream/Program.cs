@@ -61,7 +61,8 @@
                 List<string> clients;
                 string ipPort;
 
-                if (String.IsNullOrEmpty(userInput)) continue;
+                if (String.IsNullOrEmpty(userInput))
+                    continue;
 
                 switch (userInput)
                 {
@@ -105,10 +106,12 @@
                     case "send":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
+                        if (String.IsNullOrEmpty(ipPort))
+                            break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (String.IsNullOrEmpty(userInput))
+                            break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = server.Send(ipPort, data.Length, ms);
@@ -118,10 +121,12 @@
                     case "sendasync":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
+                        if (String.IsNullOrEmpty(ipPort))
+                            break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (String.IsNullOrEmpty(userInput))
+                            break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = server.SendAsync(ipPort, data.Length, ms).Result;
