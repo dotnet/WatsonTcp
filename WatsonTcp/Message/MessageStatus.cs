@@ -8,6 +8,6 @@
         AuthRequired,
         AuthRequested,
         AuthSuccess,
-        AuthFailure
+        AuthFailure,
     }
 }

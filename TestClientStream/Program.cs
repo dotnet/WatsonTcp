@@ -120,7 +120,7 @@
                             {
                                 ServerConnected = ServerConnected,
                                 ServerDisconnected = ServerDisconnected,
-                                StreamReceived = StreamReceived
+                                StreamReceived = StreamReceived,
                             };
 
                             client.Start();
@@ -138,7 +138,7 @@
                         {
                             ServerConnected = ServerConnected,
                             ServerDisconnected = ServerDisconnected,
-                            StreamReceived = StreamReceived
+                            StreamReceived = StreamReceived,
                         };
 
                         client.Start();
@@ -223,7 +223,7 @@
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass)
                 {
                     AcceptInvalidCertificates = acceptInvalidCerts,
-                    MutuallyAuthenticate = mutualAuthentication
+                    MutuallyAuthenticate = mutualAuthentication,
                 };
             }
 

@@ -583,7 +583,7 @@
                 {
                     Status = MessageStatus.AuthRequired,
                     Data = null,
-                    ContentLength = 0
+                    ContentLength = 0,
                 };
 
                 MessageWrite(client, authMsg, null);
@@ -739,7 +739,7 @@
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
                                             WatsonMessage authMsg = new WatsonMessage(data, Debug)
                                             {
-                                                Status = MessageStatus.AuthSuccess
+                                                Status = MessageStatus.AuthSuccess,
                                             };
 
                                             MessageWrite(client, authMsg, null);
@@ -755,7 +755,7 @@
                                             byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
                                             WatsonMessage authMsg = new WatsonMessage(data, Debug)
                                             {
-                                                Status = MessageStatus.AuthFailure
+                                                Status = MessageStatus.AuthFailure,
                                             };
 
                                             MessageWrite(client, authMsg, null);
@@ -772,7 +772,7 @@
                                         byte[] data = Encoding.UTF8.GetBytes("No authentication material");
                                         WatsonMessage authMsg = new WatsonMessage(data, Debug)
                                         {
-                                            Status = MessageStatus.AuthFailure
+                                            Status = MessageStatus.AuthFailure,
                                         };
 
                                         MessageWrite(client, authMsg, null);
@@ -790,7 +790,7 @@
                                     byte[] data = Encoding.UTF8.GetBytes("Authentication required");
                                     WatsonMessage authMsg = new WatsonMessage(data, Debug)
                                     {
-                                        Status = MessageStatus.AuthRequired
+                                        Status = MessageStatus.AuthRequired,
                                     };
 
                                     MessageWrite(client, authMsg, null);

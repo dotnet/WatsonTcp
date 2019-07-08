@@ -25,7 +25,7 @@
                 new JsonSerializerSettings
                 {
                     NullValueHandling = NullValueHandling.Ignore,
-                    DateTimeZoneHandling = DateTimeZoneHandling.Utc
+                    DateTimeZoneHandling = DateTimeZoneHandling.Utc,
                 });
 
             return json;

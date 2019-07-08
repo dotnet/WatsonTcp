@@ -37,7 +37,7 @@
                 server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass)
                 {
                     AcceptInvalidCertificates = acceptInvalidCerts,
-                    MutuallyAuthenticate = mutualAuthentication
+                    MutuallyAuthenticate = mutualAuthentication,
                 };
             }
 

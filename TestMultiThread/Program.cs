@@ -27,7 +27,7 @@
             {
                 ClientConnected = ServerClientConnected,
                 ClientDisconnected = ServerClientDisconnected,
-                MessageReceived = ServerMsgReceived
+                MessageReceived = ServerMsgReceived,
             };
 
             server.Start();
@@ -38,7 +38,7 @@
             {
                 ServerConnected = ClientServerConnected,
                 ServerDisconnected = ClientServerDisconnected,
-                MessageReceived = ClientMsgReceived
+                MessageReceived = ClientMsgReceived,
             };
 
             c.Start();

@@ -3,6 +3,6 @@
     internal enum Mode
     {
         Tcp,
-        Ssl
+        Ssl,
     }
 }

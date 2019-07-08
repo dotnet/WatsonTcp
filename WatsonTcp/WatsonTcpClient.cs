@@ -199,7 +199,7 @@
 
             _SslCertificateCollection = new X509Certificate2Collection
             {
-                _SslCertificate
+                _SslCertificate,
             };
         }
 
@@ -363,7 +363,7 @@
                 Status = MessageStatus.AuthRequested,
                 PresharedKey = Encoding.UTF8.GetBytes(presharedKey),
                 Data = null,
-                ContentLength = 0
+                ContentLength = 0,
             };
 
             MessageWrite(msg);

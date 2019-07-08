@@ -7,6 +7,6 @@
         Bits,
         ByteArray,
         DateTime,
-        String
+        String,
     }
 }
