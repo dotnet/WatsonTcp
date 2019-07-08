@@ -409,7 +409,7 @@
                     Console.WriteLine(Common.SerializeJson(e));
                 }
 
-                throw e;
+                throw;
             }
             finally
             {

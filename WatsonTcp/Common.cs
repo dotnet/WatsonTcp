@@ -54,7 +54,7 @@
                 Console.WriteLine("Exception while deserializing:");
                 Console.WriteLine(json);
                 Console.WriteLine(String.Empty);
-                throw e;
+                throw;
             }
         }
 
