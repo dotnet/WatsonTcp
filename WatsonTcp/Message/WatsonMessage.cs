@@ -254,10 +254,7 @@
                     Int64.TryParse(msgLengthString, out long length);
                     _Length = length;
 
-                    if (_Debug)
-                    {
-                        Console.WriteLine("Message payload length: " + Length + " bytes");
-                    }
+                    Log("Message payload length: " + Length + " bytes");
                 }
 
                 #endregion
@@ -291,20 +288,13 @@
             }
             catch (Exception e)
             {
-                if (_Debug)
-                {
-                    Console.WriteLine(Common.SerializeJson(e));
-                }
-
+                Log(Common.SerializeJson(e));
                 throw;
             }
             finally
             {
-                if (_Debug)
-                {
-                    Console.WriteLine("Message build completed:");
-                    Console.WriteLine(this.ToString());
-                }
+                Log("Message build completed:");
+                Log(this.ToString());
             }
         }
 
@@ -341,10 +331,7 @@
                     Int64.TryParse(msgLengthString, out long length);
                     _Length = length;
 
-                    if (_Debug)
-                    {
-                        Console.WriteLine("Message payload length: " + Length + " bytes");
-                    }
+                    Log("Message payload length: " + Length + " bytes");
                 }
 
                 #endregion
@@ -362,10 +349,7 @@
                     if (HeaderFields[i])
                     {
                         MessageField field = GetMessageField(i);
-                        if (_Debug)
-                        {
-                            Console.WriteLine("Reading header field " + i + " " + field.Name + " " + field.Type.ToString() + " " + field.Length + " bytes");
-                        }
+                        Log("Reading header field " + i + " " + field.Name + " " + field.Type.ToString() + " " + field.Length + " bytes");
 
                         object val = await ReadField(field.Type, field.Length, field.Name);
                         SetMessageValue(field, val);
@@ -395,20 +379,13 @@
             }
             catch (Exception e)
             {
-                if (_Debug)
-                {
-                    Console.WriteLine(Common.SerializeJson(e));
-                }
-
+                Log(Common.SerializeJson(e));
                 throw;
             }
             finally
             {
-                if (_Debug)
-                {
-                    Console.WriteLine("Message build completed:");
-                    Console.WriteLine(this.ToString());
-                }
+                Log("Message build completed:");
+                Log(this.ToString());
             }
         }
 
@@ -433,30 +410,21 @@
             {
                 if (HeaderFields[i])
                 {
-                    if (_Debug)
-                    {
-                        Console.WriteLine("Header field " + i + " is set");
-                    }
+                    Log("Header field " + i + " is set");
 
                     MessageField field = GetMessageField(i);
                     switch (i)
                     {
                         case 0: // preshared key
-                            if (_Debug)
-                            {
-                                Console.WriteLine("PresharedKey: " + Encoding.UTF8.GetString(PresharedKey));
-                            }
-
+                            Log("PresharedKey: " + Encoding.UTF8.GetString(PresharedKey));
                             ret = AppendBytes(ret, PresharedKey);
                             break;
-                        case 1: // status
-                            if (_Debug)
-                            {
-                                Console.WriteLine("Status: " + Status.ToString() + " " + (int)Status);
-                            }
 
+                        case 1: // status
+                            Log("Status: " + Status.ToString() + " " + (int)Status);
                             ret = AppendBytes(ret, IntegerToBytes((int)Status));
                             break;
+
                         default:
                             throw new ArgumentException("Unknown bit number.");
                     }
@@ -468,10 +436,7 @@
             #region Prepend-Message-Length
 
             long finalLen = ret.Length + contentLength;
-            if (_Debug)
-            {
-                Console.WriteLine("Content length: " + finalLen + " (" + ret.Length + " + " + contentLength + ")");
-            }
+            Log("Content length: " + finalLen + " (" + ret.Length + " + " + contentLength + ")");
 
             byte[] lengthHeader = Encoding.UTF8.GetBytes(finalLen.ToString() + ":");
             byte[] final = new byte[(lengthHeader.Length + ret.Length)];
@@ -480,11 +445,7 @@
 
             #endregion
 
-            if (_Debug)
-            {
-                Console.WriteLine("ToHeaderBytes returning: " + Encoding.UTF8.GetString(final));
-            }
-
+            Log("ToHeaderBytes returning: " + Encoding.UTF8.GetString(final));
             return final;
         }
 
@@ -644,10 +605,7 @@
 
         private async Task<byte[]> ReadFromNetwork(long count, string field)
         {
-            if (_Debug)
-            {
-                Console.WriteLine("ReadFromNetwork " + count + " " + field);
-            }
+            Log("ReadFromNetwork " + count + " " + field);
 
             string logMessage = null;
 
@@ -708,10 +666,7 @@
             }
             finally
             {
-                if (_Debug)
-                {
-                    Console.WriteLine("- Result: " + field + " " + count + ": " + logMessage);
-                }
+                Log("- Result: " + field + " " + count + ": " + logMessage);
             }
         }
 
@@ -823,19 +778,13 @@
             switch (bitNumber)
             {
                 case 0:
-                    if (_Debug)
-                    {
-                        Console.WriteLine("Returning field PresharedKey");
-                    }
-
+                    Log("Returning field PresharedKey");
                     return new MessageField(0, "PresharedKey", FieldType.ByteArray, 16);
-                case 1:
-                    if (_Debug)
-                    {
-                        Console.WriteLine("Returning field Status");
-                    }
 
+                case 1:
+                    Log("Returning field Status");
                     return new MessageField(1, "Status", FieldType.Int32, 4);
+
                 default:
                     throw new KeyNotFoundException();
             }
@@ -857,22 +806,26 @@
             {
                 case 0:
                     PresharedKey = (byte[])val;
-                    if (_Debug)
-                    {
-                        Console.WriteLine("PresharedKey set: " + Encoding.UTF8.GetString(PresharedKey));
-                    }
+                    Log("PresharedKey set: " + Encoding.UTF8.GetString(PresharedKey));
 
                     return;
+
                 case 1:
                     Status = (MessageStatus)(int)val;
-                    if (_Debug)
-                    {
-                        Console.WriteLine("Status set: " + Status.ToString());
-                    }
+                    Log("Status set: " + Status.ToString());
 
                     return;
+
                 default:
                     throw new ArgumentException("Unknown bit number.");
+            }
+        }
+
+        private void Log(string msg)
+        {
+            if (_Debug)
+            {
+                Console.WriteLine(msg);
             }
         }
 
