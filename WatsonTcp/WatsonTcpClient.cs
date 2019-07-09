@@ -2,7 +2,6 @@
 {
     using System;
     using System.IO;
-    using System.Net;
     using System.Net.Security;
     using System.Net.Sockets;
     using System.Security.Authentication;
@@ -119,8 +118,8 @@
         private readonly X509Certificate2 _SslCertificate;
         private readonly X509Certificate2Collection _SslCertificateCollection;
 
-        private readonly SemaphoreSlim _WriteLock;
-        private readonly SemaphoreSlim _ReadLock;
+        private readonly SemaphoreSlim _WriteLock = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim _ReadLock = new SemaphoreSlim(1);
 
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
@@ -137,23 +136,8 @@
         public WatsonTcpClient(
             string serverIp,
             int serverPort)
+            : this(Mode.Tcp, serverIp, serverPort, String.Empty, String.Empty)
         {
-            if (String.IsNullOrEmpty(serverIp))
-            {
-                throw new ArgumentNullException(nameof(serverIp));
-            }
-
-            if (serverPort < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(serverPort));
-            }
-
-            _Mode = Mode.Tcp;
-            _ServerIp = serverIp;
-            _ServerPort = serverPort;
-            _WriteLock = new SemaphoreSlim(1);
-            _ReadLock = new SemaphoreSlim(1);
-            _SslStream = null;
         }
 
         /// <summary>
@@ -164,6 +148,24 @@
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
         public WatsonTcpClient(
+            string serverIp,
+            int serverPort,
+            string pfxCertFile,
+            string pfxCertPass)
+            : this(Mode.Ssl, serverIp, serverPort, pfxCertFile, pfxCertPass)
+        {
+        }
+
+        /// <summary>
+        /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
+        /// </summary>
+        /// <param name="mode">If using TCP or SSL.</param>
+        /// <param name="serverIp">The IP address or hostname of the server.</param>
+        /// <param name="serverPort">The TCP port on which the server is listening.</param>
+        /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
+        /// <param name="pfxCertPass">The password for the SSL certificate.</param>
+        internal WatsonTcpClient(
+            Mode mode,
             string serverIp,
             int serverPort,
             string pfxCertFile,
@@ -179,26 +181,30 @@
                 throw new ArgumentOutOfRangeException(nameof(serverPort));
             }
 
-            _Mode = Mode.Ssl;
+            _Mode = mode;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
-            _WriteLock = new SemaphoreSlim(1);
-            _ReadLock = new SemaphoreSlim(1);
-            _TcpStream = null;
-            _SslCertificate = null;
-            if (String.IsNullOrEmpty(pfxCertPass))
-            {
-                _SslCertificate = new X509Certificate2(pfxCertFile);
-            }
-            else
-            {
-                _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
-            }
 
-            _SslCertificateCollection = new X509Certificate2Collection
+            _TcpStream = null;
+            _SslStream = null;
+            _SslCertificate = null;
+
+            if (mode == Mode.Ssl)
+            {
+                if (String.IsNullOrEmpty(pfxCertPass))
+                {
+                    _SslCertificate = new X509Certificate2(pfxCertFile);
+                }
+                else
+                {
+                    _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
+                }
+
+                _SslCertificateCollection = new X509Certificate2Collection
             {
                 _SslCertificate,
             };
+            }
         }
 
         #endregion
