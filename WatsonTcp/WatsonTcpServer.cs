@@ -432,14 +432,16 @@
                         }
                     }
 
-                    ClientMetadata client = new ClientMetadata(tcpClient);
-                    clientIpPort = client.IpPort;
+                    ClientMetadata client;
 
                     #endregion
 
                     if (_Mode == Mode.Tcp)
                     {
                         #region Tcp
+
+                        client = new ClientMetadata(tcpClient);
+                        clientIpPort = client.IpPort;
 
                         Task unawaited = Task.Run(() => FinalizeConnection(client), _Token);
 
@@ -451,12 +453,14 @@
 
                         if (AcceptInvalidCertificates)
                         {
-                            client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                            client = new ClientMetadata(tcpClient, true, new RemoteCertificateValidationCallback(AcceptCertificate));
                         }
                         else
                         {
-                            client.SslStream = new SslStream(client.NetworkStream, false);
+                            client = new ClientMetadata(tcpClient, true);
                         }
+
+                        clientIpPort = client.IpPort;
 
                         Task unawaited = Task.Run(() =>
                         {

@@ -15,22 +15,41 @@
         private readonly NetworkStream _NetworkStream;
         private readonly string _IpPort;
 
-        private readonly SemaphoreSlim _ReadLock;
-        private readonly SemaphoreSlim _WriteLock;
+        private readonly SemaphoreSlim _ReadLock = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim _WriteLock = new SemaphoreSlim(1);
         private SslStream _SslStream;
 
         #endregion
 
         #region Constructors
 
-        public ClientMetadata(TcpClient tcp)
+        public ClientMetadata(TcpClient tcp) :
+            this(tcp, false, null)
+        {
+        }
+
+        public ClientMetadata(TcpClient tcp, bool useSsl) :
+            this(tcp, useSsl, null)
+        {
+        }
+
+        public ClientMetadata(TcpClient tcp, bool useSsl, RemoteCertificateValidationCallback remoteCertificateValidationCallback)
         {
             _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
             _NetworkStream = tcp.GetStream();
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
-            _ReadLock = new SemaphoreSlim(1);
-            _WriteLock = new SemaphoreSlim(1);
+            if (useSsl)
+            {
+                if (remoteCertificateValidationCallback != null)
+                {
+                    _SslStream = new SslStream(_NetworkStream, false, remoteCertificateValidationCallback);
+                }
+                else
+                {
+                    _SslStream = new SslStream(_NetworkStream, false);
+                }
+            }
         }
 
         #endregion
@@ -41,11 +60,7 @@
 
         internal NetworkStream NetworkStream => _NetworkStream;
 
-        internal SslStream SslStream
-        {
-            get => _SslStream;
-            set => _SslStream = value;
-        }
+        internal SslStream SslStream => _SslStream;
 
         internal string IpPort => _IpPort;
 
