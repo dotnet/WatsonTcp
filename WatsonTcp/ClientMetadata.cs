@@ -7,38 +7,21 @@
 
     public class ClientMetadata : IDisposable
     {
-        #region Public-Members
-
-        public TcpClient TcpClient => _TcpClient;
-
-        public NetworkStream NetworkStream => _NetworkStream;
-
-        public SslStream SslStream
-        {
-            get => _SslStream;
-            set => _SslStream = value;
-        }
-
-        public string IpPort => _IpPort;
-
-        public SemaphoreSlim ReadLock { get; set; }
-
-        public SemaphoreSlim WriteLock { get; set; }
-
-        #endregion
-
-        #region Private-Members
+        #region Private-Fields
 
         private bool _Disposed = false;
 
         private readonly TcpClient _TcpClient;
         private readonly NetworkStream _NetworkStream;
-        private SslStream _SslStream;
         private readonly string _IpPort;
+
+        private readonly SemaphoreSlim _ReadLock;
+        private readonly SemaphoreSlim _WriteLock;
+        private SslStream _SslStream;
 
         #endregion
 
-        #region Constructors-and-Factories
+        #region Constructors
 
         public ClientMetadata(TcpClient tcp)
         {
@@ -46,9 +29,29 @@
             _NetworkStream = tcp.GetStream();
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
-            ReadLock = new SemaphoreSlim(1);
-            WriteLock = new SemaphoreSlim(1);
+            _ReadLock = new SemaphoreSlim(1);
+            _WriteLock = new SemaphoreSlim(1);
         }
+
+        #endregion
+
+        #region Internal-Properties
+
+        internal TcpClient TcpClient => _TcpClient;
+
+        internal NetworkStream NetworkStream => _NetworkStream;
+
+        internal SslStream SslStream
+        {
+            get => _SslStream;
+            set => _SslStream = value;
+        }
+
+        internal string IpPort => _IpPort;
+
+        internal SemaphoreSlim ReadLock => _ReadLock;
+
+        internal SemaphoreSlim WriteLock => _WriteLock;
 
         #endregion
 
@@ -62,7 +65,7 @@
 
         #endregion
 
-        #region Private-Methods
+        #region Protected-Methods
 
         protected virtual void Dispose(bool disposing)
         {

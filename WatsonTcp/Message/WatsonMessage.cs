@@ -14,22 +14,163 @@
 
     internal class WatsonMessage
     {
-        #region Public-Members
+        #region Private-Fields
+
+        private readonly bool _Debug = false;
+
+        //                                         123456789012345678901234567890
+        private readonly string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
+
+        private readonly NetworkStream _NetworkStream;
+        private readonly SslStream _SslStream;
+        private byte[] _PresharedKey;
+        private MessageStatus _Status;
+
+        private long _Length;
+        private long _ContentLength;
+        private BitArray _HeaderFields = new BitArray(64);
+        private byte[] _Data;
+        private Stream _DataStream;
+
+        #endregion
+
+        #region Constructors
+
+        /// <summary>
+        /// Do not use.
+        /// </summary>
+        internal WatsonMessage()
+        {
+            InitBitArray(HeaderFields);
+            Status = MessageStatus.Normal;
+        }
+
+        /// <summary>
+        /// Construct a new message to send.
+        /// </summary>
+        /// <param name="data">The data to send.</param>
+        /// <param name="debug">Enable or disable debugging.</param>
+        internal WatsonMessage(byte[] data, bool debug)
+        {
+            if (data == null || data.Length < 1)
+            {
+                throw new ArgumentNullException(nameof(data));
+            }
+
+            InitBitArray(HeaderFields);
+
+            Status = MessageStatus.Normal;
+
+            _ContentLength = data.Length;
+            _Data = new byte[data.Length];
+            Buffer.BlockCopy(data, 0, Data, 0, data.Length);
+            _DataStream = null;
+
+            _Debug = debug;
+        }
+
+        /// <summary>
+        /// Construct a new message to send.
+        /// </summary>
+        /// <param name="contentLength">The number of bytes included in the stream.</param>
+        /// <param name="stream">The stream containing the data.</param>
+        /// <param name="debug">Enable or disable debugging.</param>
+        internal WatsonMessage(long contentLength, Stream stream, bool debug)
+        {
+            if (contentLength < 0)
+            {
+                throw new ArgumentException("Content length must be zero or greater.");
+            }
+
+            if (contentLength > 0)
+            {
+                if (stream == null || !stream.CanRead)
+                {
+                    throw new ArgumentException("Cannot read from supplied stream.");
+                }
+            }
+
+            InitBitArray(HeaderFields);
+
+            Status = MessageStatus.Normal;
+
+            _ContentLength = contentLength;
+            _Data = null;
+            _DataStream = stream;
+
+            _Debug = debug;
+        }
+
+        /// <summary>
+        /// Read from a stream and construct a message.  Call Build() to populate.
+        /// </summary>
+        /// <param name="stream">NetworkStream.</param>
+        /// <param name="debug">Enable or disable console debugging.</param>
+        internal WatsonMessage(NetworkStream stream, bool debug)
+        {
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            if (!stream.CanRead)
+            {
+                throw new ArgumentException("Cannot read from stream.");
+            }
+
+            InitBitArray(HeaderFields);
+            Status = MessageStatus.Normal;
+
+            _NetworkStream = stream;
+            _Debug = debug;
+        }
+
+        /// <summary>
+        /// Read from an SSL-based stream and construct a message.  Call Build() to populate.
+        /// </summary>
+        /// <param name="stream">SslStream.</param>
+        /// <param name="debug">Enable or disable console debugging.</param>
+        internal WatsonMessage(SslStream stream, bool debug)
+        {
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            if (!stream.CanRead)
+            {
+                throw new ArgumentException("Cannot read from stream.");
+            }
+
+            InitBitArray(HeaderFields);
+            Status = MessageStatus.Normal;
+
+            _SslStream = stream;
+            _Debug = debug;
+        }
+
+        #endregion
+
+        #region Internal-Properties
 
         /// <summary>
         /// Length of all header fields and payload data.
         /// </summary>
-        internal long Length { get; set; }
+        internal long Length => _Length;
 
         /// <summary>
         /// Length of the data.
         /// </summary>
-        internal long ContentLength { get; set; }
+        internal long ContentLength
+        {
+            get => _ContentLength;
+            set => _ContentLength = value;
+        }
 
         /// <summary>
         /// Bit array indicating which fields in the header are set.
         /// </summary>
-        internal BitArray HeaderFields = new BitArray(64);
+        internal BitArray HeaderFields => _HeaderFields;
 
         /// <summary>
         /// Preshared key for connection authentication.  HeaderFields[0], 16 bytes.
@@ -66,170 +207,20 @@
         /// <summary>
         /// Message data.
         /// </summary>
-        internal byte[] Data { get; set; }
+        internal byte[] Data
+        {
+            get => _Data;
+            set => _Data = value;
+        }
 
         /// <summary>
         /// Stream containing the message data.
         /// </summary>
-        internal Stream DataStream { get; set; }
-
-        /// <summary>
-        /// Size of buffer to use while reading message payload.  Default is 64KB.
-        /// </summary>
-        internal int ReadStreamBuffer
-        {
-            get => _ReadStreamBuffer;
-            set
-            {
-                if (value < 1)
-                {
-                    throw new ArgumentException("ReadStreamBuffer must be greater than zero bytes.");
-                }
-
-                _ReadStreamBuffer = value;
-            }
-        }
+        internal Stream DataStream => _DataStream;
 
         #endregion
 
-        #region Private-Members
-
-        private readonly bool _Debug = false;
-
-        //                                123456789012345678901234567890
-        private readonly string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
-
-        private readonly NetworkStream _NetworkStream;
-        private readonly SslStream _SslStream;
-        private int _ReadStreamBuffer = 65536;
-        private byte[] _PresharedKey;
-        private MessageStatus _Status;
-
-        #endregion
-
-        #region Constructors-and-Factories
-
-        /// <summary>
-        /// Do not use.
-        /// </summary>
-        internal WatsonMessage()
-        {
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-            Status = MessageStatus.Normal;
-        }
-
-        /// <summary>
-        /// Construct a new message to send.
-        /// </summary>
-        /// <param name="data">The data to send.</param>
-        /// <param name="debug">Enable or disable debugging.</param>
-        internal WatsonMessage(byte[] data, bool debug)
-        {
-            if (data == null || data.Length < 1)
-            {
-                throw new ArgumentNullException(nameof(data));
-            }
-
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-
-            Status = MessageStatus.Normal;
-
-            ContentLength = data.Length;
-            Data = new byte[data.Length];
-            Buffer.BlockCopy(data, 0, Data, 0, data.Length);
-            DataStream = null;
-
-            _Debug = debug;
-        }
-
-        /// <summary>
-        /// Construct a new message to send.
-        /// </summary>
-        /// <param name="contentLength">The number of bytes included in the stream.</param>
-        /// <param name="stream">The stream containing the data.</param>
-        /// <param name="debug">Enable or disable debugging.</param>
-        internal WatsonMessage(long contentLength, Stream stream, bool debug)
-        {
-            if (contentLength < 0)
-            {
-                throw new ArgumentException("Content length must be zero or greater.");
-            }
-
-            if (contentLength > 0)
-            {
-                if (stream == null || !stream.CanRead)
-                {
-                    throw new ArgumentException("Cannot read from supplied stream.");
-                }
-            }
-
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-
-            Status = MessageStatus.Normal;
-
-            ContentLength = contentLength;
-            Data = null;
-            DataStream = stream;
-
-            _Debug = debug;
-        }
-
-        /// <summary>
-        /// Read from a stream and construct a message.  Call Build() to populate.
-        /// </summary>
-        /// <param name="stream">NetworkStream.</param>
-        /// <param name="debug">Enable or disable console debugging.</param>
-        internal WatsonMessage(NetworkStream stream, bool debug)
-        {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
-
-            if (!stream.CanRead)
-            {
-                throw new ArgumentException("Cannot read from stream.");
-            }
-
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-            Status = MessageStatus.Normal;
-
-            _NetworkStream = stream;
-            _Debug = debug;
-        }
-
-        /// <summary>
-        /// Read from an SSL-based stream and construct a message.  Call Build() to populate.
-        /// </summary>
-        /// <param name="stream">SslStream.</param>
-        /// <param name="debug">Enable or disable console debugging.</param>
-        internal WatsonMessage(SslStream stream, bool debug)
-        {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
-
-            if (!stream.CanRead)
-            {
-                throw new ArgumentException("Cannot read from stream.");
-            }
-
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-            Status = MessageStatus.Normal;
-
-            _SslStream = stream;
-            _Debug = debug;
-        }
-
-        #endregion
-
-        #region Public-Methods
+        #region Internal-Methods
 
         /// <summary>
         /// Awaitable async method to build the Message object from data that awaits in a NetworkStream or SslStream, returning the full message data.
@@ -261,7 +252,7 @@
 
                     string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", String.Empty);
                     Int64.TryParse(msgLengthString, out long length);
-                    Length = length;
+                    _Length = length;
 
                     if (_Debug)
                     {
@@ -275,7 +266,7 @@
 
                 byte[] headerFields = await ReadFromNetwork(8, "HeaderFields");
                 headerFields = ReverseByteArray(headerFields);
-                HeaderFields = new BitArray(headerFields);
+                _HeaderFields = new BitArray(headerFields);
 
                 long payloadLength = Length - 8;
 
@@ -290,9 +281,9 @@
                     }
                 }
 
-                ContentLength = payloadLength;
-                DataStream = null;
-                Data = await ReadFromNetwork(ContentLength, "Payload");
+                _ContentLength = payloadLength;
+                _DataStream = null;
+                _Data = await ReadFromNetwork(ContentLength, "Payload");
 
                 #endregion
 
@@ -348,7 +339,7 @@
                     string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", String.Empty);
 
                     Int64.TryParse(msgLengthString, out long length);
-                    Length = length;
+                    _Length = length;
 
                     if (_Debug)
                     {
@@ -362,7 +353,7 @@
 
                 byte[] headerFields = await ReadFromNetwork(8, "HeaderFields");
                 headerFields = ReverseByteArray(headerFields);
-                HeaderFields = new BitArray(headerFields);
+                _HeaderFields = new BitArray(headerFields);
 
                 long payloadLength = Length - 8;
 
@@ -382,16 +373,16 @@
                     }
                 }
 
-                ContentLength = payloadLength;
-                Data = null;
+                _ContentLength = payloadLength;
+                _Data = null;
 
                 if (_NetworkStream != null)
                 {
-                    DataStream = _NetworkStream;
+                    _DataStream = _NetworkStream;
                 }
                 else if (_SslStream != null)
                 {
-                    DataStream = _SslStream;
+                    _DataStream = _SslStream;
                 }
                 else
                 {
@@ -531,7 +522,7 @@
 
         private void SetHeaderFieldBitmap()
         {
-            HeaderFields = new BitArray(64);
+            _HeaderFields = new BitArray(64);
             InitBitArray(HeaderFields);
 
             if (PresharedKey != null && PresharedKey.Length > 0)
@@ -597,76 +588,6 @@
             finally
             {
                 Debug.WriteLine(logMessage);
-            }
-        }
-
-        private byte[] FieldToBytes(FieldType fieldType, object data, int maxLength)
-        {
-            if (data == null)
-            {
-                throw new ArgumentNullException(nameof(data));
-            }
-
-            if (fieldType == FieldType.Int32)
-            {
-                int intVar = Convert.ToInt32(data);
-                string lengthVar = String.Empty;
-                for (int i = 0; i < maxLength; i++)
-                {
-                    lengthVar += "0";
-                }
-
-                return Encoding.UTF8.GetBytes(intVar.ToString(lengthVar));
-            }
-            else if (fieldType == FieldType.Int64)
-            {
-                long longVar = Convert.ToInt64(data);
-                string lengthVar = String.Empty;
-                for (int i = 0; i < maxLength; i++)
-                {
-                    lengthVar += "0";
-                }
-
-                return Encoding.UTF8.GetBytes(longVar.ToString(lengthVar));
-            }
-            else if (fieldType == FieldType.String)
-            {
-                string dataStr = data.ToString().ToUpper();
-                if (dataStr.Length < maxLength)
-                {
-                    string ret = dataStr.PadRight(maxLength);
-                    return Encoding.UTF8.GetBytes(ret);
-                }
-                else if (dataStr.Length > maxLength)
-                {
-                    string ret = dataStr.Substring(maxLength);
-                    return Encoding.UTF8.GetBytes(ret);
-                }
-                else
-                {
-                    return Encoding.UTF8.GetBytes(dataStr);
-                }
-            }
-            else if (fieldType == FieldType.DateTime)
-            {
-                string dateTime = Convert.ToDateTime(data).ToString(_DateTimeFormat);
-                return Encoding.UTF8.GetBytes(dateTime);
-            }
-            else if (fieldType == FieldType.ByteArray)
-            {
-                if (((byte[])data).Length != maxLength)
-                {
-                    throw new ArgumentException("Data length does not match length supplied.");
-                }
-
-                byte[] ret = new byte[maxLength];
-                InitByteArray(ret);
-                Buffer.BlockCopy((byte[])data, 0, ret, 0, maxLength);
-                return ret;
-            }
-            else
-            {
-                throw new ArgumentException("Unknown field type: " + fieldType.ToString());
             }
         }
 
@@ -814,44 +735,6 @@
             return ret;
         }
 
-        private int BytesToInteger(byte[] bytes)
-        {
-            if (bytes == null || bytes.Length < 1)
-            {
-                throw new ArgumentNullException(nameof(bytes));
-            }
-
-            // see https://stackoverflow.com/questions/36295952/direct-convertation-between-ascii-byte-and-int?rq=1
-
-            int result = 0;
-
-            for (int i = 0; i < bytes.Length; ++i)
-            {
-                // ASCII digits are in the range 48 <= n <= 57. This code only
-                // makes sense if we are dealing exclusively with digits, so
-                // throw if we encounter a non-digit character
-                if (bytes[i] < 48 || bytes[i] > 57)
-                {
-                    throw new ArgumentException("Non-digit character present.");
-                }
-
-                // The bytes are in order from most to least significant, so
-                // we need to reverse the index to get the right column number
-                int exp = bytes.Length - i - 1;
-
-                // Digits in ASCII start with 0 at 48, and move sequentially
-                // to 9 at 57, so we can simply subtract 48 from a valid digit
-                // to get its numeric value
-                int digitValue = bytes[i] - 48;
-
-                // Finally, add the digit value times the column value to the
-                // result accumulator
-                result += digitValue * (int)Math.Pow(10, exp);
-            }
-
-            return result;
-        }
-
         private static void InitByteArray(byte[] data)
         {
             if (data == null || data.Length < 1)
@@ -895,19 +778,6 @@
             }
 
             return hex.ToString();
-        }
-
-        private void ReverseBitArray(BitArray array)
-        {
-            int length = array.Length;
-            int mid = length / 2;
-
-            for (int i = 0; i < mid; i++)
-            {
-                bool bit = array[i];
-                array[i] = array[length - i - 1];
-                array[length - i - 1] = bit;
-            }
         }
 
         private static byte[] ReverseByteArray(byte[] bytes)
