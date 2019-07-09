@@ -149,7 +149,6 @@
             }
 
             _ListenerPort = listenerPort;
-
             _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
             _TokenSource = new CancellationTokenSource();
@@ -192,6 +191,7 @@
             }
 
             _ListenerPort = listenerPort;
+            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
             _SslCertificate = null;
             if (String.IsNullOrEmpty(pfxCertPass))
@@ -203,9 +203,9 @@
                 _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
             }
 
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
+
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
             _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
@@ -401,12 +401,6 @@
             }
         }
 
-        private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            // return true; // Allow untrusted certificates.
-            return AcceptInvalidCertificates;
-        }
-
         private async Task AcceptConnections()
         {
             _Listener.Start();
@@ -432,16 +426,14 @@
                         }
                     }
 
-                    ClientMetadata client;
+                    ClientMetadata client = new ClientMetadata(tcpClient, _Mode, AcceptInvalidCertificates);
+                    clientIpPort = client.IpPort;
 
                     #endregion
 
                     if (_Mode == Mode.Tcp)
                     {
                         #region Tcp
-
-                        client = new ClientMetadata(tcpClient);
-                        clientIpPort = client.IpPort;
 
                         Task unawaited = Task.Run(() => FinalizeConnection(client), _Token);
 
@@ -450,17 +442,6 @@
                     else if (_Mode == Mode.Ssl)
                     {
                         #region SSL
-
-                        if (AcceptInvalidCertificates)
-                        {
-                            client = new ClientMetadata(tcpClient, true, new RemoteCertificateValidationCallback(AcceptCertificate));
-                        }
-                        else
-                        {
-                            client = new ClientMetadata(tcpClient, true);
-                        }
-
-                        clientIpPort = client.IpPort;
 
                         Task unawaited = Task.Run(() =>
                         {

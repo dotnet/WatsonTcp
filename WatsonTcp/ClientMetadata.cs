@@ -3,9 +3,10 @@
     using System;
     using System.Net.Security;
     using System.Net.Sockets;
+    using System.Security.Cryptography.X509Certificates;
     using System.Threading;
 
-    public class ClientMetadata : IDisposable
+    internal class ClientMetadata : IDisposable
     {
         #region Private-Fields
 
@@ -17,33 +18,29 @@
 
         private readonly SemaphoreSlim _ReadLock = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _WriteLock = new SemaphoreSlim(1);
-        private SslStream _SslStream;
+
+        private readonly SslStream _SslStream;
 
         #endregion
 
         #region Constructors
 
-        public ClientMetadata(TcpClient tcp) :
-            this(tcp, false, null)
+        internal ClientMetadata(TcpClient tcp) :
+            this(tcp, Mode.Tcp, false)
         {
         }
 
-        public ClientMetadata(TcpClient tcp, bool useSsl) :
-            this(tcp, useSsl, null)
-        {
-        }
-
-        public ClientMetadata(TcpClient tcp, bool useSsl, RemoteCertificateValidationCallback remoteCertificateValidationCallback)
+        internal ClientMetadata(TcpClient tcp, Mode mode, bool acceptInvalidCertificates)
         {
             _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
             _NetworkStream = tcp.GetStream();
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
-            if (useSsl)
+            if (mode == Mode.Ssl)
             {
-                if (remoteCertificateValidationCallback != null)
+                if (acceptInvalidCertificates)
                 {
-                    _SslStream = new SslStream(_NetworkStream, false, remoteCertificateValidationCallback);
+                    _SslStream = new SslStream(_NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
                 }
                 else
                 {
@@ -111,6 +108,16 @@
             WriteLock.Dispose();
 
             _Disposed = true;
+        }
+
+        #endregion
+
+        #region Private-Methods
+
+        private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            // Allow untrusted certificates.
+            return true;
         }
 
         #endregion
