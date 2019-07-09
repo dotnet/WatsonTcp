@@ -300,9 +300,10 @@
             return ret;
         }
 
-        public static void LogException(Exception e)
+        public static void LogException(String method, Exception e)
         {
             Console.WriteLine("================================================================================");
+            Console.WriteLine(" = Method: " + method);
             Console.WriteLine(" = Exception Type: " + e.GetType().ToString());
             Console.WriteLine(" = Exception Data: " + e.Data);
             Console.WriteLine(" = Inner Exception: " + e.InnerException);

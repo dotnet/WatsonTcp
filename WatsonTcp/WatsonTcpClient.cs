@@ -110,8 +110,6 @@
         private bool _Disposed = false;
         private int _ReadStreamBufferSize = 65536;
         private readonly Mode _Mode;
-        private string _SourceIp;
-        private int _SourcePort;
         private readonly string _ServerIp;
         private readonly int _ServerPort;
         private TcpClient _Client;
@@ -245,8 +243,6 @@
 
                     _Client.EndConnect(asyncResult);
 
-                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
-                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
                     _TcpStream = _Client.GetStream();
                     _SslStream = null;
 
@@ -281,9 +277,6 @@
                     }
 
                     _Client.EndConnect(asyncResult);
-
-                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
-                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
 
                     if (AcceptInvalidCertificates)
                     {
@@ -502,19 +495,6 @@
             {
                 Console.WriteLine(msg);
             }
-        }
-
-        private void LogException(string method, Exception e)
-        {
-            Log("================================================================================");
-            Log(" = Method: " + method);
-            Log(" = Exception Type: " + e.GetType().ToString());
-            Log(" = Exception Data: " + e.Data);
-            Log(" = Inner Exception: " + e.InnerException);
-            Log(" = Exception Message: " + e.Message);
-            Log(" = Exception Source: " + e.Source);
-            Log(" = Exception StackTrace: " + e.StackTrace);
-            Log("================================================================================");
         }
 
         private async Task DataReceiver(CancellationToken? cancelToken = null)
@@ -891,7 +871,7 @@
             }
             catch (Exception e)
             {
-                LogException("MessageWrite", e);
+                Common.LogException("MessageWrite", e);
                 disconnectDetected = true;
                 return false;
             }
@@ -1034,7 +1014,7 @@
             }
             catch (Exception e)
             {
-                LogException("MessageWriteAsync", e);
+                Common.LogException("MessageWriteAsync", e);
                 disconnectDetected = true;
                 return false;
             }
