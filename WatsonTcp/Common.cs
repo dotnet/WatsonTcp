@@ -1,7 +1,6 @@
 ﻿namespace WatsonTcp
 {
     using System;
-    using System.Collections;
     using System.Text;
     using Newtonsoft.Json;
 
@@ -202,102 +201,6 @@
 
                 return ret;
             }
-        }
-
-        public static void InitByteArray(byte[] data)
-        {
-            if (data == null || data.Length < 1)
-            {
-                throw new ArgumentNullException(nameof(data));
-            }
-
-            for (int i = 0; i < data.Length; i++)
-            {
-                data[i] = 0x00;
-            }
-        }
-
-        public static void InitBitArray(BitArray data)
-        {
-            if (data == null || data.Length < 1)
-            {
-                throw new ArgumentNullException(nameof(data));
-            }
-
-            for (int i = 0; i < data.Length; i++)
-            {
-                data[i] = false;
-            }
-        }
-
-        public static byte[] AppendBytes(byte[] head, byte[] tail)
-        {
-            byte[] arrayCombined = new byte[head.Length + tail.Length];
-            Array.Copy(head, 0, arrayCombined, 0, head.Length);
-            Array.Copy(tail, 0, arrayCombined, head.Length, tail.Length);
-            return arrayCombined;
-        }
-
-        public static string ByteArrayToHex(byte[] data)
-        {
-            StringBuilder hex = new StringBuilder(data.Length * 2);
-            foreach (byte b in data)
-            {
-                hex.AppendFormat("{0:x2}", b);
-            }
-
-            return hex.ToString();
-        }
-
-        public static void ReverseBitArray(BitArray array)
-        {
-            int length = array.Length;
-            int mid = length / 2;
-
-            for (int i = 0; i < mid; i++)
-            {
-                bool bit = array[i];
-                array[i] = array[length - i - 1];
-                array[length - i - 1] = bit;
-            }
-        }
-
-        public static byte[] ReverseByteArray(byte[] bytes)
-        {
-            if (bytes == null || bytes.Length < 1)
-            {
-                throw new ArgumentNullException(nameof(bytes));
-            }
-
-            byte[] ret = new byte[bytes.Length];
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                ret[i] = ReverseByte(bytes[i]);
-            }
-
-            return ret;
-        }
-
-        public static byte ReverseByte(byte b)
-        {
-            return (byte)(((((b * 0x0802u) & 0x22110u) | ((b * 0x8020u) & 0x88440u)) * 0x10101u) >> 16);
-        }
-
-        public static byte[] BitArrayToBytes(BitArray bits)
-        {
-            if (bits == null || bits.Length < 1)
-            {
-                throw new ArgumentNullException(nameof(bits));
-            }
-
-            if (bits.Length % 8 != 0)
-            {
-                throw new ArgumentException("BitArray length must be divisible by 8.");
-            }
-
-            byte[] ret = new byte[((bits.Length - 1) / 8) + 1];
-            bits.CopyTo(ret, 0);
-            return ret;
         }
 
         public static void LogException(String method, Exception e)
