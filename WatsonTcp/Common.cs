@@ -1,6 +1,7 @@
 ﻿namespace WatsonTcp
 {
     using System;
+    using System.Collections;
     using System.Text;
     using Newtonsoft.Json;
 

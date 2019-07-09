@@ -25,10 +25,6 @@
 
         #region Constructors
 
-        internal ClientMetadata(TcpClient tcp) :
-            this(tcp, Mode.Tcp, false)
-        {
-        }
 
         internal ClientMetadata(TcpClient tcp, Mode mode, bool acceptInvalidCertificates)
         {

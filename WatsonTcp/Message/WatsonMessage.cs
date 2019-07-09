@@ -58,7 +58,6 @@
             }
 
             InitBitArray(HeaderFields);
-
             Status = MessageStatus.Normal;
 
             _ContentLength = data.Length;
@@ -91,7 +90,6 @@
             }
 
             InitBitArray(HeaderFields);
-
             Status = MessageStatus.Normal;
 
             _ContentLength = contentLength;
