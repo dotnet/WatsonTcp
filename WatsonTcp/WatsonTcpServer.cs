@@ -457,9 +457,7 @@
         {
             try
             {
-                // the two bools in this should really be contruction paramaters
-                // maybe re-use mutualAuthentication and acceptInvalidCerts ?
-                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, false);
+                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, MutuallyAuthenticate, SslProtocols.Tls12, !AcceptInvalidCertificates);
 
                 if (!client.SslStream.IsEncrypted)
                 {
