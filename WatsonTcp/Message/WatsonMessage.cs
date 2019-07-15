@@ -7,8 +7,6 @@
     using System.Globalization;
     using System.IO;
     using System.Linq;
-    using System.Net.Security;
-    using System.Net.Sockets;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -21,8 +19,7 @@
         //                                         123456789012345678901234567890
         private readonly string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
 
-        private readonly NetworkStream _NetworkStream;
-        private readonly SslStream _SslStream;
+        private readonly Stream _TrafficStream;
         private byte[] _PresharedKey;
         private MessageStatus _Status;
 
@@ -104,7 +101,7 @@
         /// </summary>
         /// <param name="stream">NetworkStream.</param>
         /// <param name="debug">Enable or disable console debugging.</param>
-        internal WatsonMessage(NetworkStream stream, bool debug)
+        internal WatsonMessage(Stream stream, bool debug)
         {
             if (stream == null)
             {
@@ -119,31 +116,7 @@
             InitBitArray(HeaderFields);
             Status = MessageStatus.Normal;
 
-            _NetworkStream = stream;
-            _Debug = debug;
-        }
-
-        /// <summary>
-        /// Read from an SSL-based stream and construct a message.  Call Build() to populate.
-        /// </summary>
-        /// <param name="stream">SslStream.</param>
-        /// <param name="debug">Enable or disable console debugging.</param>
-        internal WatsonMessage(SslStream stream, bool debug)
-        {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
-
-            if (!stream.CanRead)
-            {
-                throw new ArgumentException("Cannot read from stream.");
-            }
-
-            InitBitArray(HeaderFields);
-            Status = MessageStatus.Normal;
-
-            _SslStream = stream;
+            _TrafficStream = stream;
             _Debug = debug;
         }
 
@@ -358,13 +331,9 @@
                 _ContentLength = payloadLength;
                 _Data = null;
 
-                if (_NetworkStream != null)
+                if (_TrafficStream != null)
                 {
-                    _DataStream = _NetworkStream;
-                }
-                else if (_SslStream != null)
-                {
-                    _DataStream = _SslStream;
+                    _DataStream = _TrafficStream;
                 }
                 else
                 {
@@ -620,24 +589,11 @@
 
                 InitByteArray(buffer);
 
-                if (_NetworkStream != null)
+                if (_TrafficStream != null)
                 {
                     while (true)
                     {
-                        read = await _NetworkStream.ReadAsync(buffer, 0, buffer.Length);
-                        if (read == count)
-                        {
-                            ret = new byte[read];
-                            Buffer.BlockCopy(buffer, 0, ret, 0, read);
-                            break;
-                        }
-                    }
-                }
-                else if (_SslStream != null)
-                {
-                    while (true)
-                    {
-                        read = await _SslStream.ReadAsync(buffer, 0, buffer.Length);
+                        read = await _TrafficStream.ReadAsync(buffer, 0, buffer.Length);
                         if (read == count)
                         {
                             ret = new byte[read];

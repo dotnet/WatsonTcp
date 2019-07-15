@@ -1,6 +1,7 @@
 ﻿namespace WatsonTcp
 {
     using System;
+    using System.IO;
     using System.Net.Security;
     using System.Net.Sockets;
     using System.Security.Cryptography.X509Certificates;
@@ -14,12 +15,14 @@
 
         private readonly TcpClient _TcpClient;
         private readonly NetworkStream _NetworkStream;
+        private readonly SslStream _SslStream;
+        private readonly Stream _TrafficStream;
+
         private readonly string _IpPort;
 
         private readonly SemaphoreSlim _ReadLock = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _WriteLock = new SemaphoreSlim(1);
 
-        private readonly SslStream _SslStream;
 
         #endregion
 
@@ -32,7 +35,11 @@
             _NetworkStream = tcp.GetStream();
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
-            if (mode == Mode.Ssl)
+            if (mode == Mode.Tcp)
+            {
+                _TrafficStream = _NetworkStream;
+            }
+            else
             {
                 if (acceptInvalidCertificates)
                 {
@@ -42,6 +49,8 @@
                 {
                     _SslStream = new SslStream(_NetworkStream, false);
                 }
+
+                _TrafficStream = _SslStream;
             }
         }
 
@@ -51,9 +60,9 @@
 
         internal TcpClient TcpClient => _TcpClient;
 
-        internal NetworkStream NetworkStream => _NetworkStream;
-
         internal SslStream SslStream => _SslStream;
+
+        internal Stream TrafficStream => _TrafficStream;
 
         internal string IpPort => _IpPort;
 

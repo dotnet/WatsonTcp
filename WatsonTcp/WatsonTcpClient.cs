@@ -113,6 +113,7 @@
         private TcpClient _Client;
         private NetworkStream _TcpStream;
         private SslStream _SslStream;
+        private Stream _TrafficStream;
 
         private readonly X509Certificate2 _SslCertificate;
         private readonly X509Certificate2Collection _SslCertificateCollection;
@@ -220,68 +221,47 @@
 
             if (_Mode == Mode.Tcp)
             {
-                #region TCP
-
                 Log("Watson TCP client connecting to " + _ServerIp + ":" + _ServerPort);
-
-                _Client.LingerState = new LingerOption(true, 0);
-                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
-                waitHandle = asyncResult.AsyncWaitHandle;
-
-                try
-                {
-                    if (!asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
-                    {
-                        _Client.Close();
-                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                    }
-
-                    _Client.EndConnect(asyncResult);
-
-                    _TcpStream = _Client.GetStream();
-                    _SslStream = null;
-
-                    Connected = true;
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-                finally
-                {
-                    waitHandle.Close();
-                }
-
-                #endregion
             }
             else if (_Mode == Mode.Ssl)
             {
-                #region SSL
-
                 Log("Watson TCP client connecting with SSL to " + _ServerIp + ":" + _ServerPort);
+            }
+            else
+            {
+                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+            }
 
-                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
-                waitHandle = asyncResult.AsyncWaitHandle;
+            _Client.LingerState = new LingerOption(true, 0);
+            asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
+            waitHandle = asyncResult.AsyncWaitHandle;
 
-                try
+            try
+            {
+                if (!asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
                 {
-                    if (!asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
-                    {
-                        _Client.Close();
-                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                    }
+                    _Client.Close();
+                    throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
+                }
 
-                    _Client.EndConnect(asyncResult);
+                _Client.EndConnect(asyncResult);
 
+                _TcpStream = _Client.GetStream();
+                if (_Mode == Mode.Tcp)
+                {
+                    _TrafficStream = _TcpStream;
+                }
+                if (_Mode == Mode.Ssl)
+                {
                     if (AcceptInvalidCertificates)
                     {
                         // accept invalid certs
-                        _SslStream = new SslStream(_Client.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                        _SslStream = new SslStream(_TcpStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
                     }
                     else
                     {
                         // do not accept invalid SSL certificates
-                        _SslStream = new SslStream(_Client.GetStream(), false);
+                        _SslStream = new SslStream(_TcpStream, false);
                     }
 
                     _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !AcceptInvalidCertificates);
@@ -301,22 +281,18 @@
                         throw new AuthenticationException("Mutual authentication failed");
                     }
 
-                    Connected = true;
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-                finally
-                {
-                    waitHandle.Close();
+                    _TrafficStream = _SslStream;
                 }
 
-                #endregion
+                Connected = true;
             }
-            else
+            catch
             {
-                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                throw;
+            }
+            finally
+            {
+                waitHandle.Close();
             }
 
             if (ServerConnected != null)
@@ -436,10 +412,7 @@
                     {
                         _WriteLock.Wait(1);
                         _ReadLock.Wait(1);
-                        if (_TcpStream != null)
-                        {
-                            _TcpStream.Close();
-                        }
+                        _TcpStream.Close();
                     }
                     catch (Exception)
                     {
@@ -532,31 +505,15 @@
 
                     try
                     {
-                        if (_SslStream != null)
-                        {
-                            msg = new WatsonMessage(_SslStream, Debug);
+                        msg = new WatsonMessage(_TrafficStream, Debug);
 
-                            if (ReadDataStream)
-                            {
-                                await msg.Build();
-                            }
-                            else
-                            {
-                                await msg.BuildStream();
-                            }
+                        if (ReadDataStream)
+                        {
+                            await msg.Build();
                         }
                         else
                         {
-                            msg = new WatsonMessage(_TcpStream, Debug);
-
-                            if (ReadDataStream)
-                            {
-                                await msg.Build();
-                            }
-                            else
-                            {
-                                await msg.BuildStream();
-                            }
+                            await msg.BuildStream();
                         }
                     }
                     finally
@@ -663,30 +620,13 @@
 
                 try
                 {
-                    if (_Mode == Mode.Tcp)
+                    _TrafficStream.Write(headerBytes, 0, headerBytes.Length);
+                    if (msg.Data != null && msg.Data.Length > 0)
                     {
-                        _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-                        if (msg.Data != null && msg.Data.Length > 0)
-                        {
-                            _TcpStream.Write(msg.Data, 0, msg.Data.Length);
-                        }
+                        _TrafficStream.Write(msg.Data, 0, msg.Data.Length);
+                    }
 
-                        _TcpStream.Flush();
-                    }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        _SslStream.Write(headerBytes, 0, headerBytes.Length);
-                        if (msg.Data != null && msg.Data.Length > 0)
-                        {
-                            _SslStream.Write(msg.Data, 0, msg.Data.Length);
-                        }
-
-                        _SslStream.Flush();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
+                    _TrafficStream.Flush();
                 }
                 finally
                 {
@@ -788,48 +728,22 @@
 
                 try
                 {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        _TcpStream.Write(headerBytes, 0, headerBytes.Length);
+                    _TrafficStream.Write(headerBytes, 0, headerBytes.Length);
 
-                        if (contentLength > 0)
+                    if (contentLength > 0)
+                    {
+                        while (bytesRemaining > 0)
                         {
-                            while (bytesRemaining > 0)
+                            bytesRead = stream.Read(buffer, 0, buffer.Length);
+                            if (bytesRead > 0)
                             {
-                                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    _TcpStream.Write(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
+                                _TrafficStream.Write(buffer, 0, bytesRead);
+                                bytesRemaining -= bytesRead;
                             }
                         }
-
-                        _TcpStream.Flush();
                     }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        _SslStream.Write(headerBytes, 0, headerBytes.Length);
 
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    _SslStream.Write(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        _SslStream.Flush();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
+                    _TrafficStream.Flush();
                 }
                 finally
                 {
@@ -931,48 +845,22 @@
 
                 try
                 {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        await _TcpStream.WriteAsync(headerBytes, 0, headerBytes.Length);
+                    await _TrafficStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
-                        if (contentLength > 0)
+                    if (contentLength > 0)
+                    {
+                        while (bytesRemaining > 0)
                         {
-                            while (bytesRemaining > 0)
+                            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                            if (bytesRead > 0)
                             {
-                                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    await _TcpStream.WriteAsync(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
+                                await _TrafficStream.WriteAsync(buffer, 0, bytesRead);
+                                bytesRemaining -= bytesRead;
                             }
                         }
-
-                        await _TcpStream.FlushAsync();
                     }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        await _SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    await _SslStream.WriteAsync(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        await _SslStream.FlushAsync();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
+                    await _TrafficStream.FlushAsync();
                 }
                 finally
                 {

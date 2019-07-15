@@ -818,37 +818,15 @@
              *
              */
 
-            WatsonMessage msg = null;
+            WatsonMessage msg = new WatsonMessage(client.TrafficStream, Debug);
 
-            if (_Mode == Mode.Ssl)
+            if (ReadDataStream)
             {
-                msg = new WatsonMessage(client.SslStream, Debug);
-
-                if (ReadDataStream)
-                {
-                    await msg.Build();
-                }
-                else
-                {
-                    await msg.BuildStream();
-                }
-            }
-            else if (_Mode == Mode.Tcp)
-            {
-                msg = new WatsonMessage(client.NetworkStream, Debug);
-
-                if (ReadDataStream)
-                {
-                    await msg.Build();
-                }
-                else
-                {
-                    await msg.BuildStream();
-                }
+                await msg.Build();
             }
             else
             {
-                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                await msg.BuildStream();
             }
 
             return msg;
@@ -898,48 +876,22 @@
 
             try
             {
-                if (_Mode == Mode.Tcp)
-                {
-                    client.NetworkStream.Write(headerBytes, 0, headerBytes.Length);
+                client.TrafficStream.Write(headerBytes, 0, headerBytes.Length);
 
-                    if (contentLength > 0)
+                if (contentLength > 0)
+                {
+                    while (bytesRemaining > 0)
                     {
-                        while (bytesRemaining > 0)
+                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
                         {
-                            bytesRead = stream.Read(buffer, 0, buffer.Length);
-                            if (bytesRead > 0)
-                            {
-                                client.NetworkStream.Write(buffer, 0, bytesRead);
-                                bytesRemaining -= bytesRead;
-                            }
+                            client.TrafficStream.Write(buffer, 0, bytesRead);
+                            bytesRemaining -= bytesRead;
                         }
                     }
-
-                    client.NetworkStream.Flush();
                 }
-                else if (_Mode == Mode.Ssl)
-                {
-                    client.SslStream.Write(headerBytes, 0, headerBytes.Length);
 
-                    if (contentLength > 0)
-                    {
-                        while (bytesRemaining > 0)
-                        {
-                            bytesRead = stream.Read(buffer, 0, buffer.Length);
-                            if (bytesRead > 0)
-                            {
-                                client.SslStream.Write(buffer, 0, bytesRead);
-                                bytesRemaining -= bytesRead;
-                            }
-                        }
-                    }
-
-                    client.SslStream.Flush();
-                }
-                else
-                {
-                    throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                }
+                client.TrafficStream.Flush();
 
                 return true;
             }
@@ -998,48 +950,22 @@
 
             try
             {
-                if (_Mode == Mode.Tcp)
-                {
-                    await client.NetworkStream.WriteAsync(headerBytes, 0, headerBytes.Length);
+                await client.TrafficStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
-                    if (contentLength > 0)
+                if (contentLength > 0)
+                {
+                    while (bytesRemaining > 0)
                     {
-                        while (bytesRemaining > 0)
+                        bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
                         {
-                            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                            if (bytesRead > 0)
-                            {
-                                await client.NetworkStream.WriteAsync(buffer, 0, bytesRead);
-                                bytesRemaining -= bytesRead;
-                            }
+                            await client.TrafficStream.WriteAsync(buffer, 0, bytesRead);
+                            bytesRemaining -= bytesRead;
                         }
                     }
-
-                    await client.NetworkStream.FlushAsync();
                 }
-                else if (_Mode == Mode.Ssl)
-                {
-                    await client.SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
-                    if (contentLength > 0)
-                    {
-                        while (bytesRemaining > 0)
-                        {
-                            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                            if (bytesRead > 0)
-                            {
-                                await client.SslStream.WriteAsync(buffer, 0, bytesRead);
-                                bytesRemaining -= bytesRead;
-                            }
-                        }
-                    }
-
-                    await client.SslStream.FlushAsync();
-                }
-                else
-                {
-                    throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                }
+                await client.TrafficStream.FlushAsync();
 
                 return true;
             }
