@@ -9,7 +9,6 @@
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-
     using WatsonTcp.Message;
 
     /// <summary>
@@ -136,7 +135,7 @@
         public WatsonTcpClient(
             string serverIp,
             int serverPort)
-            : this(Mode.Tcp, serverIp, serverPort, String.Empty, String.Empty)
+            : this(serverIp, serverPort, null)
         {
         }
 
@@ -152,7 +151,7 @@
             int serverPort,
             string pfxCertFile,
             string pfxCertPass)
-            : this(Mode.Ssl, serverIp, serverPort, pfxCertFile, pfxCertPass)
+            : this(serverIp, serverPort, String.IsNullOrEmpty(pfxCertPass) ? new X509Certificate2(pfxCertFile) : new X509Certificate2(pfxCertFile, pfxCertPass))
         {
         }
 
@@ -162,14 +161,11 @@
         /// <param name="mode">If using TCP or SSL.</param>
         /// <param name="serverIp">The IP address or hostname of the server.</param>
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
-        /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
-        /// <param name="pfxCertPass">The password for the SSL certificate.</param>
-        internal WatsonTcpClient(
-            Mode mode,
+        /// <param name="certificate">The certificate to use, if using SSL.</param>
+        public WatsonTcpClient(
             string serverIp,
             int serverPort,
-            string pfxCertFile,
-            string pfxCertPass)
+            X509Certificate2 certificate)
         {
             if (String.IsNullOrEmpty(serverIp))
             {
@@ -181,29 +177,22 @@
                 throw new ArgumentOutOfRangeException(nameof(serverPort));
             }
 
-            _Mode = mode;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
 
-            _TcpStream = null;
-            _SslStream = null;
-            _SslCertificate = null;
-
-            if (mode == Mode.Ssl)
+            if (certificate == null)
             {
-                if (String.IsNullOrEmpty(pfxCertPass))
-                {
-                    _SslCertificate = new X509Certificate2(pfxCertFile);
-                }
-                else
-                {
-                    _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
-                }
+                _Mode = Mode.Tcp;
+            }
+            else
+            {
+                _Mode = Mode.Ssl;
+                _SslCertificate = certificate;
 
                 _SslCertificateCollection = new X509Certificate2Collection
-            {
-                _SslCertificate,
-            };
+                {
+                    _SslCertificate,
+                };
             }
         }
 

@@ -12,7 +12,7 @@
     using System.Text;
     using System.Threading.Tasks;
 
-    internal class WatsonMessage
+    public class WatsonMessage
     {
         #region Private-Fields
 

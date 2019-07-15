@@ -12,7 +12,6 @@
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-
     using WatsonTcp.Message;
 
     /// <summary>
@@ -128,10 +127,9 @@
         public WatsonTcpServer(
             string listenerIp,
             int listenerPort) :
-            this(Mode.Tcp, listenerIp, listenerPort, String.Empty, String.Empty)
+            this(listenerIp, listenerPort, null)
         {
         }
-
 
         /// <summary>
         /// Initialize the Watson TCP server with SSL.  Call Start() afterward to start Watson.
@@ -145,7 +143,7 @@
             int listenerPort,
             string pfxCertFile,
             string pfxCertPass) :
-            this(Mode.Ssl, listenerIp, listenerPort, pfxCertFile, pfxCertPass)
+            this(listenerIp, listenerPort, String.IsNullOrEmpty(pfxCertPass) ? new X509Certificate2(pfxCertFile) : new X509Certificate2(pfxCertFile, pfxCertPass))
         {
         }
 
@@ -155,21 +153,16 @@
         /// <param name="mode">If using TCP or SSL.</param>
         /// <param name="listenerIp">The IP address on which the server should listen, nullable.</param>
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
-        /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
-        /// <param name="pfxCertPass">The password for the SSL certificate.</param>
-        internal WatsonTcpServer(
-            Mode mode,
+        /// <param name="certificate">The certificate to use, if using SSL.</param>
+        public WatsonTcpServer(
             string listenerIp,
             int listenerPort,
-            string pfxCertFile,
-            string pfxCertPass)
+            X509Certificate2 certificate)
         {
             if (listenerPort < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(listenerPort));
             }
-
-            _Mode = mode;
 
             if (String.IsNullOrEmpty(listenerIp))
             {
@@ -185,17 +178,14 @@
             _ListenerPort = listenerPort;
             _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
-            _SslCertificate = null;
-            if (mode == Mode.Ssl)
+            if (certificate == null)
             {
-                if (String.IsNullOrEmpty(pfxCertPass))
-                {
-                    _SslCertificate = new X509Certificate2(pfxCertFile);
-                }
-                else
-                {
-                    _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
-                }
+                _Mode = Mode.Tcp;
+            }
+            else
+            {
+                _Mode = Mode.Ssl;
+                _SslCertificate = certificate;
             }
 
             _TokenSource = new CancellationTokenSource();
