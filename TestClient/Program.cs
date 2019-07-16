@@ -160,16 +160,28 @@
             }
             else
             {
-                certFile = Common.InputString("Certificate file:", "test.pfx", false);
-                certPass = Common.InputString("Certificate password:", "password", false);
+                bool provideCertificate = Common.InputBoolean("Do you wish to provide a certificate ? (required for mutual authenication)", true);
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
-                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass)
+                if (provideCertificate)
                 {
-                    AcceptInvalidCertificates = acceptInvalidCerts,
-                    MutuallyAuthenticate = mutualAuthentication,
-                };
+                    certFile = Common.InputString("Certificate file:", "test.pfx", false);
+                    certPass = Common.InputString("Certificate password:", "password", false);
+                    mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
+
+                    client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass)
+                    {
+                        AcceptInvalidCertificates = acceptInvalidCerts,
+                        MutuallyAuthenticate = mutualAuthentication,
+                    };
+                }
+                else
+                {
+                    client = new WatsonTcpClient(Mode.Ssl, serverIp, serverPort, null)
+                    {
+                        AcceptInvalidCertificates = acceptInvalidCerts,
+                    };
+                }
             }
 
             client.AuthenticationFailure = AuthenticationFailure;

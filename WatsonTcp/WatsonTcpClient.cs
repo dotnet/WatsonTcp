@@ -94,7 +94,19 @@
         /// <summary>
         /// Require mutual authentication between the server and this client.
         /// </summary>
-        public bool MutuallyAuthenticate = false;
+        public bool MutuallyAuthenticate
+        {
+            get => _MutuallyAuthenticate;
+            set
+            {
+                if (_SslCertificate == null && value)
+                {
+                    throw new ArgumentNullException("Certificate must be set if you want to Mutually Authenticate");
+                }
+
+                _MutuallyAuthenticate = value;
+            }
+        }
 
         /// <summary>
         /// Indicates whether or not the client is connected to the server.
@@ -124,6 +136,8 @@
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
 
+        private bool _MutuallyAuthenticate;
+
         #endregion
 
         #region Constructors-and-Factories
@@ -136,7 +150,7 @@
         public WatsonTcpClient(
             string serverIp,
             int serverPort)
-            : this(serverIp, serverPort, null)
+            : this(Mode.Tcp, serverIp, serverPort, null)
         {
         }
 
@@ -152,7 +166,7 @@
             int serverPort,
             string pfxCertFile,
             string pfxCertPass)
-            : this(serverIp, serverPort, String.IsNullOrEmpty(pfxCertPass) ? new X509Certificate2(pfxCertFile) : new X509Certificate2(pfxCertFile, pfxCertPass))
+            : this(Mode.Ssl, serverIp, serverPort, String.IsNullOrEmpty(pfxCertPass) ? new X509Certificate2(pfxCertFile) : new X509Certificate2(pfxCertFile, pfxCertPass))
         {
         }
 
@@ -164,6 +178,7 @@
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="certificate">The certificate to use, if using SSL.</param>
         public WatsonTcpClient(
+            Mode mode,
             string serverIp,
             int serverPort,
             X509Certificate2 certificate)
@@ -178,16 +193,12 @@
                 throw new ArgumentOutOfRangeException(nameof(serverPort));
             }
 
+            _Mode = mode;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
 
-            if (certificate == null)
+            if (_Mode == Mode.Ssl && certificate != null)
             {
-                _Mode = Mode.Tcp;
-            }
-            else
-            {
-                _Mode = Mode.Ssl;
                 _SslCertificate = certificate;
 
                 _SslCertificateCollection = new X509Certificate2Collection
@@ -227,10 +238,6 @@
             {
                 Log("Watson TCP client connecting with SSL to " + _ServerIp + ":" + _ServerPort);
             }
-            else
-            {
-                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-            }
 
             _Client.LingerState = new LingerOption(true, 0);
             asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
@@ -247,11 +254,12 @@
                 _Client.EndConnect(asyncResult);
 
                 _TcpStream = _Client.GetStream();
+
                 if (_Mode == Mode.Tcp)
                 {
                     _TrafficStream = _TcpStream;
                 }
-                if (_Mode == Mode.Ssl)
+                else if (_Mode == Mode.Ssl)
                 {
                     if (AcceptInvalidCertificates)
                     {

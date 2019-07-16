@@ -127,7 +127,7 @@
         public WatsonTcpServer(
             string listenerIp,
             int listenerPort) :
-            this(listenerIp, listenerPort, null)
+            this(Mode.Tcp, listenerIp, listenerPort, null)
         {
         }
 
@@ -143,7 +143,7 @@
             int listenerPort,
             string pfxCertFile,
             string pfxCertPass) :
-            this(listenerIp, listenerPort, String.IsNullOrEmpty(pfxCertPass) ? new X509Certificate2(pfxCertFile) : new X509Certificate2(pfxCertFile, pfxCertPass))
+            this(Mode.Ssl, listenerIp, listenerPort, String.IsNullOrEmpty(pfxCertPass) ? new X509Certificate2(pfxCertFile) : new X509Certificate2(pfxCertFile, pfxCertPass))
         {
         }
 
@@ -155,6 +155,7 @@
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
         /// <param name="certificate">The certificate to use, if using SSL.</param>
         public WatsonTcpServer(
+            Mode mode,
             string listenerIp,
             int listenerPort,
             X509Certificate2 certificate)
@@ -175,16 +176,12 @@
                 _ListenerIp = listenerIp;
             }
 
+            _Mode = mode;
             _ListenerPort = listenerPort;
             _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
-            if (certificate == null)
+            if (_Mode == Mode.Ssl)
             {
-                _Mode = Mode.Tcp;
-            }
-            else
-            {
-                _Mode = Mode.Ssl;
                 _SslCertificate = certificate;
             }
 
@@ -221,10 +218,6 @@
             else if (_Mode == Mode.Ssl)
             {
                 Log("Watson TCP SSL server starting on " + _ListenerIp + ":" + _ListenerPort);
-            }
-            else
-            {
-                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
             Task.Run(() => AcceptConnections(), _Token);
@@ -438,10 +431,6 @@
                         }, _Token);
 
                         #endregion
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
                     }
 
                     Log("*** AcceptConnections accepted connection from " + client.IpPort);

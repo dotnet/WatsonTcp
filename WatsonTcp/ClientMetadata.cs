@@ -23,11 +23,9 @@
         private readonly SemaphoreSlim _ReadLock = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _WriteLock = new SemaphoreSlim(1);
 
-
         #endregion
 
         #region Constructors
-
 
         internal ClientMetadata(TcpClient tcp, Mode mode, bool acceptInvalidCertificates)
         {

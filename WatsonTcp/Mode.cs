@@ -1,6 +1,6 @@
 ﻿namespace WatsonTcp
 {
-    internal enum Mode
+    public enum Mode
     {
         Tcp,
         Ssl,
