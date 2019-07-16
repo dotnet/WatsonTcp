@@ -1,6 +1,7 @@
 ﻿namespace WatsonTcp
 {
     using System;
+    using System.Security.Cryptography;
     using System.Text;
     using Newtonsoft.Json;
 
@@ -201,6 +202,45 @@
 
                 return ret;
             }
+        }
+
+        public static byte[] InitByteArray(int count, byte val)
+        {
+            byte[] ret = new byte[count];
+            for (int i = 0; i < ret.Length; i++)
+            {
+                ret[i] = val;
+            }
+
+            return ret;
+        }
+
+        public static byte[] Md5(byte[] data)
+        {
+            if (data == null || data.Length < 1)
+            {
+                return null;
+            }
+
+            using (MD5 m = MD5.Create())
+            {
+                return m.ComputeHash(data);
+            }
+        }
+
+        public static string BytesToHex(byte[] bytes)
+        {
+            if (bytes == null)
+            {
+                return null;
+            }
+
+            if (bytes.Length < 1)
+            {
+                return null;
+            }
+
+            return BitConverter.ToString(bytes).Replace("-", String.Empty);
         }
 
         public static void LogException(String method, Exception e)

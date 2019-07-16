@@ -1,7 +1,6 @@
 ﻿namespace TestParallel
 {
     using System;
-    using System.Security.Cryptography;
     using System.Threading;
     using System.Threading.Tasks;
     using WatsonTcp;
@@ -18,8 +17,8 @@
         private static void Main()
         {
             rng = new Random((int)DateTime.Now.Ticks);
-            data = InitByteArray(262144, 0x00);
-            Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
+            data = Common.InitByteArray(262144, 0x00);
+            Console.WriteLine("Data MD5: " + Common.BytesToHex(Common.Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");
 
             server = new WatsonTcpServer(null, serverPort)
@@ -76,7 +75,7 @@
 
         private static bool ServerMsgReceived(string ipPort, byte[] data)
         {
-            Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
+            Console.WriteLine("[server] msg from " + ipPort + ": " + Common.BytesToHex(Common.Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
 
@@ -92,47 +91,8 @@
 
         private static bool ClientMsgReceived(byte[] data)
         {
-            Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
+            Console.WriteLine("[server] msg from server: " + Common.BytesToHex(Common.Md5(data)) + " (" + data.Length + " bytes)");
             return true;
-        }
-
-        public static byte[] InitByteArray(int count, byte val)
-        {
-            byte[] ret = new byte[count];
-            for (int i = 0; i < ret.Length; i++)
-            {
-                ret[i] = val;
-            }
-
-            return ret;
-        }
-
-        private static byte[] Md5(byte[] data)
-        {
-            if (data == null || data.Length < 1)
-            {
-                return null;
-            }
-
-            using (MD5 m = MD5.Create())
-            {
-                return m.ComputeHash(data);
-            }
-        }
-
-        public static string BytesToHex(byte[] bytes)
-        {
-            if (bytes == null)
-            {
-                return null;
-            }
-
-            if (bytes.Length < 1)
-            {
-                return null;
-            }
-
-            return BitConverter.ToString(bytes).Replace("-", String.Empty);
         }
     }
 }
