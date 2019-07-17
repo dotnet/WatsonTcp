@@ -527,13 +527,7 @@
                 _UnauthenticatedClients.TryAdd(client.IpPort, DateTime.Now);
 
                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
-                WatsonMessage authMsg = new WatsonMessage
-                {
-                    Status = MessageStatus.AuthRequired,
-                    Data = null,
-                    ContentLength = 0,
-                };
-
+                WatsonMessage authMsg = new WatsonMessage(MessageStatus.AuthRequired);
                 MessageWrite(client, authMsg, null);
             }
 

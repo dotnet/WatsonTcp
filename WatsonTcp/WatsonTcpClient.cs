@@ -306,14 +306,7 @@
             }
 
             presharedKey = presharedKey.PadRight(16, ' ');
-            WatsonMessage msg = new WatsonMessage
-            {
-                Status = MessageStatus.AuthRequested,
-                PresharedKey = Encoding.UTF8.GetBytes(presharedKey),
-                Data = null,
-                ContentLength = 0,
-            };
-
+            WatsonMessage msg = new WatsonMessage(MessageStatus.AuthRequested, presharedKey);
             MessageWrite(msg);
         }
 

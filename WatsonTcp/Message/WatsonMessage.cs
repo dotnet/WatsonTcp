@@ -33,12 +33,33 @@
         #region Constructors
 
         /// <summary>
-        /// Do not use.
+        /// Construct a message. Used for Authentication requests.
         /// </summary>
-        internal WatsonMessage()
+        /// <param name="messageStatus">The messaqge status type.</param>
+        internal WatsonMessage(MessageStatus messageStatus)
         {
             InitBitArray(HeaderFields);
-            Status = MessageStatus.Normal;
+            Status = messageStatus;
+        }
+
+        /// <summary>
+        /// Construct a message. Used for Authentication responses.
+        /// </summary>
+        /// <param name="messageStatus">The messaqge status type.</param>
+        /// <param name="preSharedKey">The preshared key for authentication.</param>
+        internal WatsonMessage(MessageStatus messageStatus, string preSharedKey)
+        {
+            InitBitArray(HeaderFields);
+            Status = messageStatus;
+
+            if (preSharedKey != null && preSharedKey.Length != 16)
+            {
+                throw new ArgumentException("PresharedKey must be 16 bytes.");
+            }
+
+            _PresharedKey = new byte[16];
+            Buffer.BlockCopy(Encoding.UTF8.GetBytes(preSharedKey), 0, _PresharedKey, 0, 16);
+            HeaderFields[0] = true;
         }
 
         /// <summary>
@@ -59,7 +80,6 @@
             _ContentLength = data.Length;
             _Data = new byte[data.Length];
             Buffer.BlockCopy(data, 0, Data, 0, data.Length);
-            _DataStream = null;
 
             _Debug = debug;
         }
@@ -89,7 +109,6 @@
             Status = MessageStatus.Normal;
 
             _ContentLength = contentLength;
-            _Data = null;
             _DataStream = stream;
 
             _Debug = debug;
@@ -145,21 +164,7 @@
         /// <summary>
         /// Preshared key for connection authentication.  HeaderFields[0], 16 bytes.
         /// </summary>
-        internal byte[] PresharedKey
-        {
-            get => _PresharedKey;
-            set
-            {
-                if (value != null && value.Length != 16)
-                {
-                    throw new ArgumentException("PresharedKey must be 16 bytes.");
-                }
-
-                _PresharedKey = new byte[16];
-                Buffer.BlockCopy(value, 0, _PresharedKey, 0, 16);
-                HeaderFields[0] = true;
-            }
-        }
+        internal byte[] PresharedKey => PresharedKey;
 
         /// <summary>
         /// Status of the message.  HeaderFields[1], 4 bytes.
@@ -691,7 +696,7 @@
             switch (field.BitNumber)
             {
                 case 0:
-                    PresharedKey = (byte[])val;
+                    _PresharedKey = (byte[])val;
                     Log("PresharedKey set: " + Encoding.UTF8.GetString(PresharedKey));
 
                     return;
