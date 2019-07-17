@@ -122,16 +122,10 @@
         private readonly Mode _Mode;
         private readonly string _ServerIp;
         private readonly int _ServerPort;
-        private TcpClient _Client;
-        private NetworkStream _TcpStream;
-        private SslStream _SslStream;
-        private Stream _TrafficStream;
+        private ClientMetadata _Server;
 
         private readonly X509Certificate2 _SslCertificate;
         private readonly X509Certificate2Collection _SslCertificateCollection;
-
-        private readonly SemaphoreSlim _WriteLock = new SemaphoreSlim(1);
-        private readonly SemaphoreSlim _ReadLock = new SemaphoreSlim(1);
 
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
@@ -226,7 +220,7 @@
         /// </summary>
         public void Start()
         {
-            _Client = new TcpClient();
+            TcpClient client = new TcpClient();
             IAsyncResult asyncResult = null;
             WaitHandle waitHandle = null;
 
@@ -239,57 +233,39 @@
                 Log("Watson TCP client connecting with SSL to " + _ServerIp + ":" + _ServerPort);
             }
 
-            _Client.LingerState = new LingerOption(true, 0);
-            asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
+            client.LingerState = new LingerOption(true, 0);
+            asyncResult = client.BeginConnect(_ServerIp, _ServerPort, null, null);
             waitHandle = asyncResult.AsyncWaitHandle;
 
             try
             {
                 if (!asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(5), false))
                 {
-                    _Client.Close();
+                    client.Close();
                     throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
                 }
 
-                _Client.EndConnect(asyncResult);
+                client.EndConnect(asyncResult);
 
-                _TcpStream = _Client.GetStream();
-
-                if (_Mode == Mode.Tcp)
+                ClientMetadata _Server = new ClientMetadata(client, _Mode, AcceptInvalidCertificates);
+                if (_Mode == Mode.Ssl)
                 {
-                    _TrafficStream = _TcpStream;
-                }
-                else if (_Mode == Mode.Ssl)
-                {
-                    if (AcceptInvalidCertificates)
-                    {
-                        // accept invalid certs
-                        _SslStream = new SslStream(_TcpStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
-                    }
-                    else
-                    {
-                        // do not accept invalid SSL certificates
-                        _SslStream = new SslStream(_TcpStream, false);
-                    }
+                    _Server.SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !AcceptInvalidCertificates);
 
-                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !AcceptInvalidCertificates);
-
-                    if (!_SslStream.IsEncrypted)
+                    if (!_Server.SslStream.IsEncrypted)
                     {
                         throw new AuthenticationException("Stream is not encrypted");
                     }
 
-                    if (!_SslStream.IsAuthenticated)
+                    if (!_Server.SslStream.IsAuthenticated)
                     {
                         throw new AuthenticationException("Stream is not authenticated");
                     }
 
-                    if (MutuallyAuthenticate && !_SslStream.IsMutuallyAuthenticated)
+                    if (MutuallyAuthenticate && !_Server.SslStream.IsMutuallyAuthenticated)
                     {
                         throw new AuthenticationException("Mutual authentication failed");
                     }
-
-                    _TrafficStream = _SslStream;
                 }
 
                 Connected = true;
@@ -396,62 +372,10 @@
 
             if (disposing)
             {
-                if (_SslStream != null)
-                {
-                    try
-                    {
-                        _WriteLock.Wait(1);
-                        _ReadLock.Wait(1);
-                        _SslStream.Close();
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    finally
-                    {
-                        _WriteLock.Release();
-                        _ReadLock.Release();
-                    }
-                }
-
-                if (_TcpStream != null)
-                {
-                    try
-                    {
-                        _WriteLock.Wait(1);
-                        _ReadLock.Wait(1);
-                        _TcpStream.Close();
-                    }
-                    catch (Exception)
-                    {
-                    }
-
-                    try
-                    {
-                        _Client.Close();
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    finally
-                    {
-                        _WriteLock.Release();
-                        _ReadLock.Release();
-                    }
-                }
-
                 _TokenSource.Cancel();
                 _TokenSource.Dispose();
 
-                if (_WriteLock != null)
-                {
-                    _WriteLock.Dispose();
-                }
-
-                if (_ReadLock != null)
-                {
-                    _ReadLock.Dispose();
-                }
+                _Server.Dispose();
 
                 Connected = false;
             }
@@ -462,12 +386,6 @@
         #endregion
 
         #region Private-Methods
-
-        private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            // return true; // Allow untrusted certificates.
-            return AcceptInvalidCertificates;
-        }
 
         private void Log(string msg)
         {
@@ -489,19 +407,19 @@
 
                     #region Check-Connection
 
-                    if (_Client == null)
+                    if (_Server.TcpClient == null)
                     {
                         Log("*** DataReceiver null TCP interface detected, disconnection or close assumed");
                         break;
                     }
 
-                    if (!_Client.Connected)
+                    if (!_Server.TcpClient.Connected)
                     {
                         Log("*** DataReceiver server disconnected");
                         break;
                     }
 
-                    if (_SslStream != null && !_SslStream.CanRead)
+                    if (_Server.SslStream != null && !_Server.SslStream.CanRead)
                     {
                         Log("*** DataReceiver cannot read from SSL stream");
                         break;
@@ -513,16 +431,16 @@
 
                     WatsonMessage msg = null;
 
-                    _ReadLock.Wait(1);
+                    _Server.ReadLock.Wait(1);
 
                     try
                     {
-                        msg = new WatsonMessage(_TrafficStream, Debug);
+                        msg = new WatsonMessage(_Server.TrafficStream, Debug);
                         await msg.Build(ReadDataStream);
                     }
                     finally
                     {
-                        _ReadLock.Release();
+                        _Server.ReadLock.Release();
                     }
 
                     if (msg == null)
@@ -611,7 +529,7 @@
 
             try
             {
-                if (_Client == null)
+                if (_Server.TcpClient == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
@@ -620,21 +538,21 @@
 
                 byte[] headerBytes = msg.ToHeaderBytes(dataLen);
 
-                _WriteLock.Wait(1);
+                _Server.WriteLock.Wait(1);
 
                 try
                 {
-                    _TrafficStream.Write(headerBytes, 0, headerBytes.Length);
+                    _Server.TrafficStream.Write(headerBytes, 0, headerBytes.Length);
                     if (msg.Data != null && msg.Data.Length > 0)
                     {
-                        _TrafficStream.Write(msg.Data, 0, msg.Data.Length);
+                        _Server.TrafficStream.Write(msg.Data, 0, msg.Data.Length);
                     }
 
-                    _TrafficStream.Flush();
+                    _Server.TrafficStream.Flush();
                 }
                 finally
                 {
-                    _WriteLock.Release();
+                    _Server.WriteLock.Release();
                 }
 
                 string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes);
@@ -717,7 +635,7 @@
 
             try
             {
-                if (_Client == null)
+                if (_Server.TcpClient == null)
                 {
                     Log("MessageWrite client is null");
                     disconnectDetected = true;
@@ -731,11 +649,11 @@
                 long bytesRemaining = contentLength;
                 byte[] buffer = new byte[_ReadStreamBufferSize];
 
-                _WriteLock.Wait(1);
+                _Server.WriteLock.Wait(1);
 
                 try
                 {
-                    _TrafficStream.Write(headerBytes, 0, headerBytes.Length);
+                    _Server.TrafficStream.Write(headerBytes, 0, headerBytes.Length);
 
                     if (contentLength > 0)
                     {
@@ -744,17 +662,17 @@
                             bytesRead = stream.Read(buffer, 0, buffer.Length);
                             if (bytesRead > 0)
                             {
-                                _TrafficStream.Write(buffer, 0, bytesRead);
+                                _Server.TrafficStream.Write(buffer, 0, bytesRead);
                                 bytesRemaining -= bytesRead;
                             }
                         }
                     }
 
-                    _TrafficStream.Flush();
+                    _Server.TrafficStream.Flush();
                 }
                 finally
                 {
-                    _WriteLock.Release();
+                    _Server.WriteLock.Release();
                 }
 
                 string logMessage = "MessageWrite sent " + Encoding.UTF8.GetString(headerBytes);
@@ -836,7 +754,7 @@
 
             try
             {
-                if (_Client == null)
+                if (_Server.TcpClient == null)
                 {
                     Log("MessageWriteAsync client is null");
                     disconnectDetected = true;
@@ -850,11 +768,11 @@
                 long bytesRemaining = contentLength;
                 byte[] buffer = new byte[_ReadStreamBufferSize];
 
-                await _WriteLock.WaitAsync();
+                await _Server.WriteLock.WaitAsync();
 
                 try
                 {
-                    await _TrafficStream.WriteAsync(headerBytes, 0, headerBytes.Length);
+                    await _Server.TrafficStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
                     if (contentLength > 0)
                     {
@@ -863,17 +781,17 @@
                             bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                             if (bytesRead > 0)
                             {
-                                await _TrafficStream.WriteAsync(buffer, 0, bytesRead);
+                                await _Server.TrafficStream.WriteAsync(buffer, 0, bytesRead);
                                 bytesRemaining -= bytesRead;
                             }
                         }
                     }
 
-                    await _TrafficStream.FlushAsync();
+                    await _Server.TrafficStream.FlushAsync();
                 }
                 finally
                 {
-                    _WriteLock.Release();
+                    _Server.WriteLock.Release();
                 }
 
                 string logMessage = "MessageWriteAsync sent " + Encoding.UTF8.GetString(headerBytes);
