@@ -194,10 +194,11 @@
         #region Internal-Methods
 
         /// <summary>
-        /// Awaitable async method to build the Message object from data that awaits in a NetworkStream or SslStream, returning the full message data.
+        /// Awaitable async method to build the Message object from data that awaits in a NetworkStream or SslStream.
         /// </summary>
+        /// <param name="ReadDataStream">If true returns the full message data. If false returns the stream.</param>
         /// <returns>Always returns true (void cannot be a return parameter).</returns>
-        internal async Task<bool> Build()
+        internal async Task<bool> Build(bool ReadDataStream)
         {
             try
             {
@@ -222,83 +223,6 @@
                     }
 
                     string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", String.Empty);
-                    Int64.TryParse(msgLengthString, out long length);
-                    _Length = length;
-
-                    Log("Message payload length: " + Length + " bytes");
-                }
-
-                #endregion
-
-                #region Process-Header-Fields
-
-                byte[] headerFields = await ReadFromNetwork(8, "HeaderFields");
-                headerFields = ReverseByteArray(headerFields);
-                _HeaderFields = new BitArray(headerFields);
-
-                long payloadLength = Length - 8;
-
-                for (int i = 0; i < HeaderFields.Length; i++)
-                {
-                    if (HeaderFields[i])
-                    {
-                        MessageField field = GetMessageField(i);
-                        object val = await ReadField(field.Type, field.Length, field.Name);
-                        SetMessageValue(field, val);
-                        payloadLength -= field.Length;
-                    }
-                }
-
-                _ContentLength = payloadLength;
-                _DataStream = null;
-                _Data = await ReadFromNetwork(ContentLength, "Payload");
-
-                #endregion
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                Log(Common.SerializeJson(e));
-                throw;
-            }
-            finally
-            {
-                Log("Message build completed:");
-                Log(this.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Awaitable async method to build the Message object from data that awaits in a NetworkStream or SslStream, returning the stream itself.
-        /// </summary>
-        /// <returns>Always returns true (void cannot be a return parameter).</returns>
-        internal async Task<bool> BuildStream()
-        {
-            try
-            {
-                #region Read-Message-Length
-
-                using (MemoryStream msgLengthMs = new MemoryStream())
-                {
-                    while (true)
-                    {
-                        byte[] data = await ReadFromNetwork(1, "MessageLength");
-                        await msgLengthMs.WriteAsync(data, 0, 1);
-                        if (data[0] == 58)
-                        {
-                            break;
-                        }
-                    }
-
-                    byte[] msgLengthBytes = msgLengthMs.ToArray();
-                    if (msgLengthBytes == null || msgLengthBytes.Length < 1)
-                    {
-                        return false;
-                    }
-
-                    string msgLengthString = Encoding.UTF8.GetString(msgLengthBytes).Replace(":", String.Empty);
-
                     Int64.TryParse(msgLengthString, out long length);
                     _Length = length;
 
@@ -329,15 +253,24 @@
                 }
 
                 _ContentLength = payloadLength;
-                _Data = null;
 
-                if (_TrafficStream != null)
+                if (ReadDataStream)
                 {
-                    _DataStream = _TrafficStream;
+                    _DataStream = null;
+                    _Data = await ReadFromNetwork(ContentLength, "Payload");
                 }
                 else
                 {
-                    throw new IOException("No suitable input stream found.");
+                    _Data = null;
+
+                    if (_TrafficStream != null)
+                    {
+                        _DataStream = _TrafficStream;
+                    }
+                    else
+                    {
+                        throw new IOException("No suitable input stream found.");
+                    }
                 }
 
                 #endregion

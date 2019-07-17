@@ -339,7 +339,7 @@
 
         #endregion
 
-        #region Private-Methods
+        #region Protected-Methods
 
         protected virtual void Dispose(bool disposing)
         {
@@ -370,6 +370,10 @@
 
             _Disposed = true;
         }
+
+        #endregion
+
+        #region Private-Methods
 
         private void Log(string msg)
         {
@@ -806,31 +810,24 @@
              */
 
             WatsonMessage msg = new WatsonMessage(client.TrafficStream, Debug);
-
-            if (ReadDataStream)
-            {
-                await msg.Build();
-            }
-            else
-            {
-                await msg.BuildStream();
-            }
-
+            await msg.Build(ReadDataStream);
             return msg;
         }
 
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, byte[] data)
         {
             int dataLen = 0;
-            MemoryStream ms = new MemoryStream();
-            if (data != null && data.Length > 0)
+            using (MemoryStream ms = new MemoryStream())
             {
-                dataLen = data.Length;
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
+                if (data != null && data.Length > 0)
+                {
+                    dataLen = data.Length;
+                    ms.Write(data, 0, data.Length);
+                    ms.Seek(0, SeekOrigin.Begin);
+                }
 
-            return MessageWrite(client, msg, dataLen, ms);
+                return MessageWrite(client, msg, dataLen, ms);
+            }
         }
 
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
@@ -896,15 +893,17 @@
         private async Task<bool> MessageWriteAsync(ClientMetadata client, WatsonMessage msg, byte[] data)
         {
             int dataLen = 0;
-            MemoryStream ms = new MemoryStream();
-            if (data != null && data.Length > 0)
+            using (MemoryStream ms = new MemoryStream())
             {
-                dataLen = data.Length;
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
+                if (data != null && data.Length > 0)
+                {
+                    dataLen = data.Length;
+                    ms.Write(data, 0, data.Length);
+                    ms.Seek(0, SeekOrigin.Begin);
+                }
 
-            return await MessageWriteAsync(client, msg, dataLen, ms);
+                return await MessageWriteAsync(client, msg, dataLen, ms);
+            }
         }
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)

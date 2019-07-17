@@ -385,7 +385,7 @@
 
         #endregion
 
-        #region Private-Methods
+        #region Protected-Methods
 
         protected virtual void Dispose(bool disposing)
         {
@@ -459,6 +459,10 @@
             _Disposed = true;
         }
 
+        #endregion
+
+        #region Private-Methods
+
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
@@ -514,15 +518,7 @@
                     try
                     {
                         msg = new WatsonMessage(_TrafficStream, Debug);
-
-                        if (ReadDataStream)
-                        {
-                            await msg.Build();
-                        }
-                        else
-                        {
-                            await msg.BuildStream();
-                        }
+                        await msg.Build(ReadDataStream);
                     }
                     finally
                     {
@@ -688,15 +684,18 @@
         private bool MessageWrite(byte[] data)
         {
             long dataLen = 0;
-            MemoryStream ms = new MemoryStream();
-            if (data != null && data.Length > 0)
-            {
-                dataLen = data.Length;
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
 
-            return MessageWrite(dataLen, ms);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                if (data != null && data.Length > 0)
+                {
+                    dataLen = data.Length;
+                    ms.Write(data, 0, data.Length);
+                    ms.Seek(0, SeekOrigin.Begin);
+                }
+
+                return MessageWrite(dataLen, ms);
+            }
         }
 
         private bool MessageWrite(long contentLength, Stream stream)
@@ -805,15 +804,17 @@
         private async Task<bool> MessageWriteAsync(byte[] data)
         {
             long dataLen = 0;
-            MemoryStream ms = new MemoryStream();
-            if (data != null)
+            using (MemoryStream ms = new MemoryStream())
             {
-                dataLen = data.Length;
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
+                if (data != null)
+                {
+                    dataLen = data.Length;
+                    ms.Write(data, 0, data.Length);
+                    ms.Seek(0, SeekOrigin.Begin);
+                }
 
-            return await MessageWriteAsync(dataLen, ms);
+                return await MessageWriteAsync(dataLen, ms);
+            }
         }
 
         private async Task<bool> MessageWriteAsync(long contentLength, Stream stream)
