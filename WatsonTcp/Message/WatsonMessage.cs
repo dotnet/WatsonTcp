@@ -16,8 +16,7 @@
 
         private readonly bool _Debug = false;
 
-        //                                         123456789012345678901234567890
-        private readonly string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
+        private readonly string _DateTimeFormat = "MMddyyyyTHHmmssffffffz";
 
         private readonly Stream _TrafficStream;
         private byte[] _PresharedKey;
@@ -428,7 +427,7 @@
                 }
                 else if (fieldType == FieldType.DateTime)
                 {
-                    data = await ReadFromNetwork(22, name + " DateTime");
+                    data = await ReadFromNetwork(_DateTimeFormat.Length, name + " DateTime");
                     logMessage += " " + ByteArrayToHex(data);
                     ret = DateTime.ParseExact(Encoding.UTF8.GetString(data), _DateTimeFormat, CultureInfo.InvariantCulture);
                     logMessage += ": " + headerLength + " " + ret.ToString();
