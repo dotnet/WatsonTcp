@@ -1,31 +1,33 @@
-﻿using System;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace TestParallel
+﻿namespace TestParallel
 {
-    class Program
-    {
-        static int serverPort = 8000;
-        static int clientThreads = 8;
-        static int numIterations = 10000;
-        static Random rng;
-        static byte[] data;
-        static WatsonTcpServer server;
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using WatsonTcp;
 
-        static void Main(string[] args)
+    internal class Program
+    {
+        private static readonly int serverPort = 8000;
+        private static readonly int clientThreads = 8;
+        private static readonly int numIterations = 10000;
+        private static Random rng;
+        private static byte[] data;
+        private static WatsonTcpServer server;
+
+        private static void Main()
         {
             rng = new Random((int)DateTime.Now.Ticks);
-            data = InitByteArray(262144, 0x00);
-            Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
+            data = Common.InitByteArray(262144, 0x00);
+            Console.WriteLine("Data MD5: " + Common.BytesToHex(Common.Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");
 
-            server = new WatsonTcpServer(null, serverPort);
-            server.ClientConnected = ServerClientConnected;
-            server.ClientDisconnected = ServerClientDisconnected;
-            server.MessageReceived = ServerMsgReceived;
+            server = new WatsonTcpServer(null, serverPort)
+            {
+                ClientConnected = ServerClientConnected,
+                ClientDisconnected = ServerClientDisconnected,
+                MessageReceived = ServerMsgReceived,
+            };
+
             server.Start();
 
             Thread.Sleep(3000);
@@ -40,7 +42,7 @@ namespace TestParallel
             Console.ReadLine();
         }
 
-        static void ClientTask()
+        private static void ClientTask()
         {
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
@@ -59,74 +61,38 @@ namespace TestParallel
             Console.WriteLine("[client] finished");
         }
 
-        static bool ServerClientConnected(string ipPort)
+        private static bool ServerClientConnected(string ipPort)
         {
             Console.WriteLine("[server] connection from " + ipPort);
             return true;
         }
 
-        static bool ServerClientDisconnected(string ipPort)
+        private static bool ServerClientDisconnected(string ipPort)
         {
             Console.WriteLine("[server] disconnection from " + ipPort);
             return true;
         }
 
-        static bool ServerMsgReceived(string ipPort, byte[] data)
+        private static bool ServerMsgReceived(string ipPort, byte[] data)
         {
-            Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
+            Console.WriteLine("[server] msg from " + ipPort + ": " + Common.BytesToHex(Common.Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
 
-        static bool ClientServerConnected()
-        {
-            return true;
-        }
-
-        static bool ClientServerDisconnected()
+        private static bool ClientServerConnected()
         {
             return true;
         }
 
-        static bool ClientMsgReceived(byte[] data)
+        private static bool ClientServerDisconnected()
         {
-            Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
             return true;
         }
 
-        public static byte[] InitByteArray(int count, byte val)
+        private static bool ClientMsgReceived(byte[] data)
         {
-            byte[] ret = new byte[count];
-            for (int i = 0; i < ret.Length; i++)
-            {
-                ret[i] = val;
-            }
-            return ret;
-        }
-
-        static byte[] Md5(byte[] data)
-        {
-            if (data == null || data.Length < 1)
-            {
-                return null;
-            }
-
-            MD5 m = MD5.Create();
-            return m.ComputeHash(data);
-        }
-
-        public static string BytesToHex(byte[] bytes)
-        {
-            if (bytes == null)
-            {
-                return null;
-            }
-
-            if (bytes.Length < 1)
-            {
-                return null;
-            }
-
-            return BitConverter.ToString(bytes).Replace("-", "");
+            Console.WriteLine("[server] msg from server: " + Common.BytesToHex(Common.Md5(data)) + " (" + data.Length + " bytes)");
+            return true;
         }
     }
 }

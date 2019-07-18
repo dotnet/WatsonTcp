@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading;
-
-namespace ConcurrentList
+﻿namespace ConcurrentList
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Threading;
+
     public sealed class ConcurrentList<T> : ThreadSafeList<T>
     {
-        static readonly int[] Sizes;
-        static readonly int[] Counts;
+        private static readonly int[] Sizes;
+        private static readonly int[] Counts;
 
         static ConcurrentList()
         {
@@ -30,10 +30,10 @@ namespace ConcurrentList
             }
         }
 
-        int _index;
-        int _fuzzyCount;
-        int _count;
-        T[][] _array;
+        private int _index;
+        private int _fuzzyCount;
+        private int _count;
+        private readonly T[][] _array;
 
         public ConcurrentList()
         {
@@ -46,26 +46,20 @@ namespace ConcurrentList
             {
                 if (index < 0 || index >= _count)
                 {
-                    throw new ArgumentOutOfRangeException("index");
+                    throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
                 int arrayIndex = GetArrayIndex(index + 1);
                 if (arrayIndex > 0)
                 {
-                    index -= ((int)Math.Pow(2, arrayIndex) - 1);
+                    index -= (int)Math.Pow(2, arrayIndex) - 1;
                 }
 
                 return _array[arrayIndex][index];
             }
         }
 
-        public override int Count
-        {
-            get
-            {
-                return _count;
-            }
-        }
+        public override int Count => _count;
 
         public override void Add(T element)
         {
@@ -98,7 +92,7 @@ namespace ConcurrentList
         {
             if (array == null)
             {
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array));
             }
 
             int count = _count;
@@ -160,10 +154,7 @@ namespace ConcurrentList
 
         #region "Protected methods"
 
-        protected override bool IsSynchronizedBase
-        {
-            get { return false; }
-        }
+        protected override bool IsSynchronizedBase => false;
 
         #endregion
     }
@@ -232,8 +223,8 @@ namespace ConcurrentList
 
         T IList<T>.this[int index]
         {
-            get { return this[index]; }
-            set { throw new NotSupportedException(); }
+            get => this[index];
+            set => throw new NotSupportedException();
         }
 
         void IList<T>.Insert(int index, T item)
@@ -246,10 +237,7 @@ namespace ConcurrentList
             throw new NotSupportedException();
         }
 
-        bool ICollection<T>.IsReadOnly
-        {
-            get { return false; }
-        }
+        bool ICollection<T>.IsReadOnly => false;
 
         void ICollection<T>.Clear()
         {
@@ -261,20 +249,14 @@ namespace ConcurrentList
             throw new NotSupportedException();
         }
 
-        bool IList.IsFixedSize
-        {
-            get { return false; }
-        }
+        bool IList.IsFixedSize => false;
 
-        bool IList.IsReadOnly
-        {
-            get { return false; }
-        }
+        bool IList.IsReadOnly => false;
 
         object IList.this[int index]
         {
-            get { return this[index]; }
-            set { throw new NotSupportedException(); }
+            get => this[index];
+            set => throw new NotSupportedException();
         }
 
         void IList.RemoveAt(int index)
@@ -312,15 +294,9 @@ namespace ConcurrentList
             return AddBase(value);
         }
 
-        bool ICollection.IsSynchronized
-        {
-            get { return IsSynchronizedBase; }
-        }
+        bool ICollection.IsSynchronized => IsSynchronizedBase;
 
-        object ICollection.SyncRoot
-        {
-            get { return null; }
-        }
+        object ICollection.SyncRoot => null;
 
         void ICollection.CopyTo(Array array, int arrayIndex)
         {

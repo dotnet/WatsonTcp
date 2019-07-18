@@ -1,22 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using WatsonTcp;
-
-namespace TestServer
+﻿namespace TestServer
 {
-    class TestServer
-    {
-        static string serverIp = "";
-        static int serverPort = 0;
-        static bool useSsl = false;
-        static WatsonTcpServer server = null;
-        static string certFile = "";
-        static string certPass = "";
-        static bool acceptInvalidCerts = true;
-        static bool mutualAuthentication = true;
+    using System;
+    using System.Collections.Generic;
+    using System.Text;
+    using WatsonTcp;
 
-        static void Main(string[] args)
+    internal class TestServer
+    {
+        private static string serverIp = String.Empty;
+        private static int serverPort = 0;
+        private static bool useSsl = false;
+        private static WatsonTcpServer server = null;
+        private static string certFile = String.Empty;
+        private static string certPass = String.Empty;
+        private static bool acceptInvalidCerts = true;
+        private static bool mutualAuthentication = true;
+
+        private static void Main()
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -24,7 +24,7 @@ namespace TestServer
 
             if (!useSsl)
             {
-                server = new WatsonTcpServer(serverIp, serverPort); 
+                server = new WatsonTcpServer(serverIp, serverPort);
             }
             else
             {
@@ -33,9 +33,11 @@ namespace TestServer
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
                 mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
-                server.AcceptInvalidCertificates = acceptInvalidCerts;
-                server.MutuallyAuthenticate = mutualAuthentication;
+                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass)
+                {
+                    AcceptInvalidCertificates = acceptInvalidCerts,
+                    MutuallyAuthenticate = mutualAuthentication,
+                };
             }
 
             server.ClientConnected = ClientConnected;
@@ -54,7 +56,10 @@ namespace TestServer
                 string ipPort;
                 bool success = false;
 
-                if (String.IsNullOrEmpty(userInput)) continue;
+                if (String.IsNullOrEmpty(userInput))
+                {
+                    continue;
+                }
 
                 switch (userInput)
                 {
@@ -93,15 +98,24 @@ namespace TestServer
                         {
                             Console.WriteLine("None");
                         }
+
                         break;
 
                     case "send":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
+                        if (String.IsNullOrEmpty(ipPort))
+                        {
+                            break;
+                        }
+
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break; 
+                        if (String.IsNullOrEmpty(userInput))
+                        {
+                            break;
+                        }
+
                         success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
                         Console.WriteLine(success);
                         break;
@@ -109,10 +123,18 @@ namespace TestServer
                     case "sendasync":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
+                        if (String.IsNullOrEmpty(ipPort))
+                        {
+                            break;
+                        }
+
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (String.IsNullOrEmpty(userInput))
+                        {
+                            break;
+                        }
+
                         success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput)).Result;
                         Console.WriteLine(success);
                         break;
@@ -135,24 +157,24 @@ namespace TestServer
                     default:
                         break;
                 }
-            } 
+            }
         }
 
-        static bool ClientConnected(string ipPort)
+        private static bool ClientConnected(string ipPort)
         {
             Console.WriteLine("Client connected: " + ipPort);
             return true;
         }
 
-        static bool ClientDisconnected(string ipPort)
+        private static bool ClientDisconnected(string ipPort)
         {
             Console.WriteLine("Client disconnected: " + ipPort);
             return true;
         }
 
-        static bool MessageReceived(string ipPort, byte[] data)
+        private static bool MessageReceived(string ipPort, byte[] data)
         {
-            string msg = "";
+            string msg = String.Empty;
             if (data != null && data.Length > 0)
             {
                 msg = Encoding.UTF8.GetString(data);

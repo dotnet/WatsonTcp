@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
-    internal enum Mode
+    public enum Mode
     {
         Tcp,
-        Ssl
+        Ssl,
     }
 }
