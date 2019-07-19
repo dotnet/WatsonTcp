@@ -1,14 +1,14 @@
-﻿namespace ConcurrentList
-{
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Threading;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading;
 
+namespace ConcurrentList
+{
     public sealed class ConcurrentList<T> : ThreadSafeList<T>
     {
-        private static readonly int[] Sizes;
-        private static readonly int[] Counts;
+        static readonly int[] Sizes;
+        static readonly int[] Counts;
 
         static ConcurrentList()
         {
@@ -30,10 +30,10 @@
             }
         }
 
-        private int _index;
-        private int _fuzzyCount;
-        private int _count;
-        private readonly T[][] _array;
+        int _index;
+        int _fuzzyCount;
+        int _count;
+        T[][] _array;
 
         public ConcurrentList()
         {
@@ -46,20 +46,26 @@
             {
                 if (index < 0 || index >= _count)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(index));
+                    throw new ArgumentOutOfRangeException("index");
                 }
 
                 int arrayIndex = GetArrayIndex(index + 1);
                 if (arrayIndex > 0)
                 {
-                    index -= (int)Math.Pow(2, arrayIndex) - 1;
+                    index -= ((int)Math.Pow(2, arrayIndex) - 1);
                 }
 
                 return _array[arrayIndex][index];
             }
         }
 
-        public override int Count => _count;
+        public override int Count
+        {
+            get
+            {
+                return _count;
+            }
+        }
 
         public override void Add(T element)
         {
@@ -92,7 +98,7 @@
         {
             if (array == null)
             {
-                throw new ArgumentNullException(nameof(array));
+                throw new ArgumentNullException("array");
             }
 
             int count = _count;
@@ -154,7 +160,10 @@
 
         #region "Protected methods"
 
-        protected override bool IsSynchronizedBase => false;
+        protected override bool IsSynchronizedBase
+        {
+            get { return false; }
+        }
 
         #endregion
     }
@@ -223,8 +232,8 @@
 
         T IList<T>.this[int index]
         {
-            get => this[index];
-            set => throw new NotSupportedException();
+            get { return this[index]; }
+            set { throw new NotSupportedException(); }
         }
 
         void IList<T>.Insert(int index, T item)
@@ -237,7 +246,10 @@
             throw new NotSupportedException();
         }
 
-        bool ICollection<T>.IsReadOnly => false;
+        bool ICollection<T>.IsReadOnly
+        {
+            get { return false; }
+        }
 
         void ICollection<T>.Clear()
         {
@@ -249,14 +261,20 @@
             throw new NotSupportedException();
         }
 
-        bool IList.IsFixedSize => false;
+        bool IList.IsFixedSize
+        {
+            get { return false; }
+        }
 
-        bool IList.IsReadOnly => false;
+        bool IList.IsReadOnly
+        {
+            get { return false; }
+        }
 
         object IList.this[int index]
         {
-            get => this[index];
-            set => throw new NotSupportedException();
+            get { return this[index]; }
+            set { throw new NotSupportedException(); }
         }
 
         void IList.RemoveAt(int index)
@@ -294,9 +312,15 @@
             return AddBase(value);
         }
 
-        bool ICollection.IsSynchronized => IsSynchronizedBase;
+        bool ICollection.IsSynchronized
+        {
+            get { return IsSynchronizedBase; }
+        }
 
-        object ICollection.SyncRoot => null;
+        object ICollection.SyncRoot
+        {
+            get { return null; }
+        }
 
         void ICollection.CopyTo(Array array, int arrayIndex)
         {

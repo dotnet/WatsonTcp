@@ -1,22 +1,22 @@
-﻿namespace TestClient
+﻿using System;
+using System.Text;
+using WatsonTcp;
+
+namespace TestClient
 {
-    using System;
-    using System.Text;
-    using WatsonTcp;
-
-    internal class TestClient
+    class TestClient
     {
-        private static string serverIp = String.Empty;
-        private static int serverPort = 0;
-        private static bool useSsl = false;
-        private static string certFile = String.Empty;
-        private static string certPass = String.Empty;
-        private static bool acceptInvalidCerts = true;
-        private static bool mutualAuthentication = true;
-        private static WatsonTcpClient client = null;
-        private static string presharedKey = null;
+        static string serverIp = "";
+        static int serverPort = 0;
+        static bool useSsl = false;
+        static string certFile = "";
+        static string certPass = "";
+        static bool acceptInvalidCerts = true;
+        static bool mutualAuthentication = true;
+        static WatsonTcpClient client = null;
+        static string presharedKey = null;
 
-        private static void Main()
+        static void Main(string[] args)
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -105,32 +105,21 @@
                         }
                         else
                         {
-                            client = new WatsonTcpClient(serverIp, serverPort)
-                            {
-                                ServerConnected = ServerConnected,
-                                ServerDisconnected = ServerDisconnected,
-                                MessageReceived = MessageReceived,
-                            };
-
-                            client.Start();
+                            client = new WatsonTcpClient(serverIp, serverPort);
+                            client.ServerConnected = ServerConnected;
+                            client.ServerDisconnected = ServerDisconnected;
+                            client.MessageReceived = MessageReceived;
+                            client.Start(); 
                         }
-
                         break;
 
                     case "reconnect":
-                        if (client != null)
-                        {
-                            client.Dispose();
-                        }
-
-                        client = new WatsonTcpClient(serverIp, serverPort)
-                        {
-                            ServerConnected = ServerConnected,
-                            ServerDisconnected = ServerDisconnected,
-                            MessageReceived = MessageReceived,
-                        };
-
-                        client.Start();
+                        if (client != null) client.Dispose();
+                        client = new WatsonTcpClient(serverIp, serverPort);
+                        client.ServerConnected = ServerConnected;
+                        client.ServerDisconnected = ServerDisconnected;
+                        client.MessageReceived = MessageReceived;
+                        client.Start(); 
                         break;
 
                     case "psk":
@@ -152,36 +141,22 @@
             }
         }
 
-        private static void InitializeClient()
-        {
+        static void InitializeClient()
+        { 
             if (!useSsl)
             {
                 client = new WatsonTcpClient(serverIp, serverPort);
             }
             else
             {
-                bool provideCertificate = Common.InputBoolean("Do you wish to provide a certificate ? (required for mutual authenication)", true);
+                certFile = Common.InputString("Certificate file:", "test.pfx", false);
+                certPass = Common.InputString("Certificate password:", "password", false);
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-                if (provideCertificate)
-                {
-                    certFile = Common.InputString("Certificate file:", "test.pfx", false);
-                    certPass = Common.InputString("Certificate password:", "password", false);
-                    mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
-
-                    client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass)
-                    {
-                        AcceptInvalidCertificates = acceptInvalidCerts,
-                        MutuallyAuthenticate = mutualAuthentication,
-                    };
-                }
-                else
-                {
-                    client = new WatsonTcpClient(Mode.Ssl, serverIp, serverPort, null)
-                    {
-                        AcceptInvalidCertificates = acceptInvalidCerts,
-                    };
-                }
+                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.MutuallyAuthenticate = mutualAuthentication;
             }
 
             client.AuthenticationFailure = AuthenticationFailure;
@@ -196,45 +171,41 @@
             client.Start();
         }
 
-        private static string AuthenticationRequested()
+        static string AuthenticationRequested()
         {
-            Console.WriteLine(String.Empty);
-            Console.WriteLine(String.Empty);
+            Console.WriteLine("");
+            Console.WriteLine("");
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(presharedKey))
-            {
-                presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
-            }
-
+            if (String.IsNullOrEmpty(presharedKey)) presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
             return presharedKey;
         }
 
-        private static bool AuthenticationSucceeded()
+        static bool AuthenticationSucceeded()
         {
             Console.WriteLine("Authentication succeeded");
             return true;
         }
 
-        private static bool AuthenticationFailure()
+        static bool AuthenticationFailure()
         {
             Console.WriteLine("Authentication failed");
             return true;
         }
 
-        private static bool MessageReceived(byte[] data)
+        static bool MessageReceived(byte[] data)
         {
             Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(data));
             return true;
         }
 
-        private static bool ServerConnected()
+        static bool ServerConnected()
         {
             Console.WriteLine("Server connected");
             return true;
         }
 
-        private static bool ServerDisconnected()
+        static bool ServerDisconnected()
         {
             Console.WriteLine("Server disconnected");
             return true;

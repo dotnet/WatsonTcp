@@ -1,4 +1,8 @@
-﻿namespace WatsonTcp.Message
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace WatsonTcp.Message
 {
     public enum MessageStatus
     {
@@ -8,6 +12,6 @@
         AuthRequired,
         AuthRequested,
         AuthSuccess,
-        AuthFailure,
+        AuthFailure
     }
 }

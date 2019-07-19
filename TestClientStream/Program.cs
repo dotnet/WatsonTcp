@@ -1,23 +1,23 @@
-﻿namespace TestClientStream
+﻿using System;
+using System.IO;
+using System.Text;
+using WatsonTcp;
+
+namespace TestClientStream
 {
-    using System;
-    using System.IO;
-    using System.Text;
-    using WatsonTcp;
-
-    internal class TestClientStream
+    class TestClientStream
     {
-        private static string serverIp = String.Empty;
-        private static int serverPort = 0;
-        private static bool useSsl = false;
-        private static string certFile = String.Empty;
-        private static string certPass = String.Empty;
-        private static bool acceptInvalidCerts = true;
-        private static bool mutualAuthentication = true;
-        private static WatsonTcpClient client = null;
-        private static string presharedKey = null;
+        static string serverIp = "";
+        static int serverPort = 0;
+        static bool useSsl = false;
+        static string certFile = "";
+        static string certPass = "";
+        static bool acceptInvalidCerts = true;
+        static bool mutualAuthentication = true;
+        static WatsonTcpClient client = null;
+        static string presharedKey = null;
 
-        private static void Main()
+        static void Main(string[] args)
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -68,11 +68,7 @@
                     case "send":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput))
-                        {
-                            break;
-                        }
-
+                        if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = client.Send(data.Length, ms);
@@ -82,11 +78,7 @@
                     case "sendasync":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput))
-                        {
-                            break;
-                        }
-
+                        if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = client.SendAsync(data.Length, ms).Result;
@@ -116,31 +108,20 @@
                         }
                         else
                         {
-                            client = new WatsonTcpClient(serverIp, serverPort)
-                            {
-                                ServerConnected = ServerConnected,
-                                ServerDisconnected = ServerDisconnected,
-                                StreamReceived = StreamReceived,
-                            };
-
+                            client = new WatsonTcpClient(serverIp, serverPort);
+                            client.ServerConnected = ServerConnected;
+                            client.ServerDisconnected = ServerDisconnected;
+                            client.StreamReceived = StreamReceived;
                             client.Start();
                         }
-
                         break;
 
                     case "reconnect":
-                        if (client != null)
-                        {
-                            client.Dispose();
-                        }
-
-                        client = new WatsonTcpClient(serverIp, serverPort)
-                        {
-                            ServerConnected = ServerConnected,
-                            ServerDisconnected = ServerDisconnected,
-                            StreamReceived = StreamReceived,
-                        };
-
+                        if (client != null) client.Dispose();
+                        client = new WatsonTcpClient(serverIp, serverPort);
+                        client.ServerConnected = ServerConnected;
+                        client.ServerDisconnected = ServerDisconnected;
+                        client.StreamReceived = StreamReceived;
                         client.Start();
                         break;
 
@@ -163,7 +144,7 @@
             }
         }
 
-        private static bool StreamReceived(long contentLength, Stream stream)
+        static bool StreamReceived(long contentLength, Stream stream)
         {
             try
             {
@@ -175,9 +156,9 @@
                 long bytesRemaining = contentLength;
 
                 if (stream != null && stream.CanRead)
-                {
+                { 
                     while (bytesRemaining > 0)
-                    {
+                    { 
                         bytesRead = stream.Read(buffer, 0, buffer.Length);
                         Console.WriteLine("Read " + bytesRead);
 
@@ -191,23 +172,23 @@
                         bytesRemaining -= bytesRead;
                     }
 
-                    Console.WriteLine(String.Empty);
+                    Console.WriteLine("");
                 }
                 else
                 {
                     Console.WriteLine("[null]");
                 }
-
+                 
                 return true;
-            }
+            } 
             catch (Exception e)
             {
-                Common.LogException("StreamReceived", e);
+                LogException(e);
                 return false;
             }
         }
 
-        private static void InitializeClient()
+        static void InitializeClient()
         {
             if (!useSsl)
             {
@@ -215,28 +196,14 @@
             }
             else
             {
-                bool provideCertificate = Common.InputBoolean("Do you wish to provide a certificate ? (required for mutual authenication)", true);
+                certFile = Common.InputString("Certificate file:", "test.pfx", false);
+                certPass = Common.InputString("Certificate password:", "password", false);
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-                if (provideCertificate)
-                {
-                    certFile = Common.InputString("Certificate file:", "test.pfx", false);
-                    certPass = Common.InputString("Certificate password:", "password", false);
-                    mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
-
-                    client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass)
-                    {
-                        AcceptInvalidCertificates = acceptInvalidCerts,
-                        MutuallyAuthenticate = mutualAuthentication,
-                    };
-                }
-                else
-                {
-                    client = new WatsonTcpClient(Mode.Ssl, serverIp, serverPort, null)
-                    {
-                        AcceptInvalidCertificates = acceptInvalidCerts,
-                    };
-                }
+                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.MutuallyAuthenticate = mutualAuthentication;
             }
 
             client.AuthenticationFailure = AuthenticationFailure;
@@ -247,45 +214,53 @@
             client.StreamReceived = StreamReceived;
             client.ReadDataStream = false;
             // client.Debug = true;
-            client.Start();
+            client.Start(); 
         }
 
-        private static string AuthenticationRequested()
+        static string AuthenticationRequested()
         {
-            Console.WriteLine(String.Empty);
-            Console.WriteLine(String.Empty);
+            Console.WriteLine("");
+            Console.WriteLine("");
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(presharedKey))
-            {
-                presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
-            }
-
+            if (String.IsNullOrEmpty(presharedKey)) presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
             return presharedKey;
         }
 
-        private static bool AuthenticationSucceeded()
+        static bool AuthenticationSucceeded()
         {
             Console.WriteLine("Authentication succeeded");
             return true;
         }
 
-        private static bool AuthenticationFailure()
+        static bool AuthenticationFailure()
         {
             Console.WriteLine("Authentication failed");
             return true;
         }
 
-        private static bool ServerConnected()
+        static bool ServerConnected()
         {
             Console.WriteLine("Server connected");
             return true;
         }
 
-        private static bool ServerDisconnected()
+        static bool ServerDisconnected()
         {
             Console.WriteLine("Server disconnected");
             return true;
+        }
+
+        static void LogException(Exception e)
+        {
+            Console.WriteLine("================================================================================");
+            Console.WriteLine(" = Exception Type: " + e.GetType().ToString());
+            Console.WriteLine(" = Exception Data: " + e.Data);
+            Console.WriteLine(" = Inner Exception: " + e.InnerException);
+            Console.WriteLine(" = Exception Message: " + e.Message);
+            Console.WriteLine(" = Exception Source: " + e.Source);
+            Console.WriteLine(" = Exception StackTrace: " + e.StackTrace);
+            Console.WriteLine("================================================================================");
         }
     }
 }

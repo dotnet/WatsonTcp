@@ -1,52 +1,52 @@
-﻿namespace WatsonTcp.Message
-{
-    using System;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
 
+namespace WatsonTcp.Message
+{
     public class MessageField
     {
-        #region Private-Fields
+        #region Public-Members
 
-        private readonly int _BitNumber;
-        private readonly string _Name;
-        private readonly FieldType _Type;
-        private readonly int _Length;
+        public int BitNumber { get; set; }
+        public string Name { get; set; }
+        public FieldType Type { get; set; }
+        public int Length { get; set; }
 
         #endregion
 
-        #region Constructors
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        public MessageField()
+        {
+            throw new NotImplementedException();
+        }
 
         public MessageField(int bitNumber, string name, FieldType fieldType, int length)
         {
-            if (bitNumber < 0)
-            {
-                throw new ArgumentException("Invalid bit number.");
-            }
+            if (bitNumber < 0) throw new ArgumentException("Invalid bit number.");
+            if (String.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
+            if (length < 0) throw new ArgumentException("Invalid length.");
 
-            if (String.IsNullOrEmpty(name))
-            {
-                throw new ArgumentNullException(nameof(name));
-            }
-
-            if (length < 0)
-            {
-                throw new ArgumentException("Invalid length.");
-            }
-
-            _BitNumber = bitNumber;
-            _Name = name;
-            _Type = fieldType;
-            _Length = length;
+            BitNumber = bitNumber;
+            Name = name;
+            Type = fieldType;
+            Length = length;
         }
 
         #endregion
 
-        #region Internal-Properties
-
-        internal int BitNumber => _BitNumber;
-        internal string Name => _Name;
-        internal FieldType Type => _Type;
-        internal int Length => _Length;
+        #region Public-Methods
 
         #endregion
-    }
+
+        #region Private-Methods
+
+        #endregion
+    } 
 }

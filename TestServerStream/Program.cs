@@ -1,23 +1,23 @@
-﻿namespace TestServerStream
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using WatsonTcp;
+
+namespace TestServerStream
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Text;
-    using WatsonTcp;
-
-    internal class TestServerStream
+    class TestServerStream
     {
-        private static string serverIp = String.Empty;
-        private static int serverPort = 0;
-        private static bool useSsl = false;
-        private static WatsonTcpServer server = null;
-        private static string certFile = String.Empty;
-        private static string certPass = String.Empty;
-        private static bool acceptInvalidCerts = true;
-        private static bool mutualAuthentication = true;
+        static string serverIp = "";
+        static int serverPort = 0;
+        static bool useSsl = false;
+        static WatsonTcpServer server = null;
+        static string certFile = "";
+        static string certPass = "";
+        static bool acceptInvalidCerts = true;
+        static bool mutualAuthentication = true;
 
-        private static void Main()
+        static void Main(string[] args)
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -34,17 +34,15 @@
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
                 mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
 
-                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass)
-                {
-                    AcceptInvalidCertificates = acceptInvalidCerts,
-                    MutuallyAuthenticate = mutualAuthentication,
-                };
+                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
+                server.AcceptInvalidCertificates = acceptInvalidCerts;
+                server.MutuallyAuthenticate = mutualAuthentication;
             }
 
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
             server.StreamReceived = StreamReceived;
-            server.ReadDataStream = false;
+            server.ReadDataStream = false; 
             // server.Debug = true;
             server.Start();
 
@@ -61,10 +59,7 @@
                 List<string> clients;
                 string ipPort;
 
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    continue;
-                }
+                if (String.IsNullOrEmpty(userInput)) continue;
 
                 switch (userInput)
                 {
@@ -103,45 +98,28 @@
                         {
                             Console.WriteLine("None");
                         }
-
                         break;
 
                     case "send":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort))
-                        {
-                            break;
-                        }
-
+                        if (String.IsNullOrEmpty(ipPort)) break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput))
-                        {
-                            break;
-                        }
-
+                        if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = server.Send(ipPort, data.Length, ms);
-                        Console.WriteLine(success);
+                        Console.WriteLine(success); 
                         break;
 
                     case "sendasync":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort))
-                        {
-                            break;
-                        }
-
+                        if (String.IsNullOrEmpty(ipPort)) break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput))
-                        {
-                            break;
-                        }
-
+                        if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = server.SendAsync(ipPort, data.Length, ms).Result;
@@ -169,19 +147,19 @@
             }
         }
 
-        private static bool ClientConnected(string ipPort)
+        static bool ClientConnected(string ipPort)
         {
             Console.WriteLine("Client connected: " + ipPort);
             return true;
         }
 
-        private static bool ClientDisconnected(string ipPort)
+        static bool ClientDisconnected(string ipPort)
         {
             Console.WriteLine("Client disconnected: " + ipPort);
             return true;
         }
 
-        private static bool StreamReceived(string ipPort, long contentLength, Stream stream)
+        static bool StreamReceived(string ipPort, long contentLength, Stream stream)
         {
             try
             {
@@ -193,9 +171,9 @@
                 long bytesRemaining = contentLength;
 
                 if (stream != null && stream.CanRead)
-                {
+                { 
                     while (bytesRemaining > 0)
-                    {
+                    { 
                         bytesRead = stream.Read(buffer, 0, buffer.Length);
                         Console.WriteLine("Read " + bytesRead);
 
@@ -209,20 +187,32 @@
                         bytesRemaining -= bytesRead;
                     }
 
-                    Console.WriteLine(String.Empty);
+                    Console.WriteLine("");
                 }
                 else
                 {
                     Console.WriteLine("[null]");
                 }
-
+                 
                 return true;
             }
             catch (Exception e)
             {
-                Common.LogException("StreamReceived", e);
+                LogException(e);
                 return false;
             }
         }
+
+        static void LogException(Exception e)
+        {
+            Console.WriteLine("================================================================================");
+            Console.WriteLine(" = Exception Type: " + e.GetType().ToString());
+            Console.WriteLine(" = Exception Data: " + e.Data);
+            Console.WriteLine(" = Inner Exception: " + e.InnerException);
+            Console.WriteLine(" = Exception Message: " + e.Message);
+            Console.WriteLine(" = Exception Source: " + e.Source);
+            Console.WriteLine(" = Exception StackTrace: " + e.StackTrace);
+            Console.WriteLine("================================================================================");
+        } 
     }
 }

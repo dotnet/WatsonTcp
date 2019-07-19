@@ -1,72 +1,65 @@
-﻿namespace WatsonTcp
-{
-    using System;
-    using System.IO;
-    using System.Net.Security;
-    using System.Net.Sockets;
-    using System.Security.Cryptography.X509Certificates;
-    using System.Threading;
+﻿using System;
+using System.Net;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
-    internal class ClientMetadata : IDisposable
+namespace WatsonTcp
+{
+    public class ClientMetadata : IDisposable
     {
-        #region Private-Fields
+        #region Public-Members
+
+        public TcpClient TcpClient
+        {
+            get { return _TcpClient; }
+        }
+
+        public NetworkStream NetworkStream
+        {
+            get { return _NetworkStream; }
+        }
+
+        public SslStream SslStream
+        {
+            get { return _SslStream; }
+            set { _SslStream = value; }
+        }
+
+        public string IpPort
+        {
+            get { return _IpPort; }
+        }
+
+        public SemaphoreSlim ReadLock { get; set; }
+
+        public SemaphoreSlim WriteLock { get; set; }
+
+        #endregion
+
+        #region Private-Members
 
         private bool _Disposed = false;
 
-        private readonly TcpClient _TcpClient;
-        private readonly NetworkStream _NetworkStream;
-        private readonly SslStream _SslStream;
-        private readonly Stream _TrafficStream;
-
-        private readonly string _IpPort;
-
-        private readonly SemaphoreSlim _ReadLock = new SemaphoreSlim(1);
-        private readonly SemaphoreSlim _WriteLock = new SemaphoreSlim(1);
+        private TcpClient _TcpClient;
+        private NetworkStream _NetworkStream;
+        private SslStream _SslStream;
+        private string _IpPort;
 
         #endregion
 
-        #region Constructors
+        #region Constructors-and-Factories
 
-        internal ClientMetadata(TcpClient tcp, Mode mode, bool acceptInvalidCertificates)
+        public ClientMetadata(TcpClient tcp)
         {
-            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
-            _NetworkStream = tcp.GetStream();
+            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp)); 
+            _NetworkStream = tcp.GetStream(); 
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
-            if (mode == Mode.Tcp)
-            {
-                _TrafficStream = _NetworkStream;
-            }
-            else
-            {
-                if (acceptInvalidCertificates)
-                {
-                    _SslStream = new SslStream(_NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
-                }
-                else
-                {
-                    _SslStream = new SslStream(_NetworkStream, false);
-                }
-
-                _TrafficStream = _SslStream;
-            }
+            ReadLock = new SemaphoreSlim(1);
+            WriteLock = new SemaphoreSlim(1);
         }
-
-        #endregion
-
-        #region Internal-Properties
-
-        internal TcpClient TcpClient => _TcpClient;
-
-        internal SslStream SslStream => _SslStream;
-
-        internal Stream TrafficStream => _TrafficStream;
-
-        internal string IpPort => _IpPort;
-
-        internal SemaphoreSlim ReadLock => _ReadLock;
-
-        internal SemaphoreSlim WriteLock => _WriteLock;
 
         #endregion
 
@@ -80,7 +73,7 @@
 
         #endregion
 
-        #region Protected-Methods
+        #region Private-Methods
 
         protected virtual void Dispose(bool disposing)
         {
@@ -111,16 +104,6 @@
             WriteLock.Dispose();
 
             _Disposed = true;
-        }
-
-        #endregion
-
-        #region Private-Methods
-
-        private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            // Allow untrusted certificates.
-            return true;
         }
 
         #endregion
