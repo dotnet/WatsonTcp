@@ -1,22 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using WatsonTcp;
 
 namespace TestServer
 {
-    class TestServer
+    internal class TestServer
     {
-        static string serverIp = "";
-        static int serverPort = 0;
-        static bool useSsl = false;
-        static WatsonTcpServer server = null;
-        static string certFile = "";
-        static string certPass = "";
-        static bool acceptInvalidCerts = true;
-        static bool mutualAuthentication = true;
+        private static string serverIp = "";
+        private static int serverPort = 0;
+        private static bool useSsl = false;
+        private static WatsonTcpServer server = null;
+        private static string certFile = "";
+        private static string certPass = "";
+        private static bool acceptInvalidCerts = true;
+        private static bool mutualAuthentication = true;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -24,14 +25,14 @@ namespace TestServer
 
             if (!useSsl)
             {
-                server = new WatsonTcpServer(serverIp, serverPort); 
+                server = new WatsonTcpServer(serverIp, serverPort);
             }
             else
-            {
+            { 
                 certFile = Common.InputString("Certificate file:", "test.pfx", false);
-                certPass = Common.InputString("Certificate password:", "password", false);
+                certPass = Common.InputString("Certificate password:", "password", false); 
                 acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
-                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
+                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", false);
 
                 server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
                 server.AcceptInvalidCertificates = acceptInvalidCerts;
@@ -101,7 +102,7 @@ namespace TestServer
                         if (String.IsNullOrEmpty(ipPort)) break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break; 
+                        if (String.IsNullOrEmpty(userInput)) break;
                         success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
                         Console.WriteLine(success);
                         break;
@@ -135,22 +136,29 @@ namespace TestServer
                     default:
                         break;
                 }
-            } 
+            }
         }
 
-        static bool ClientConnected(string ipPort)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ClientConnected(string ipPort)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Client connected: " + ipPort);
-            return true;
         }
 
-        static bool ClientDisconnected(string ipPort)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ClientDisconnected(string ipPort)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Client disconnected: " + ipPort);
-            return true;
         }
 
-        static bool MessageReceived(string ipPort, byte[] data)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task MessageReceived(string ipPort, byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             string msg = "";
             if (data != null && data.Length > 0)
@@ -159,7 +167,6 @@ namespace TestServer
             }
 
             Console.WriteLine("Message received from " + ipPort + ": " + msg);
-            return true;
         }
     }
 }

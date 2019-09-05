@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Text;
 
 namespace WatsonTcp.Message
 {
@@ -14,11 +11,9 @@ namespace WatsonTcp.Message
         public FieldType Type { get; set; }
         public int Length { get; set; }
 
-        #endregion
+        #endregion Public-Members
 
-        #region Private-Members
 
-        #endregion
 
         #region Constructors-and-Factories
 
@@ -39,14 +34,6 @@ namespace WatsonTcp.Message
             Length = length;
         }
 
-        #endregion
-
-        #region Public-Methods
-
-        #endregion
-
-        #region Private-Methods
-
-        #endregion
-    } 
+        #endregion Constructors-and-Factories
+    }
 }

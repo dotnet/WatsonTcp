@@ -6,16 +6,16 @@ using WatsonTcp;
 
 namespace TestParallel
 {
-    class Program
+    internal class Program
     {
-        static int serverPort = 8000;
-        static int clientThreads = 8;
-        static int numIterations = 10000;
-        static Random rng;
-        static byte[] data;
-        static WatsonTcpServer server;
+        private static int serverPort = 8000;
+        private static int clientThreads = 8;
+        private static int numIterations = 10000;
+        private static Random rng;
+        private static byte[] data;
+        private static WatsonTcpServer server;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             rng = new Random((int)DateTime.Now.Ticks);
             data = InitByteArray(262144, 0x00);
@@ -40,7 +40,7 @@ namespace TestParallel
             Console.ReadLine();
         }
 
-        static void ClientTask()
+        private static void ClientTask()
         {
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
@@ -59,38 +59,50 @@ namespace TestParallel
             Console.WriteLine("[client] finished");
         }
 
-        static bool ServerClientConnected(string ipPort)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ServerClientConnected(string ipPort)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("[server] connection from " + ipPort);
-            return true;
         }
 
-        static bool ServerClientDisconnected(string ipPort)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ServerClientDisconnected(string ipPort)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("[server] disconnection from " + ipPort);
-            return true;
         }
 
-        static bool ServerMsgReceived(string ipPort, byte[] data)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ServerMsgReceived(string ipPort, byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
-            return true;
         }
 
-        static bool ClientServerConnected()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ClientServerConnected()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
-            return true;
         }
 
-        static bool ClientServerDisconnected()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ClientServerDisconnected()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
-            return true;
         }
 
-        static bool ClientMsgReceived(byte[] data)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ClientMsgReceived(byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
-            return true;
         }
 
         public static byte[] InitByteArray(int count, byte val)
@@ -103,7 +115,7 @@ namespace TestParallel
             return ret;
         }
 
-        static byte[] Md5(byte[] data)
+        private static byte[] Md5(byte[] data)
         {
             if (data == null || data.Length < 1)
             {

@@ -7,8 +7,8 @@ namespace ConcurrentList
 {
     public sealed class ConcurrentList<T> : ThreadSafeList<T>
     {
-        static readonly int[] Sizes;
-        static readonly int[] Counts;
+        private static readonly int[] Sizes;
+        private static readonly int[] Counts;
 
         static ConcurrentList()
         {
@@ -30,10 +30,10 @@ namespace ConcurrentList
             }
         }
 
-        int _index;
-        int _fuzzyCount;
-        int _count;
-        T[][] _array;
+        private int _index;
+        private int _fuzzyCount;
+        private int _count;
+        private T[][] _array;
 
         public ConcurrentList()
         {
@@ -46,7 +46,7 @@ namespace ConcurrentList
             {
                 if (index < 0 || index >= _count)
                 {
-                    throw new ArgumentOutOfRangeException("index");
+                    throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
                 int arrayIndex = GetArrayIndex(index + 1);
@@ -98,7 +98,7 @@ namespace ConcurrentList
         {
             if (array == null)
             {
-                throw new ArgumentNullException("array");
+                throw new ArgumentNullException(nameof(array));
             }
 
             int count = _count;
@@ -165,7 +165,7 @@ namespace ConcurrentList
             get { return false; }
         }
 
-        #endregion
+        #endregion "Protected methods"
     }
 
     public abstract class ThreadSafeList<T> : IList<T>, IList
@@ -226,7 +226,7 @@ namespace ConcurrentList
             return Count - 1;
         }
 
-        #endregion
+        #endregion "Protected methods"
 
         #region "Explicit interface implementations"
 
@@ -332,6 +332,6 @@ namespace ConcurrentList
             return GetEnumerator();
         }
 
-        #endregion
+        #endregion "Explicit interface implementations"
     }
 }

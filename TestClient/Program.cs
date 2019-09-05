@@ -1,27 +1,24 @@
 ﻿using System;
 using System.Text;
+using System.Threading.Tasks;
 using WatsonTcp;
 
 namespace TestClient
 {
-    class TestClient
+    internal class TestClient
     {
-        static string serverIp = "";
-        static int serverPort = 0;
-        static bool useSsl = false;
-        static string certFile = "";
-        static string certPass = "";
-        static bool acceptInvalidCerts = true;
-        static bool mutualAuthentication = true;
-        static WatsonTcpClient client = null;
-        static string presharedKey = null;
+        private static string serverIp = "";
+        private static int serverPort = 0;
+        private static bool useSsl = false;
+        private static string certFile = "";
+        private static string certPass = "";
+        private static bool acceptInvalidCerts = true;
+        private static bool mutualAuthentication = true;
+        private static WatsonTcpClient client = null;
+        private static string presharedKey = null;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
-            serverPort = Common.InputInteger("Server port:", 9000, true, false);
-            useSsl = Common.InputBoolean("Use SSL:", false);
-
             InitializeClient();
 
             bool runForever = true;
@@ -68,7 +65,7 @@ namespace TestClient
                             break;
                         }
 
-                        client.Send(Encoding.UTF8.GetBytes(userInput));
+                        if (!client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
@@ -79,7 +76,7 @@ namespace TestClient
                             break;
                         }
 
-                        bool success = client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
+                        if (!client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result) Console.WriteLine("Failed");
                         break;
 
                     case "status":
@@ -109,17 +106,12 @@ namespace TestClient
                             client.ServerConnected = ServerConnected;
                             client.ServerDisconnected = ServerDisconnected;
                             client.MessageReceived = MessageReceived;
-                            client.Start(); 
+                            client.Start();
                         }
                         break;
 
                     case "reconnect":
-                        if (client != null) client.Dispose();
-                        client = new WatsonTcpClient(serverIp, serverPort);
-                        client.ServerConnected = ServerConnected;
-                        client.ServerDisconnected = ServerDisconnected;
-                        client.MessageReceived = MessageReceived;
-                        client.Start(); 
+                        ConnectClient();
                         break;
 
                     case "psk":
@@ -141,19 +133,47 @@ namespace TestClient
             }
         }
 
-        static void InitializeClient()
-        { 
+        private static void InitializeClient()
+        {
+            serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
+            serverPort = Common.InputInteger("Server port:", 9000, true, false);
+            useSsl = Common.InputBoolean("Use SSL:", false);
+
             if (!useSsl)
             {
                 client = new WatsonTcpClient(serverIp, serverPort);
             }
             else
             {
-                certFile = Common.InputString("Certificate file:", "test.pfx", false);
-                certPass = Common.InputString("Certificate password:", "password", false);
-                acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
-                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", true);
+                bool supplyCert = Common.InputBoolean("Supply SSL certificate:", false);
 
+                if (supplyCert)
+                {
+                    certFile = Common.InputString("Certificate file:", "test.pfx", false);
+                    certPass = Common.InputString("Certificate password:", "password", false);
+                }
+
+                acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", false);
+
+                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.MutuallyAuthenticate = mutualAuthentication;
+            }
+
+            ConnectClient();
+        }
+
+        private static void ConnectClient()
+        { 
+            if (client != null) client.Dispose();
+
+            if (!useSsl)
+            {
+                client = new WatsonTcpClient(serverIp, serverPort);
+            }
+            else
+            {
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
                 client.AcceptInvalidCertificates = acceptInvalidCerts;
                 client.MutuallyAuthenticate = mutualAuthentication;
@@ -168,10 +188,10 @@ namespace TestClient
             client.ReadDataStream = true;
             client.ReadStreamBufferSize = 65536;
             // client.Debug = true;
-            client.Start();
+            client.Start(); 
         }
 
-        static string AuthenticationRequested()
+        private static string AuthenticationRequested()
         {
             Console.WriteLine("");
             Console.WriteLine("");
@@ -181,34 +201,44 @@ namespace TestClient
             return presharedKey;
         }
 
-        static bool AuthenticationSucceeded()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task AuthenticationSucceeded()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Authentication succeeded");
-            return true;
         }
 
-        static bool AuthenticationFailure()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task AuthenticationFailure()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Authentication failed");
-            return true;
         }
 
-        static bool MessageReceived(byte[] data)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task MessageReceived(byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(data));
-            return true;
         }
 
-        static bool ServerConnected()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ServerConnected()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Server connected");
-            return true;
         }
 
-        static bool ServerDisconnected()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ServerDisconnected()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Server disconnected");
-            return true;
         }
     }
 }

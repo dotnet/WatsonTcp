@@ -1,23 +1,24 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using WatsonTcp;
 
 namespace TestClientStream
 {
-    class TestClientStream
+    internal class TestClientStream
     {
-        static string serverIp = "";
-        static int serverPort = 0;
-        static bool useSsl = false;
-        static string certFile = "";
-        static string certPass = "";
-        static bool acceptInvalidCerts = true;
-        static bool mutualAuthentication = true;
-        static WatsonTcpClient client = null;
-        static string presharedKey = null;
+        private static string serverIp = "";
+        private static int serverPort = 0;
+        private static bool useSsl = false;
+        private static string certFile = "";
+        private static string certPass = "";
+        private static bool acceptInvalidCerts = true;
+        private static bool mutualAuthentication = true;
+        private static WatsonTcpClient client = null;
+        private static string presharedKey = null;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
             serverPort = Common.InputInteger("Server port:", 9000, true, false);
@@ -144,7 +145,10 @@ namespace TestClientStream
             }
         }
 
-        static bool StreamReceived(long contentLength, Stream stream)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task StreamReceived(long contentLength, Stream stream)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             try
             {
@@ -156,9 +160,9 @@ namespace TestClientStream
                 long bytesRemaining = contentLength;
 
                 if (stream != null && stream.CanRead)
-                { 
+                {
                     while (bytesRemaining > 0)
-                    { 
+                    {
                         bytesRead = stream.Read(buffer, 0, buffer.Length);
                         Console.WriteLine("Read " + bytesRead);
 
@@ -178,17 +182,14 @@ namespace TestClientStream
                 {
                     Console.WriteLine("[null]");
                 }
-                 
-                return true;
-            } 
+            }
             catch (Exception e)
             {
-                LogException(e);
-                return false;
+                Common.LogException("StreamReceived", e);
             }
         }
 
-        static void InitializeClient()
+        private static void InitializeClient()
         {
             if (!useSsl)
             {
@@ -214,10 +215,10 @@ namespace TestClientStream
             client.StreamReceived = StreamReceived;
             client.ReadDataStream = false;
             // client.Debug = true;
-            client.Start(); 
+            client.Start();
         }
 
-        static string AuthenticationRequested()
+        private static string AuthenticationRequested()
         {
             Console.WriteLine("");
             Console.WriteLine("");
@@ -227,40 +228,36 @@ namespace TestClientStream
             return presharedKey;
         }
 
-        static bool AuthenticationSucceeded()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task AuthenticationSucceeded()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Authentication succeeded");
-            return true;
         }
 
-        static bool AuthenticationFailure()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task AuthenticationFailure()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Authentication failed");
-            return true;
         }
 
-        static bool ServerConnected()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ServerConnected()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Server connected");
-            return true;
         }
 
-        static bool ServerDisconnected()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        private static async Task ServerDisconnected()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Server disconnected");
-            return true;
-        }
-
-        static void LogException(Exception e)
-        {
-            Console.WriteLine("================================================================================");
-            Console.WriteLine(" = Exception Type: " + e.GetType().ToString());
-            Console.WriteLine(" = Exception Data: " + e.Data);
-            Console.WriteLine(" = Inner Exception: " + e.InnerException);
-            Console.WriteLine(" = Exception Message: " + e.Message);
-            Console.WriteLine(" = Exception Source: " + e.Source);
-            Console.WriteLine(" = Exception StackTrace: " + e.StackTrace);
-            Console.WriteLine("================================================================================");
-        }
+        } 
     }
 }

@@ -55,30 +55,28 @@ namespace WatsonTcp
         public List<string> PermittedIPs = null;
 
         /// <summary>
-        /// Method to call when a client connects to the server.  
-        /// The IP:port is passed to this method as a string, and it is expected that the method will return true.
+        /// Method to call when a client connects to the server.
+        /// The IP:port is passed to this method as a string.
         /// </summary>
-        public Func<string, bool> ClientConnected = null;
+        public Func<string, Task> ClientConnected = null;
 
         /// <summary>
-        /// Method to call when a client disconnects from the server.  
-        /// The IP:port is passed to this method as a string, and it is expected that the method will return true.
+        /// Method to call when a client disconnects from the server.
+        /// The IP:port is passed to this method as a string.
         /// </summary>
-        public Func<string, bool> ClientDisconnected = null;
+        public Func<string, Task> ClientDisconnected = null;
 
         /// <summary>
-        /// Method to call when a message is received from a client.  
-        /// The IP:port is passed to this method as a string, along with a byte array containing the message data.  
-        /// It is expected that the method will return true.
+        /// Method to call when a message is received from a client.
+        /// The IP:port is passed to this method as a string, along with a byte array containing the message data.
         /// </summary>
-        public Func<string, byte[], bool> MessageReceived = null;
+        public Func<string, byte[], Task> MessageReceived = null;
 
         /// <summary>
         /// Method to call when a message is received from a client.
         /// The IP:port is passed to this method as a string, along with a long indicating the number of bytes to read from the stream.
-        /// It is expected that the method will return true;
         /// </summary>
-        public Func<string, long, Stream, bool> StreamReceived = null;
+        public Func<string, long, Stream, Task> StreamReceived = null;
 
         /// <summary>
         /// Enable acceptance of SSL certificates from clients that cannot be validated.
@@ -95,15 +93,15 @@ namespace WatsonTcp
         /// </summary>
         public string PresharedKey = null;
 
-        #endregion
+        #endregion Public-Members
 
         #region Private-Members
 
         private bool _Disposed = false;
         private int _ReadStreamBufferSize = 65536;
-        private Mode _Mode;  
+        private Mode _Mode;
         private string _ListenerIp;
-        private int _ListenerPort; 
+        private int _ListenerPort;
         private IPAddress _ListenerIpAddress;
         private TcpListener _Listener;
 
@@ -112,14 +110,14 @@ namespace WatsonTcp
         private int _ActiveClients;
         private ConcurrentDictionary<string, ClientMetadata> _Clients;
         private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients;
-         
+
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
 
-        #endregion
+        #endregion Private-Members
 
         #region Constructors-and-Factories
-         
+
         /// <summary>
         /// Initialize the Watson TCP server without SSL.  Call Start() afterward to start Watson.
         /// </summary>
@@ -145,7 +143,7 @@ namespace WatsonTcp
             }
 
             _ListenerPort = listenerPort;
-            
+
             _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
             _TokenSource = new CancellationTokenSource();
@@ -153,9 +151,9 @@ namespace WatsonTcp
 
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>(); 
+            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
         }
-        
+
         /// <summary>
         /// Initialize the Watson TCP server with SSL.  Call Start() afterward to start Watson.
         /// </summary>
@@ -170,6 +168,7 @@ namespace WatsonTcp
             string pfxCertPass)
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
+            if (String.IsNullOrEmpty(pfxCertFile)) throw new ArgumentNullException(nameof(pfxCertFile));
 
             _Mode = Mode.Ssl;
 
@@ -186,7 +185,7 @@ namespace WatsonTcp
 
             _ListenerPort = listenerPort;
 
-            _SslCertificate = null;
+            _SslCertificate = null; 
             if (String.IsNullOrEmpty(pfxCertPass))
             {
                 _SslCertificate = new X509Certificate2(pfxCertFile);
@@ -194,17 +193,17 @@ namespace WatsonTcp
             else
             {
                 _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
-            }
+            } 
 
             _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
             _ActiveClients = 0;
             _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>(); 
+            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
         }
-        
-        #endregion
+
+        #endregion Constructors-and-Factories
 
         #region Public-Methods
 
@@ -218,7 +217,7 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Start the server.  
+        /// Start the server.
         /// </summary>
         public void Start()
         {
@@ -347,11 +346,18 @@ namespace WatsonTcp
             }
             else
             {
+                byte[] data = Encoding.UTF8.GetBytes("Removed from server");
+                WatsonMessage removeMsg = new WatsonMessage();
+                removeMsg.Status = MessageStatus.Removed;
+                removeMsg.Data = null;
+                removeMsg.ContentLength = 0;
+                MessageWrite(client, removeMsg, null); 
                 client.Dispose();
+                _Clients.TryRemove(ipPort, out ClientMetadata removed);
             }
         }
 
-        #endregion
+        #endregion Public-Methods
 
         #region Private-Methods
 
@@ -381,7 +387,7 @@ namespace WatsonTcp
                     }
                 }
             }
-             
+
             _Disposed = true;
         }
 
@@ -389,20 +395,7 @@ namespace WatsonTcp
         {
             if (Debug) Console.WriteLine(msg);
         }
-
-        private void LogException(string method, Exception e)
-        {
-            Log("================================================================================");
-            Log(" = Method: " + method);
-            Log(" = Exception Type: " + e.GetType().ToString());
-            Log(" = Exception Data: " + e.Data);
-            Log(" = Inner Exception: " + e.InnerException);
-            Log(" = Exception Message: " + e.Message);
-            Log(" = Exception Source: " + e.Source);
-            Log(" = Exception StackTrace: " + e.StackTrace);
-            Log("================================================================================");
-        }
-
+         
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
@@ -422,7 +415,7 @@ namespace WatsonTcp
 
                     TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
                     tcpClient.LingerState.Enabled = false;
-                    
+
                     string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
                     if (PermittedIPs != null && PermittedIPs.Count > 0)
                     {
@@ -437,18 +430,15 @@ namespace WatsonTcp
                     ClientMetadata client = new ClientMetadata(tcpClient);
                     clientIpPort = client.IpPort;
 
-                    #endregion
+                    #endregion Accept-Connection-and-Validate-IP
 
                     if (_Mode == Mode.Tcp)
                     {
                         #region Tcp
 
-                        Task unawaited = Task.Run(() =>
-                        {
-                            FinalizeConnection(client);
-                        }, _Token);
+                        Task unawaited = Task.Run(() => FinalizeConnection(client), _Token);
 
-                        #endregion
+                        #endregion Tcp
                     }
                     else if (_Mode == Mode.Ssl)
                     {
@@ -463,7 +453,8 @@ namespace WatsonTcp
                             client.SslStream = new SslStream(client.NetworkStream, false);
                         }
 
-                        Task unawaited = Task.Run(() => {
+                        Task unawaited = Task.Run(() =>
+                        {
                             Task<bool> success = StartTls(client);
                             if (success.Result)
                             {
@@ -471,13 +462,13 @@ namespace WatsonTcp
                             }
                         }, _Token);
 
-                        #endregion
+                        #endregion SSL
                     }
                     else
                     {
                         throw new ArgumentException("Unknown mode: " + _Mode.ToString());
                     }
-                     
+
                     Log("*** AcceptConnections accepted connection from " + client.IpPort);
                 }
                 catch (Exception e)
@@ -490,10 +481,8 @@ namespace WatsonTcp
         private async Task<bool> StartTls(ClientMetadata client)
         {
             try
-            {
-                // the two bools in this should really be contruction paramaters
-                // maybe re-use mutualAuthentication and acceptInvalidCerts ?
-                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, false);
+            { 
+                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, !AcceptInvalidCertificates);
 
                 if (!client.SslStream.IsEncrypted)
                 {
@@ -525,9 +514,11 @@ namespace WatsonTcp
                     case "Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host.":
                         Log("*** StartTls IOException " + client.IpPort + " closed the connection.");
                         break;
+
                     case "The handshake failed due to an unexpected packet format.":
                         Log("*** StartTls IOException " + client.IpPort + " disconnected, invalid handshake.");
                         break;
+
                     default:
                         Log("*** StartTls IOException from " + client.IpPort + Environment.NewLine + ex.ToString());
                         break;
@@ -560,7 +551,7 @@ namespace WatsonTcp
             // Do not decrement in this block, decrement is done by the connection reader
             int activeCount = Interlocked.Increment(ref _ActiveClients);
 
-            #endregion
+            #endregion Add-to-Client-List
 
             #region Request-Authentication
 
@@ -577,7 +568,7 @@ namespace WatsonTcp
                 MessageWrite(client, authMsg, null);
             }
 
-            #endregion
+            #endregion Request-Authentication
 
             #region Start-Data-Receiver
 
@@ -589,7 +580,8 @@ namespace WatsonTcp
 
             Task.Run(async () => await DataReceiver(client));
 
-            #endregion 
+            #endregion Start-Data-Receiver
+
         }
 
         private bool IsConnected(ClientMetadata client)
@@ -610,16 +602,14 @@ namespace WatsonTcp
                 }
                 catch (ObjectDisposedException)
                 {
-
                 }
                 catch (IOException)
                 {
-
                 }
                 catch (SocketException se)
                 {
                     if (se.NativeErrorCode.Equals(10035)) success = true;
-                } 
+                }
                 catch (Exception e)
                 {
                     Log("*** IsConnected " + client.IpPort + " exception using send: " + e.Message);
@@ -659,7 +649,7 @@ namespace WatsonTcp
                 {
                     Log("*** IsConnected " + client.IpPort + " exception using poll/peek: " + e.Message);
                     return false;
-                } 
+                }
                 finally
                 {
                     if (readLocked) client.ReadLock.Release();
@@ -697,12 +687,12 @@ namespace WatsonTcp
                         if (!String.IsNullOrEmpty(PresharedKey))
                         {
                             if (_UnauthenticatedClients.ContainsKey(client.IpPort))
-                            { 
+                            {
                                 Log("*** DataReceiver message received from unauthenticated endpoint: " + client.IpPort);
 
                                 if (msg.Status == MessageStatus.AuthRequested)
                                 {
-                                    // check preshared key 
+                                    // check preshared key
                                     if (msg.PresharedKey != null && msg.PresharedKey.Length > 0)
                                     {
                                         string clientPsk = Encoding.UTF8.GetString(msg.PresharedKey).Trim();
@@ -753,14 +743,14 @@ namespace WatsonTcp
                         {
                             if (MessageReceived != null)
                             {
-                                Task<bool> unawaited = Task.Run(() => MessageReceived(client.IpPort, msg.Data));
+                                Task unawaited = Task.Run(() => MessageReceived(client.IpPort, msg.Data));
                             }
                         }
                         else
                         {
                             if (StreamReceived != null)
-                            { 
-                                StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
+                            {
+                                Task unawaited = Task.Run(() => StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream));
                             }
                         }
                     }
@@ -770,7 +760,7 @@ namespace WatsonTcp
                     }
                 }
 
-                #endregion
+                #endregion Wait-for-Data
             }
             finally
             {
@@ -779,7 +769,7 @@ namespace WatsonTcp
 
                 if (ClientDisconnected != null)
                 {
-                    Task<bool> unawaited = Task.Run(() => ClientDisconnected(client.IpPort));
+                    Task unawaited = Task.Run(() => ClientDisconnected(client.IpPort));
                 }
 
                 Log("*** DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
@@ -804,7 +794,7 @@ namespace WatsonTcp
             Log("*** RemoveClient removed client " + client.IpPort);
             return true;
         }
-         
+
         private async Task<WatsonMessage> MessageReadAsync(ClientMetadata client)
         {
             /*
@@ -847,7 +837,7 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
-            return msg; 
+            return msg;
         }
 
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, byte[] data)
@@ -861,7 +851,7 @@ namespace WatsonTcp
                 ms.Seek(0, SeekOrigin.Begin);
             }
 
-            return MessageWrite(client, msg, dataLen, ms); 
+            return MessageWrite(client, msg, dataLen, ms);
         }
 
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
@@ -876,13 +866,13 @@ namespace WatsonTcp
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
             }
-             
+
             byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
             int bytesRead = 0;
             long bytesRemaining = contentLength;
             byte[] buffer = new byte[_ReadStreamBufferSize];
-             
+
             client.WriteLock.Wait(1);
 
             try
@@ -890,7 +880,7 @@ namespace WatsonTcp
                 if (_Mode == Mode.Tcp)
                 {
                     client.NetworkStream.Write(headerBytes, 0, headerBytes.Length);
-                    
+
                     if (contentLength > 0)
                     {
                         while (bytesRemaining > 0)
@@ -944,7 +934,7 @@ namespace WatsonTcp
         }
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, WatsonMessage msg, byte[] data)
-        { 
+        {
             int dataLen = 0;
             MemoryStream ms = new MemoryStream();
             if (data != null && data.Length > 0)
@@ -954,7 +944,7 @@ namespace WatsonTcp
                 ms.Seek(0, SeekOrigin.Begin);
             }
 
-            return await MessageWriteAsync(client, msg, dataLen, ms); 
+            return await MessageWriteAsync(client, msg, dataLen, ms);
         }
 
         private async Task<bool> MessageWriteAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
@@ -969,7 +959,7 @@ namespace WatsonTcp
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
             }
- 
+
             byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
             int bytesRead = 0;
@@ -983,7 +973,7 @@ namespace WatsonTcp
                 if (_Mode == Mode.Tcp)
                 {
                     await client.NetworkStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-                    
+
                     if (contentLength > 0)
                     {
                         while (bytesRemaining > 0)
@@ -1036,6 +1026,6 @@ namespace WatsonTcp
             }
         }
 
-        #endregion
+        #endregion Private-Methods
     }
 }

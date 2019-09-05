@@ -9,15 +9,12 @@
 
 A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data.  
 
-## New in v1.3.x
+## New in v2.x
 
-- Numerous fixes to authentication using preshared keys
-- Authentication callbacks in the client to handle authentication events
-  - ```AuthenticationRequested``` - authentication requested by the server, return the preshared key string (16 bytes)
-  - ```AuthenticationSucceeded``` - authentication has succeeded, return true
-  - ```AuthenticationFailure``` - authentication has failed, return true
-- Support for sending and receiving larger messages by using streams instead of byte arrays
-- Refer to ```TestServerStream``` and ```TestClientStream``` for a reference implementation.  You must set ```client.ReadDataStream = false``` and ```server.ReadDataStream = false``` and use the ```StreamReceived``` callback instead of ```MessageReceived```
+- Async Task-based callbacks
+- Configurable connect timeout in WatsonTcpClient
+- Clients can now connect via SSL without a certificate
+- Big thanks to @MrMikeJJ for his extensive commits and pull requests
 
 ## Test Applications
 
@@ -99,24 +96,21 @@ static void Main(string[] args)
     }
 }
 
-static bool ClientConnected(string ipPort)
+static async Task ClientConnected(string ipPort)
 {
     Console.WriteLine("Client connected: " + ipPort);
-    return true;
 }
 
-static bool ClientDisconnected(string ipPort)
+static async Task ClientDisconnected(string ipPort)
 {
     Console.WriteLine("Client disconnected: " + ipPort);
-    return true;
 }
 
-static bool MessageReceived(string ipPort, byte[] data)
+static async Task MessageReceived(string ipPort, byte[] data)
 {
     string msg = "";
     if (data != null && data.Length > 0) msg = Encoding.UTF8.GetString(data);
     Console.WriteLine("Message received from " + ipPort + ": " + msg);
-    return true;
 }
 ```
 
@@ -164,22 +158,19 @@ static void Main(string[] args)
     }
 }
 
-static bool MessageReceived(byte[] data)
+static async Task MessageReceived(byte[] data)
 {
     Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(data));
-    return true;
 }
 
-static bool ServerConnected()
+static async Task ServerConnected()
 {
     Console.WriteLine("Server connected");
-    return true;
 }
 
-static bool ServerDisconnected()
+static async Task ServerDisconnected()
 {
     Console.WriteLine("Server disconnected");
-    return true;
 }
 ```
 
@@ -218,7 +209,7 @@ server.StreamReceived = StreamReceived;
 server.ReadDataStream = false;
 server.Start();
 
-static bool StreamReceived(string ipPort, long contentLength, Stream stream)
+static async Task StreamReceived(string ipPort, long contentLength, Stream stream)
 {
     // read contentLength bytes from the stream from client ipPort and process
     return true;
@@ -232,14 +223,22 @@ client.StreamReceived = StreamReceived;
 client.ReadDataStream = false;
 client.Start();
 
-static bool StreamReceived(long contentLength, Stream stream)
+static async Task StreamReceived(long contentLength, Stream stream)
 {
     // read contentLength bytes from the stream and process
-    return true;
 }
 ```
 
 ## Version History
+
+v1.3.x
+- Numerous fixes to authentication using preshared keys
+- Authentication callbacks in the client to handle authentication events
+  - ```AuthenticationRequested``` - authentication requested by the server, return the preshared key string (16 bytes)
+  - ```AuthenticationSucceeded``` - authentication has succeeded, return true
+  - ```AuthenticationFailure``` - authentication has failed, return true
+- Support for sending and receiving larger messages by using streams instead of byte arrays
+- Refer to ```TestServerStream``` and ```TestClientStream``` for a reference implementation.  You must set ```client.ReadDataStream = false``` and ```server.ReadDataStream = false``` and use the ```StreamReceived``` callback instead of ```MessageReceived```
 
 v1.2.x
 - Breaking changes for assigning callbacks, various server/client class variables, and starting them

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace WatsonTcp
 {
@@ -36,7 +34,7 @@ namespace WatsonTcp
 
         public SemaphoreSlim WriteLock { get; set; }
 
-        #endregion
+        #endregion Public-Members
 
         #region Private-Members
 
@@ -47,21 +45,21 @@ namespace WatsonTcp
         private SslStream _SslStream;
         private string _IpPort;
 
-        #endregion
+        #endregion Private-Members
 
         #region Constructors-and-Factories
 
         public ClientMetadata(TcpClient tcp)
         {
-            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp)); 
-            _NetworkStream = tcp.GetStream(); 
+            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
+            _NetworkStream = tcp.GetStream();
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
             ReadLock = new SemaphoreSlim(1);
             WriteLock = new SemaphoreSlim(1);
         }
 
-        #endregion
+        #endregion Constructors-and-Factories
 
         #region Public-Methods
 
@@ -71,7 +69,7 @@ namespace WatsonTcp
             GC.SuppressFinalize(this);
         }
 
-        #endregion
+        #endregion Public-Methods
 
         #region Private-Methods
 
@@ -106,6 +104,6 @@ namespace WatsonTcp
             _Disposed = true;
         }
 
-        #endregion
+        #endregion Private-Methods
     }
 }
