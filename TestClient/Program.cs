@@ -115,7 +115,7 @@ namespace TestClient
                         break;
 
                     case "psk":
-                        presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
+                        presharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "auth":
@@ -135,9 +135,9 @@ namespace TestClient
 
         private static void InitializeClient()
         {
-            serverIp = Common.InputString("Server IP:", "127.0.0.1", false);
-            serverPort = Common.InputInteger("Server port:", 9000, true, false);
-            useSsl = Common.InputBoolean("Use SSL:", false);
+            serverIp = InputString("Server IP:", "127.0.0.1", false);
+            serverPort = InputInteger("Server port:", 9000, true, false);
+            useSsl = InputBoolean("Use SSL:", false);
 
             if (!useSsl)
             {
@@ -145,16 +145,16 @@ namespace TestClient
             }
             else
             {
-                bool supplyCert = Common.InputBoolean("Supply SSL certificate:", false);
+                bool supplyCert = InputBoolean("Supply SSL certificate:", false);
 
                 if (supplyCert)
                 {
-                    certFile = Common.InputString("Certificate file:", "test.pfx", false);
-                    certPass = Common.InputString("Certificate password:", "password", false);
+                    certFile = InputString("Certificate file:", "test.pfx", false);
+                    certPass = InputString("Certificate password:", "password", false);
                 }
 
-                acceptInvalidCerts = Common.InputBoolean("Accept Invalid Certs:", true);
-                mutualAuthentication = Common.InputBoolean("Mutually authenticate:", false);
+                acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = InputBoolean("Mutually authenticate:", false);
 
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
                 client.AcceptInvalidCertificates = acceptInvalidCerts;
@@ -191,13 +191,124 @@ namespace TestClient
             client.Start(); 
         }
 
+        private static bool InputBoolean(string question, bool yesDefault)
+        {
+            Console.Write(question);
+
+            if (yesDefault) Console.Write(" [Y/n]? ");
+            else Console.Write(" [y/N]? ");
+
+            string userInput = Console.ReadLine();
+
+            if (String.IsNullOrEmpty(userInput))
+            {
+                if (yesDefault) return true;
+                return false;
+            }
+
+            userInput = userInput.ToLower();
+
+            if (yesDefault)
+            {
+                if (
+                    (String.Compare(userInput, "n") == 0)
+                    || (String.Compare(userInput, "no") == 0)
+                   )
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            else
+            {
+                if (
+                    (String.Compare(userInput, "y") == 0)
+                    || (String.Compare(userInput, "yes") == 0)
+                   )
+                {
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        private static string InputString(string question, string defaultAnswer, bool allowNull)
+        {
+            while (true)
+            {
+                Console.Write(question);
+
+                if (!String.IsNullOrEmpty(defaultAnswer))
+                {
+                    Console.Write(" [" + defaultAnswer + "]");
+                }
+
+                Console.Write(" ");
+
+                string userInput = Console.ReadLine();
+
+                if (String.IsNullOrEmpty(userInput))
+                {
+                    if (!String.IsNullOrEmpty(defaultAnswer)) return defaultAnswer;
+                    if (allowNull) return null;
+                    else continue;
+                }
+
+                return userInput;
+            }
+        }
+
+        private static int InputInteger(string question, int defaultAnswer, bool positiveOnly, bool allowZero)
+        {
+            while (true)
+            {
+                Console.Write(question);
+                Console.Write(" [" + defaultAnswer + "] ");
+
+                string userInput = Console.ReadLine();
+
+                if (String.IsNullOrEmpty(userInput))
+                {
+                    return defaultAnswer;
+                }
+
+                int ret = 0;
+                if (!Int32.TryParse(userInput, out ret))
+                {
+                    Console.WriteLine("Please enter a valid integer.");
+                    continue;
+                }
+
+                if (ret == 0)
+                {
+                    if (allowZero)
+                    {
+                        return 0;
+                    }
+                }
+
+                if (ret < 0)
+                {
+                    if (positiveOnly)
+                    {
+                        Console.WriteLine("Please enter a value greater than zero.");
+                        continue;
+                    }
+                }
+
+                return ret;
+            }
+        }
+
         private static string AuthenticationRequested()
         {
             Console.WriteLine("");
             Console.WriteLine("");
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(presharedKey)) presharedKey = Common.InputString("Preshared key:", "1234567812345678", false);
+            if (String.IsNullOrEmpty(presharedKey)) presharedKey = InputString("Preshared key:", "1234567812345678", false);
             return presharedKey;
         }
 

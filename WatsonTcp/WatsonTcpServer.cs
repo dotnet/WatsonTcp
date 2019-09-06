@@ -395,7 +395,21 @@ namespace WatsonTcp
         {
             if (Debug) Console.WriteLine(msg);
         }
-         
+
+        private void LogException(string method, Exception e)
+        {
+            Log("");
+            Log("An exception was encountered.");
+            Log("   Method        : " + method);
+            Log("   Type          : " + e.GetType().ToString());
+            Log("   Data          : " + e.Data);
+            Log("   Inner         : " + e.InnerException);
+            Log("   Message       : " + e.Message);
+            Log("   Source        : " + e.Source);
+            Log("   StackTrace    : " + e.StackTrace);
+            Log("");
+        }
+
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
@@ -662,64 +676,87 @@ namespace WatsonTcp
         }
 
         private async Task DataReceiver(ClientMetadata client)
-        {
-            try
+        { 
+            #region Wait-for-Data
+
+            while (true)
             {
-                #region Wait-for-Data
-
-                while (true)
+                try
                 {
-                    try
+                    if (!IsConnected(client)) break;
+
+                    WatsonMessage msg = null;
+                    bool buildSuccess = false;
+
+                    if (_Mode == Mode.Ssl)
                     {
-                        if (!IsConnected(client))
-                        {
-                            break;
-                        }
+                        msg = new WatsonMessage(client.SslStream, Debug);
 
-                        WatsonMessage msg = await MessageReadAsync(client);
-                        if (msg == null)
+                        if (ReadDataStream)
                         {
-                            // no message available
-                            await Task.Delay(30);
-                            continue;
+                            buildSuccess = await msg.Build();
                         }
-
-                        if (!String.IsNullOrEmpty(PresharedKey))
+                        else
                         {
-                            if (_UnauthenticatedClients.ContainsKey(client.IpPort))
+                            buildSuccess = await msg.BuildStream();
+                        }
+                    }
+                    else if (_Mode == Mode.Tcp)
+                    {
+                        msg = new WatsonMessage(client.NetworkStream, Debug);
+
+                        if (ReadDataStream)
+                        {
+                            buildSuccess = await msg.Build();
+                        }
+                        else
+                        {
+                            buildSuccess = await msg.BuildStream();
+                        }
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                    }
+
+                    if (!buildSuccess)
+                    {
+                        break;
+                    }
+                     
+                    if (msg == null)
+                    {
+                        // no message available
+                        await Task.Delay(30);
+                        continue;
+                    }
+
+                    if (!String.IsNullOrEmpty(PresharedKey))
+                    {
+                        if (_UnauthenticatedClients.ContainsKey(client.IpPort))
+                        {
+                            Log("*** DataReceiver message received from unauthenticated endpoint: " + client.IpPort);
+
+                            if (msg.Status == MessageStatus.AuthRequested)
                             {
-                                Log("*** DataReceiver message received from unauthenticated endpoint: " + client.IpPort);
-
-                                if (msg.Status == MessageStatus.AuthRequested)
+                                // check preshared key
+                                if (msg.PresharedKey != null && msg.PresharedKey.Length > 0)
                                 {
-                                    // check preshared key
-                                    if (msg.PresharedKey != null && msg.PresharedKey.Length > 0)
+                                    string clientPsk = Encoding.UTF8.GetString(msg.PresharedKey).Trim();
+                                    if (PresharedKey.Trim().Equals(clientPsk))
                                     {
-                                        string clientPsk = Encoding.UTF8.GetString(msg.PresharedKey).Trim();
-                                        if (PresharedKey.Trim().Equals(clientPsk))
-                                        {
-                                            if (Debug) Log("DataReceiver accepted authentication from " + client.IpPort);
-                                            _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime dt);
-                                            byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
-                                            WatsonMessage authMsg = new WatsonMessage(data, Debug);
-                                            authMsg.Status = MessageStatus.AuthSuccess;
-                                            MessageWrite(client, authMsg, null);
-                                            continue;
-                                        }
-                                        else
-                                        {
-                                            if (Debug) Log("DataReceiver declined authentication from " + client.IpPort);
-                                            byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
-                                            WatsonMessage authMsg = new WatsonMessage(data, Debug);
-                                            authMsg.Status = MessageStatus.AuthFailure;
-                                            MessageWrite(client, authMsg, null);
-                                            continue;
-                                        }
+                                        if (Debug) Log("DataReceiver accepted authentication from " + client.IpPort);
+                                        _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime dt);
+                                        byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
+                                        WatsonMessage authMsg = new WatsonMessage(data, Debug);
+                                        authMsg.Status = MessageStatus.AuthSuccess;
+                                        MessageWrite(client, authMsg, null);
+                                        continue;
                                     }
                                     else
                                     {
-                                        if (Debug) Log("DataReceiver no authentication material from " + client.IpPort);
-                                        byte[] data = Encoding.UTF8.GetBytes("No authentication material");
+                                        if (Debug) Log("DataReceiver declined authentication from " + client.IpPort);
+                                        byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
                                         WatsonMessage authMsg = new WatsonMessage(data, Debug);
                                         authMsg.Status = MessageStatus.AuthFailure;
                                         MessageWrite(client, authMsg, null);
@@ -728,53 +765,80 @@ namespace WatsonTcp
                                 }
                                 else
                                 {
-                                    // decline the message
                                     if (Debug) Log("DataReceiver no authentication material from " + client.IpPort);
-                                    byte[] data = Encoding.UTF8.GetBytes("Authentication required");
+                                    byte[] data = Encoding.UTF8.GetBytes("No authentication material");
                                     WatsonMessage authMsg = new WatsonMessage(data, Debug);
-                                    authMsg.Status = MessageStatus.AuthRequired;
+                                    authMsg.Status = MessageStatus.AuthFailure;
                                     MessageWrite(client, authMsg, null);
                                     continue;
                                 }
                             }
-                        }
-
-                        if (ReadDataStream)
-                        {
-                            if (MessageReceived != null)
+                            else
                             {
-                                Task unawaited = Task.Run(() => MessageReceived(client.IpPort, msg.Data));
-                            }
-                        }
-                        else
-                        {
-                            if (StreamReceived != null)
-                            {
-                                Task unawaited = Task.Run(() => StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream));
+                                // decline the message
+                                if (Debug) Log("DataReceiver no authentication material from " + client.IpPort);
+                                byte[] data = Encoding.UTF8.GetBytes("Authentication required");
+                                WatsonMessage authMsg = new WatsonMessage(data, Debug);
+                                authMsg.Status = MessageStatus.AuthRequired;
+                                MessageWrite(client, authMsg, null);
+                                continue;
                             }
                         }
                     }
-                    catch (Exception)
+
+                    if (ReadDataStream)
                     {
-                        break;
+                        if (MessageReceived != null)
+                        {
+                            // does not need to be awaited, because the stream has been fully read
+                            Task unawaited = Task.Run(() => MessageReceived(client.IpPort, msg.Data));
+                        }
+                    }
+                    else
+                    {
+                        if (StreamReceived != null)
+                        {
+                            // must be awaited, the stream has not been fully read
+                            await StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
+                        }
                     }
                 }
-
-                #endregion Wait-for-Data
-            }
-            finally
-            {
-                int activeCount = Interlocked.Decrement(ref _ActiveClients);
-                RemoveClient(client);
-
-                if (ClientDisconnected != null)
+                catch (OperationCanceledException)
                 {
-                    Task unawaited = Task.Run(() => ClientDisconnected(client.IpPort));
+                    break;
                 }
-
-                Log("*** DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
-                client.Dispose();
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+                catch (IOException)
+                {
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Log("*** DataReceiver server disconnected unexpectedly");
+                    LogException("WatsonTcpClient.DataReceiver", e);
+                    break;
+                }
             }
+
+            #endregion Wait-for-Data
+
+            #region Cleanup
+
+            int activeCount = Interlocked.Decrement(ref _ActiveClients);
+            RemoveClient(client);
+
+            if (ClientDisconnected != null)
+            {
+                Task unawaited = Task.Run(() => ClientDisconnected(client.IpPort));
+            }
+
+            Log("*** DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
+            client.Dispose();
+
+            #endregion Cleanup
         }
 
         private bool AddClient(ClientMetadata client)
@@ -794,52 +858,7 @@ namespace WatsonTcp
             Log("*** RemoveClient removed client " + client.IpPort);
             return true;
         }
-
-        private async Task<WatsonMessage> MessageReadAsync(ClientMetadata client)
-        {
-            /*
-             *
-             * Do not catch exceptions, let them get caught by the data reader
-             * to destroy the connection
-             *
-             */
-
-            WatsonMessage msg = null;
-
-            if (_Mode == Mode.Ssl)
-            {
-                msg = new WatsonMessage(client.SslStream, Debug);
-
-                if (ReadDataStream)
-                {
-                    await msg.Build();
-                }
-                else
-                {
-                    await msg.BuildStream();
-                }
-            }
-            else if (_Mode == Mode.Tcp)
-            {
-                msg = new WatsonMessage(client.NetworkStream, Debug);
-
-                if (ReadDataStream)
-                {
-                    await msg.Build();
-                }
-                else
-                {
-                    await msg.BuildStream();
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-            }
-
-            return msg;
-        }
-
+         
         private bool MessageWrite(ClientMetadata client, WatsonMessage msg, byte[] data)
         {
             int dataLen = 0;

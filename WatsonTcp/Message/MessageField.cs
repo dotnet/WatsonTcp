@@ -2,27 +2,24 @@
 
 namespace WatsonTcp.Message
 {
-    public class MessageField
+    internal class MessageField
     {
         #region Public-Members
 
-        public int BitNumber { get; set; }
-        public string Name { get; set; }
-        public FieldType Type { get; set; }
-        public int Length { get; set; }
+        internal int BitNumber { get; set; }
+        internal string Name { get; set; }
+        internal FieldType Type { get; set; }
+        internal int Length { get; set; }
 
         #endregion Public-Members
 
-
-
         #region Constructors-and-Factories
 
-        public MessageField()
-        {
-            throw new NotImplementedException();
+        internal MessageField()
+        { 
         }
 
-        public MessageField(int bitNumber, string name, FieldType fieldType, int length)
+        internal MessageField(int bitNumber, string name, FieldType fieldType, int length)
         {
             if (bitNumber < 0) throw new ArgumentException("Invalid bit number.");
             if (String.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));

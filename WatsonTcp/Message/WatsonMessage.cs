@@ -270,15 +270,28 @@ namespace WatsonTcp.Message
 
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
             catch (Exception e)
             {
-                Log(Common.SerializeJson(e));
+                LogException("WatsonMessage.Build", e);
                 throw;
             }
             finally
             {
                 Log("Message build completed:");
                 Log(this.ToString());
+                Log("-------------------------------------------------------------------------------");
             }
         }
 
@@ -354,15 +367,28 @@ namespace WatsonTcp.Message
 
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
             catch (Exception e)
             {
-                Log(Common.SerializeJson(e));
-                throw e;
+                LogException("WatsonMessage.BuildStream", e);
+                throw;
             }
             finally
             {
-                Log("Message build completed:");
+                Log("Message build from stream completed:");
                 Log(this.ToString());
+                Log("-------------------------------------------------------------------------------");
             }
         }
 
@@ -820,7 +846,7 @@ namespace WatsonTcp.Message
                     return new MessageField(1, "Status", FieldType.Int32, 4);
 
                 default:
-                    throw new KeyNotFoundException();
+                    throw new KeyNotFoundException("Unable to retrieve field with bit number: " + bitNumber);
             }
         }
 
@@ -842,7 +868,7 @@ namespace WatsonTcp.Message
                     return;
 
                 default:
-                    throw new ArgumentException("Unknown bit number.");
+                    throw new ArgumentException("Unknown bit number: " + field.BitNumber + ", length " + field.Length + " " + field.Name + ".");
             }
         }
 
@@ -852,6 +878,20 @@ namespace WatsonTcp.Message
             {
                 Console.WriteLine(msg);
             }
+        }
+
+        private void LogException(string method, Exception e)
+        {
+            Log("");
+            Log("An exception was encountered.");
+            Log("   Method        : " + method);
+            Log("   Type          : " + e.GetType().ToString());
+            Log("   Data          : " + e.Data);
+            Log("   Inner         : " + e.InnerException);
+            Log("   Message       : " + e.Message);
+            Log("   Source        : " + e.Source);
+            Log("   StackTrace    : " + e.StackTrace);
+            Log("");
         }
 
         #endregion Private-Methods

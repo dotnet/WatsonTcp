@@ -503,14 +503,30 @@ namespace WatsonTcp
                 Console.WriteLine(msg);
             }
         }
-         
-        private async Task DataReceiver(CancellationToken? cancelToken = null)
-        {
-            try
-            {
-                #region Wait-for-Data
 
-                while (true)
+        private void LogException(string method, Exception e)
+        {
+            Log("");
+            Log("An exception was encountered.");
+            Log("   Method        : " + method);
+            Log("   Type          : " + e.GetType().ToString());
+            Log("   Data          : " + e.Data);
+            Log("   Inner         : " + e.InnerException);
+            Log("   Message       : " + e.Message);
+            Log("   Source        : " + e.Source);
+            Log("   StackTrace    : " + e.StackTrace);
+            Log("");
+        }
+
+        private async Task DataReceiver(CancellationToken? cancelToken = null)
+        { 
+            #region Wait-for-Data
+
+            while (true)
+            {
+                bool readLocked = false;
+
+                try
                 {
                     cancelToken?.ThrowIfCancellationRequested();
 
@@ -540,41 +556,37 @@ namespace WatsonTcp
 
                     WatsonMessage msg = null;
 
-                    _ReadLock.Wait(1);
+                    readLocked = await _ReadLock.WaitAsync(1);
+                    bool buildSuccess = false;
 
-                    try
+                    if (_SslStream != null)
                     {
-                        if (_SslStream != null)
-                        {
-                            msg = new WatsonMessage(_SslStream, Debug);
+                        msg = new WatsonMessage(_SslStream, Debug);
 
-                            if (ReadDataStream)
-                            {
-                                await msg.Build();
-                            }
-                            else
-                            {
-                                await msg.BuildStream();
-                            }
+                        if (ReadDataStream)
+                        {
+                            buildSuccess = await msg.Build();
                         }
                         else
                         {
-                            msg = new WatsonMessage(_TcpStream, Debug);
-
-                            if (ReadDataStream)
-                            {
-                                await msg.Build();
-                            }
-                            else
-                            {
-                                await msg.BuildStream();
-                            }
+                            buildSuccess = await msg.BuildStream();
                         }
                     }
-                    finally
+                    else
                     {
-                        _ReadLock.Release();
+                        msg = new WatsonMessage(_TcpStream, Debug);
+
+                        if (ReadDataStream)
+                        {
+                            buildSuccess = await msg.Build();
+                        }
+                        else
+                        {
+                            buildSuccess = await msg.BuildStream();
+                        }
                     }
+
+                    if (!buildSuccess) break;
 
                     if (msg == null)
                     {
@@ -618,41 +630,49 @@ namespace WatsonTcp
                     {
                         if (MessageReceived != null)
                         {
+                            // does not need to be awaited, because the stream has been fully read
                             Task unawaited = Task.Run(() => MessageReceived(msg.Data));
                         }
                     }
                     else
                     {
-                        StreamReceived?.Invoke(msg.ContentLength, msg.DataStream);
+                        if (StreamReceived != null)
+                        {
+                            // must be awaited, because the content has not yet been fully read
+                            await StreamReceived(msg.ContentLength, msg.DataStream);
+                        }
                     }
 
                     #endregion Read-Message-and-Handle
                 }
-
-                #endregion Wait-for-Data
-            }
-            catch (OperationCanceledException)
-            { 
-            }
-            catch (ObjectDisposedException)
-            { 
-            }
-            catch (IOException)
-            { 
-            }
-            catch (Exception e)
-            {
-                if (Debug)
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+                catch (IOException)
+                {
+                    break;
+                }
+                catch (Exception e)
                 {
                     Log("*** DataReceiver server disconnected unexpectedly");
-                    Log(Common.SerializeJson(e));
+                    LogException("WatsonTcpClient.DataReceiver", e);
+                    break;
+                } 
+                finally
+                {
+                    if (readLocked) _ReadLock.Release();
                 }
             }
-            finally
-            {
-                Connected = false;
-                ServerDisconnected?.Invoke();
-            }
+
+            #endregion Wait-for-Data
+
+            Connected = false;
+            ServerDisconnected?.Invoke();
         }
 
         private bool MessageWrite(WatsonMessage msg)
@@ -728,7 +748,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                Log(Common.SerializeJson(e));
+                LogException("WatsonTcpClient.MessageWrite", e);
                 disconnectDetected = true;
                 return false;
             }
@@ -867,7 +887,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                Common.LogException("MessageWrite", e);
+                LogException("MessageWrite", e);
                 disconnectDetected = true;
                 return false;
             }
@@ -1007,7 +1027,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                Common.LogException("MessageWriteAsync", e);
+                LogException("MessageWriteAsync", e);
                 disconnectDetected = true;
                 return false;
             }
