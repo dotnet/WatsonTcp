@@ -465,10 +465,8 @@ namespace WatsonTcp.Message
             if (Data != null)
             {
                 ret += "  Data          : " + Data.Length + " bytes" + Environment.NewLine;
-                if (Data.Length > 0)
-                {
-                    Console.WriteLine(Encoding.UTF8.GetString(Data));
-                }
+                if (Data.Length > 0) 
+                    ret += Encoding.UTF8.GetString(Data); 
             }
 
             if (DataStream != null)
@@ -544,7 +542,7 @@ namespace WatsonTcp.Message
             }
             finally
             {
-                Debug.WriteLine(logMessage);
+                Log(logMessage);
             }
         }
 
