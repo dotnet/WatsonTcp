@@ -12,6 +12,7 @@ namespace TestClient
         private static bool useSsl = false;
         private static string certFile = "";
         private static string certPass = "";
+        private static bool debug = false;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
         private static WatsonTcpClient client = null;
@@ -153,7 +154,7 @@ namespace TestClient
                     certPass = InputString("Certificate password:", "password", false);
                 }
 
-                acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
+                acceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
                 mutualAuthentication = InputBoolean("Mutually authenticate:", false);
 
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
@@ -161,6 +162,7 @@ namespace TestClient
                 client.MutuallyAuthenticate = mutualAuthentication;
             }
 
+            client.Debug = debug;
             ConnectClient();
         }
 
@@ -187,7 +189,7 @@ namespace TestClient
             client.MessageReceived = MessageReceived;
             client.ReadDataStream = true;
             client.ReadStreamBufferSize = 65536;
-            // client.Debug = true;
+            client.Debug = debug;
             client.Start(); 
         }
 

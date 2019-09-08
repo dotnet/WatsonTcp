@@ -14,6 +14,7 @@ namespace TestServer
         private static WatsonTcpServer server = null;
         private static string certFile = "";
         private static string certPass = "";
+        private static bool debug = false;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
 
@@ -31,7 +32,7 @@ namespace TestServer
             { 
                 certFile = InputString("Certificate file:", "test.pfx", false);
                 certPass = InputString("Certificate password:", "password", false); 
-                acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
+                acceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
                 mutualAuthentication = InputBoolean("Mutually authenticate:", false);
 
                 server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
@@ -42,7 +43,7 @@ namespace TestServer
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
             server.MessageReceived = MessageReceived;
-            // server.Debug = true;
+            server.Debug = debug;
             server.Start();
 
             bool runForever = true;

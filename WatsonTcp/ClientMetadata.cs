@@ -34,6 +34,10 @@ namespace WatsonTcp
 
         public SemaphoreSlim WriteLock { get; set; }
 
+        public CancellationTokenSource TokenSource { get; set; }
+
+        public CancellationToken Token { get; set; }
+
         #endregion Public-Members
 
         #region Private-Members
@@ -57,6 +61,9 @@ namespace WatsonTcp
 
             ReadLock = new SemaphoreSlim(1);
             WriteLock = new SemaphoreSlim(1);
+
+            TokenSource = new CancellationTokenSource();
+            Token = TokenSource.Token;
         }
 
         #endregion Constructors-and-Factories
@@ -74,7 +81,7 @@ namespace WatsonTcp
         #region Private-Methods
 
         protected virtual void Dispose(bool disposing)
-        {
+        { 
             if (_Disposed)
             {
                 return;
@@ -82,24 +89,82 @@ namespace WatsonTcp
 
             if (disposing)
             {
+                #region Cancellation-Token
+
+                TokenSource.Cancel();
+                TokenSource.Dispose();
+
+                #endregion
+
+                #region Locks
+
+                if (WriteLock != null) WriteLock.Dispose();
+                if (ReadLock != null) ReadLock.Dispose();
+                
+                #endregion
+
+                #region SslStream
+
                 if (_SslStream != null)
                 {
-                    _SslStream.Close();
+                    try
+                    {
+                        _SslStream.Close();
+                        _SslStream.Dispose(); 
+                    }
+                    catch (Exception)
+                    { 
+                    }
                 }
+
+                #endregion
+
+                #region TcpStream
 
                 if (_NetworkStream != null)
                 {
-                    _NetworkStream.Close();
+                    try
+                    {
+                        _NetworkStream.Close();
+                        _NetworkStream.Dispose(); 
+                    }
+                    catch (Exception)
+                    { 
+                    }
                 }
+
+                #endregion
+
+                #region TcpClient
 
                 if (_TcpClient != null)
                 {
-                    _TcpClient.Close();
-                }
-            }
+                    if (_TcpClient.Client != null)
+                    {
+                        try
+                        {
+                            // if (_Client.Client.Connected) _Client.Client.Disconnect(false);
+                            // _Client.Client.Shutdown(SocketShutdown.Both);
+                            _TcpClient.Client.Close(0);
+                            _TcpClient.Client.Dispose(); 
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
 
-            ReadLock.Dispose();
-            WriteLock.Dispose();
+                    try
+                    {
+                        _TcpClient.Close();
+                        _TcpClient = null; 
+                    }
+                    catch (Exception)
+                    { 
+                    }
+                }
+
+                #endregion 
+            }
 
             _Disposed = true;
         }

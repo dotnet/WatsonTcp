@@ -286,13 +286,7 @@ namespace WatsonTcp.Message
             {
                 LogException("WatsonMessage.Build", e);
                 throw;
-            }
-            finally
-            {
-                Log("Message build completed:");
-                Log(this.ToString());
-                Log("-------------------------------------------------------------------------------");
-            }
+            } 
         }
 
         /// <summary>
@@ -383,13 +377,7 @@ namespace WatsonTcp.Message
             {
                 LogException("WatsonMessage.BuildStream", e);
                 throw;
-            }
-            finally
-            {
-                Log("Message build from stream completed:");
-                Log(this.ToString());
-                Log("-------------------------------------------------------------------------------");
-            }
+            } 
         }
 
         /// <summary>

@@ -9,6 +9,7 @@
         AuthRequested,
         AuthSuccess,
         AuthFailure,
-        Removed
+        Removed,
+        Disconnecting
     }
 }

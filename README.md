@@ -15,6 +15,7 @@ A simple C# async TCP server and client with integrated framing for reliable tra
 - Configurable connect timeout in WatsonTcpClient
 - Clients can now connect via SSL without a certificate
 - Big thanks to @MrMikeJJ for his extensive commits and pull requests
+- Bugfix for graceful disconnect through dispose (thank you @mikkleini!)
 
 ## Test Applications
 

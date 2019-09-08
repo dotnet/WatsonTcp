@@ -232,6 +232,7 @@ namespace WatsonTcp
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+            Log("Garbage collector finalized");
         }
 
         /// <summary>
@@ -250,7 +251,7 @@ namespace WatsonTcp
 
                 Log("Watson TCP client connecting to " + _ServerIp + ":" + _ServerPort);
 
-                _Client.LingerState = new LingerOption(true, 0);
+                _Client.LingerState = new LingerOption(true, 0); 
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
                 waitHandle = asyncResult.AsyncWaitHandle;
 
@@ -427,66 +428,109 @@ namespace WatsonTcp
 
         protected virtual void Dispose(bool disposing)
         {
-            if (_Disposed)
-            {
-                return;
-            }
+            Log("Disposing WatsonTcpClient");
+
+            if (_Disposed) return;
 
             if (disposing)
             {
+                #region Send-Disconnection-Message
+
+                if (Connected)
+                {
+                    WatsonMessage msg = new WatsonMessage();
+                    msg.Status = MessageStatus.Disconnecting;
+                    msg.Data = null;
+                    msg.ContentLength = 0;
+                    MessageWrite(msg);
+                }
+
+                #endregion
+
+                #region Cancellation-Token
+
+                _TokenSource.Cancel(true);
+                _TokenSource.Dispose(); 
+
+                #endregion
+
+                #region Locks
+
+                if (_WriteLock != null) _WriteLock.Dispose();
+                if (_ReadLock != null) _ReadLock.Dispose(); 
+
+                #endregion
+
+                #region SslStream
+
                 if (_SslStream != null)
                 {
                     try
-                    {
-                        _WriteLock.Wait(1);
-                        _ReadLock.Wait(1);
+                    {  
                         _SslStream.Close();
+                        _SslStream.Dispose(); 
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                    }
-                    finally
-                    {
-                        _WriteLock.Release();
-                        _ReadLock.Release();
-                    }
+                        LogException("Dispose SslStream", e);
+                    } 
                 }
+
+                #endregion
+
+                #region TcpStream
 
                 if (_TcpStream != null)
                 {
                     try
-                    {
-                        _WriteLock.Wait(1);
-                        _ReadLock.Wait(1);
-                        if (_TcpStream != null) _TcpStream.Close();
+                    { 
+                        _TcpStream.Close();
+                        _TcpStream.Dispose(); 
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
+                        LogException("Dispose NetworkStream", e);
+                    } 
+                }
+
+                #endregion
+
+                #region TcpClient
+
+                if (_Client != null)
+                { 
+                    if (_Client.Client != null)
+                    {
+                        try
+                        {
+                            // if (_Client.Client.Connected) _Client.Client.Disconnect(false);
+                            // _Client.Client.Shutdown(SocketShutdown.Both);
+                            _Client.Client.Close(0);
+                            _Client.Client.Dispose(); 
+                        }
+                        catch (Exception e)
+                        {
+                            LogException("Dispose Socket", e);
+                        }
                     }
 
                     try
                     {
                         _Client.Close();
+                        _Client = null; 
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                    }
-                    finally
-                    {
-                        _WriteLock.Release();
-                        _ReadLock.Release();
+                        LogException("Close TcpClient", e);
                     }
                 }
 
-                _TokenSource.Cancel();
-                _TokenSource.Dispose();
-
-                if (_WriteLock != null) _WriteLock.Dispose(); 
-                if (_ReadLock != null) _ReadLock.Dispose(); 
+                #endregion
 
                 Connected = false;
             }
 
+            Log("Dispose routine complete");
             _Disposed = true;
         }
 
@@ -518,17 +562,17 @@ namespace WatsonTcp
             Log("");
         }
 
-        private async Task DataReceiver(CancellationToken? cancelToken = null)
+        private async Task DataReceiver(CancellationToken token)
         { 
             #region Wait-for-Data
 
             while (true)
             {
                 bool readLocked = false;
-
+                 
                 try
                 {
-                    cancelToken?.ThrowIfCancellationRequested();
+                    token.ThrowIfCancellationRequested();
 
                     #region Check-Connection
 
@@ -586,10 +630,14 @@ namespace WatsonTcp
                         }
                     }
 
-                    if (!buildSuccess) break;
+                    if (!buildSuccess)
+                    {
+                        Log("*** DataReceiver message build failed due to disconnect");
+                        break;
+                    }
 
                     if (msg == null)
-                    {
+                    { 
                         await Task.Delay(30);
                         continue;
                     }
@@ -597,6 +645,11 @@ namespace WatsonTcp
                     if (msg.Status == MessageStatus.Removed)
                     {
                         Log("*** DataReceiver removed from the server");
+                        break;
+                    }
+                    else if (msg.Status == MessageStatus.Disconnecting)
+                    {
+                        Log("*** DataReceiver server is disconnecting");
                         break;
                     }
                     else if (msg.Status == MessageStatus.AuthSuccess)
@@ -660,7 +713,7 @@ namespace WatsonTcp
                 catch (Exception e)
                 {
                     Log("*** DataReceiver server disconnected unexpectedly");
-                    LogException("WatsonTcpClient.DataReceiver", e);
+                    LogException("DataReceiver", e);
                     break;
                 } 
                 finally
@@ -671,8 +724,10 @@ namespace WatsonTcp
 
             #endregion Wait-for-Data
 
+            Log("*** DataReceiver terminated");
             Connected = false;
             ServerDisconnected?.Invoke();
+            Dispose(true);
         }
 
         private bool MessageWrite(WatsonMessage msg)

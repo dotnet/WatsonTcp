@@ -388,6 +388,7 @@ namespace WatsonTcp
                 }
             }
 
+            Log("WatsonTcpServer Disposed");
             _Disposed = true;
         }
 
@@ -592,10 +593,9 @@ namespace WatsonTcp
                 Task.Run(() => ClientConnected(client.IpPort));
             }
 
-            Task.Run(async () => await DataReceiver(client));
+            Task.Run(async () => await DataReceiver(client, client.Token));
 
-            #endregion Start-Data-Receiver
-
+            #endregion Start-Data-Receiver 
         }
 
         private bool IsConnected(ClientMetadata client)
@@ -675,14 +675,16 @@ namespace WatsonTcp
             }
         }
 
-        private async Task DataReceiver(ClientMetadata client)
+        private async Task DataReceiver(ClientMetadata client, CancellationToken token)
         { 
             #region Wait-for-Data
 
             while (true)
             {
                 try
-                {
+                { 
+                    token.ThrowIfCancellationRequested();
+
                     if (!IsConnected(client)) break;
 
                     WatsonMessage msg = null;
@@ -786,6 +788,12 @@ namespace WatsonTcp
                         }
                     }
 
+                    if (msg.Status == MessageStatus.Disconnecting)
+                    {
+                        Log("DataReceiver client " + client.IpPort + " sent notification of disconnection");
+                        break;
+                    }
+
                     if (ReadDataStream)
                     {
                         if (MessageReceived != null)
@@ -802,7 +810,7 @@ namespace WatsonTcp
                             await StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
                         }
                     }
-                }
+                } 
                 catch (OperationCanceledException)
                 {
                     break;
@@ -814,11 +822,11 @@ namespace WatsonTcp
                 catch (IOException)
                 {
                     break;
-                }
+                } 
                 catch (Exception e)
                 {
-                    Log("*** DataReceiver server disconnected unexpectedly");
-                    LogException("WatsonTcpClient.DataReceiver", e);
+                    Log("*** DataReceiver client " + client.IpPort + " disconnected unexpectedly");
+                    LogException("DataReceiver client " + client.IpPort, e);
                     break;
                 }
             }
@@ -827,16 +835,25 @@ namespace WatsonTcp
 
             #region Cleanup
 
-            int activeCount = Interlocked.Decrement(ref _ActiveClients);
-            RemoveClient(client);
+            Log("*** DataReceiver client " + client.IpPort + " cleanup beginning");
 
-            if (ClientDisconnected != null)
+            try
             {
-                Task unawaited = Task.Run(() => ClientDisconnected(client.IpPort));
-            }
+                int activeCount = Interlocked.Decrement(ref _ActiveClients);
+                RemoveClient(client);
 
-            Log("*** DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
-            client.Dispose();
+                if (ClientDisconnected != null)
+                {
+                    Task unawaited = Task.Run(() => ClientDisconnected(client.IpPort));
+                }
+
+                Log("*** DataReceiver client " + client.IpPort + " disconnected (now " + activeCount + " clients active)");
+                client.Dispose();
+            }
+            catch (Exception e)
+            {
+                LogException("DataReceiver client  " + client.IpPort, e);
+            }
 
             #endregion Cleanup
         }
