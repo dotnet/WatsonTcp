@@ -381,8 +381,14 @@ namespace WatsonTcp
 
                 if (_Clients != null && _Clients.Count > 0)
                 {
+                    WatsonMessage discMsg = new WatsonMessage();
+                    discMsg.Status = MessageStatus.Disconnecting;
+                    discMsg.Data = null;
+                    discMsg.ContentLength = 0;
+
                     foreach (KeyValuePair<string, ClientMetadata> currMetadata in _Clients)
                     {
+                        MessageWrite(currMetadata.Value, discMsg, null);
                         currMetadata.Value.Dispose();
                     }
                 }

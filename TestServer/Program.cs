@@ -66,6 +66,7 @@ namespace TestServer
                         Console.WriteLine("  q          quit");
                         Console.WriteLine("  cls        clear screen");
                         Console.WriteLine("  list       list clients");
+                        Console.WriteLine("  dispose    dispose of the connection");
                         Console.WriteLine("  send       send message to client");
                         Console.WriteLine("  sendasync  send message to a client asynchronously");
                         Console.WriteLine("  remove     disconnect client");
@@ -95,6 +96,10 @@ namespace TestServer
                         {
                             Console.WriteLine("None");
                         }
+                        break;
+
+                    case "dispose":
+                        server.Dispose();
                         break;
 
                     case "send":
