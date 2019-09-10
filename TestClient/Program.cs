@@ -12,7 +12,7 @@ namespace TestClient
         private static bool useSsl = false;
         private static string certFile = "";
         private static string certPass = "";
-        private static bool debug = false;
+        private static bool debug = true;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
         private static WatsonTcpClient client = null;

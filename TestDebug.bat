@@ -1,11 +1,11 @@
 @echo off
 IF [%1] == [] GOTO Usage
-cd TestServer\bin\debug\net452
+cd TestServer\bin\debug\net461
 start TestServer.exe
 TIMEOUT 3 > NUL
 cd ..\..\..\..
 
-cd TestClient\bin\debug\net452
+cd TestClient\bin\debug\net461
 FOR /L %%i IN (1,1,%1) DO (
 ECHO Starting client %%i
 start TestClient.exe
