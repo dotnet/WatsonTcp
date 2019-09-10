@@ -269,23 +269,16 @@ namespace WatsonTcp.Message
                 #endregion Process-Header-Fields
 
                 return true;
-            }
-            catch (OperationCanceledException)
-            {
-                return false;
-            }
-            catch (ObjectDisposedException)
-            {
-                return false;
-            }
-            catch (IOException)
-            {
-                return false;
-            }
+            } 
             catch (Exception e)
             {
-                LogException("WatsonMessage.Build", e);
-                throw;
+                Log(Environment.NewLine +
+                    "Message build exception:" +
+                    Environment.NewLine +
+                    e.ToString() +
+                    Environment.NewLine);
+
+                return false;
             } 
         }
 
@@ -351,33 +344,22 @@ namespace WatsonTcp.Message
                 else if (_SslStream != null)
                 {
                     DataStream = _SslStream;
-                }
-                else
-                {
-                    throw new IOException("No suitable input stream found.");
-                }
+                } 
 
                 #endregion Process-Header-Fields
 
                 return true;
             }
-            catch (OperationCanceledException)
-            {
-                return false;
-            }
-            catch (ObjectDisposedException)
-            {
-                return false;
-            }
-            catch (IOException)
-            {
-                return false;
-            }
             catch (Exception e)
             {
-                LogException("WatsonMessage.BuildStream", e);
-                throw;
-            } 
+                Log(Environment.NewLine +
+                    "Message build from stream exception:" +
+                    Environment.NewLine +
+                    e.ToString() +
+                    Environment.NewLine);
+
+                return false;
+            }
         }
 
         /// <summary>
@@ -662,6 +644,11 @@ namespace WatsonTcp.Message
                             Buffer.BlockCopy(buffer, 0, ret, 0, read);
                             break;
                         }
+
+                        if (read == 0)
+                        {
+                            throw new SocketException();
+                        }
                     }
                 }
                 else if (_SslStream != null)
@@ -674,6 +661,11 @@ namespace WatsonTcp.Message
                             ret = new byte[read];
                             Buffer.BlockCopy(buffer, 0, ret, 0, read);
                             break;
+                        }
+                        
+                        if (read == 0)
+                        {
+                            throw new SocketException();
                         }
                     }
                 }
@@ -865,21 +857,7 @@ namespace WatsonTcp.Message
                 Console.WriteLine(msg);
             }
         }
-
-        private void LogException(string method, Exception e)
-        {
-            Log("");
-            Log("An exception was encountered.");
-            Log("   Method        : " + method);
-            Log("   Type          : " + e.GetType().ToString());
-            Log("   Data          : " + e.Data);
-            Log("   Inner         : " + e.InnerException);
-            Log("   Message       : " + e.Message);
-            Log("   Source        : " + e.Source);
-            Log("   StackTrace    : " + e.StackTrace);
-            Log("");
-        }
-
+         
         #endregion Private-Methods
     }
 }

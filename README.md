@@ -11,6 +11,8 @@ A simple C# async TCP server and client with integrated framing for reliable tra
 
 ## New in v2.x
 
+- Changed .NET Framework minimum requirement to 4.6.1 to support use of ```TcpClient.Dispose```
+- Better disconnect handling and support (thank you to @mikkleini)
 - Async Task-based callbacks
 - Configurable connect timeout in WatsonTcpClient
 - Clients can now connect via SSL without a certificate
@@ -229,6 +231,18 @@ static async Task StreamReceived(long contentLength, Stream stream)
     // read contentLength bytes from the stream and process
 }
 ```
+
+## Disconnection Handling
+
+The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically to provide a reference for WatsonTcp to handle a variety of disconnection scenarios.  These include:
+
+| Test case | Description | Pass/Fail |
+|---|---|---|
+| Server-side dispose | Graceful termination of all client connections | PASS |
+| Server-side client removal | Graceful termination of a single client | PASS |
+| Server-side termination | Abrupt termination due to process abort or CTRL-C | PASS |
+| Client-side dispose | Graceful termination of a client connection | PASS |
+| Client-side termination | Abrupt termination due to a process abort or CTRL-C | PASS |
 
 ## Version History
 

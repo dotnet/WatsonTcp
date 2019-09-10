@@ -41,9 +41,7 @@ namespace WatsonTcp
         #endregion Public-Members
 
         #region Private-Members
-
-        private bool _Disposed = false;
-
+         
         private TcpClient _TcpClient;
         private NetworkStream _NetworkStream;
         private SslStream _SslStream;
@@ -72,103 +70,51 @@ namespace WatsonTcp
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            if (_SslStream != null)
+            {
+                _SslStream.Close();
+                _SslStream.Dispose();
+                _SslStream = null;
+            }
+
+            if (_NetworkStream != null)
+            {
+                _NetworkStream.Close();
+                _NetworkStream.Dispose();
+                _NetworkStream = null;
+            }
+
+            if (TokenSource != null)
+            {
+                if (!TokenSource.IsCancellationRequested) TokenSource.Cancel();
+                TokenSource.Dispose();
+                TokenSource = null;
+            }
+
+            if (WriteLock != null)
+            {
+                WriteLock.Dispose();
+                WriteLock = null;
+            }
+
+            if (ReadLock != null)
+            {
+                ReadLock.Dispose();
+                ReadLock = null;
+            }
+             
+            if (_TcpClient != null)
+            {
+                _TcpClient.Close();
+                _TcpClient.Dispose();
+                _TcpClient = null;
+            }
         }
 
         #endregion Public-Methods
 
         #region Private-Methods
-
-        protected virtual void Dispose(bool disposing)
-        { 
-            if (_Disposed)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                #region Cancellation-Token
-
-                TokenSource.Cancel();
-                TokenSource.Dispose();
-
-                #endregion
-
-                #region Locks
-
-                if (WriteLock != null) WriteLock.Dispose();
-                if (ReadLock != null) ReadLock.Dispose();
-                
-                #endregion
-
-                #region SslStream
-
-                if (_SslStream != null)
-                {
-                    try
-                    {
-                        _SslStream.Close();
-                        _SslStream.Dispose(); 
-                    }
-                    catch (Exception)
-                    { 
-                    }
-                }
-
-                #endregion
-
-                #region TcpStream
-
-                if (_NetworkStream != null)
-                {
-                    try
-                    {
-                        _NetworkStream.Close();
-                        _NetworkStream.Dispose(); 
-                    }
-                    catch (Exception)
-                    { 
-                    }
-                }
-
-                #endregion
-
-                #region TcpClient
-
-                if (_TcpClient != null)
-                {
-                    if (_TcpClient.Client != null)
-                    {
-                        try
-                        {
-                            // if (_Client.Client.Connected) _Client.Client.Disconnect(false);
-                            // _Client.Client.Shutdown(SocketShutdown.Both);
-                            _TcpClient.Client.Close(0);
-                            _TcpClient.Client.Dispose(); 
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-
-                    try
-                    {
-                        _TcpClient.Close();
-                        _TcpClient = null; 
-                    }
-                    catch (Exception)
-                    { 
-                    }
-                }
-
-                #endregion 
-            }
-
-            _Disposed = true;
-        }
-
+         
         #endregion Private-Methods
     }
 }
