@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>2.0.5</Version>
+    <Version>2.0.6</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -12,14 +12,26 @@
     <PackageProjectUrl>https://github.com/jchristn/WatsonTcp</PackageProjectUrl>
     <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
-    <PackageLicenseUrl>https://github.com/jchristn/WatsonTcp/blob/master/LICENSE.TXT</PackageLicenseUrl>
-    <PackageReleaseNotes>Disconnect fixes per @mikkleini and the project TcpTest (refer to README.md)</PackageReleaseNotes>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageReleaseNotes>XML documentation</PackageReleaseNotes>
     <PackageIconUrl>https://raw.githubusercontent.com/jchristn/watsontcp/master/assets/watson.ico</PackageIconUrl>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
+    <DocumentationFile>C:\code\Watson\WatsonTcp-2.0\WatsonTcp\WatsonTcp.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 ﻿namespace WatsonTcp.Message
 {
-    public enum MessageStatus
+    internal enum MessageStatus
     {
         Normal,
         Success,

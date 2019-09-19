@@ -5,43 +5,43 @@ using System.Threading;
 
 namespace WatsonTcp
 {
-    public class ClientMetadata : IDisposable
+    internal class ClientMetadata : IDisposable
     {
-        #region Public-Members
+        #region Internal-Members
 
-        public TcpClient TcpClient
+        internal TcpClient TcpClient
         {
             get { return _TcpClient; }
         }
 
-        public NetworkStream NetworkStream
+        internal NetworkStream NetworkStream
         {
             get { return _NetworkStream; }
         }
 
-        public SslStream SslStream
+        internal SslStream SslStream
         {
             get { return _SslStream; }
             set { _SslStream = value; }
         }
 
-        public string IpPort
+        internal string IpPort
         {
             get { return _IpPort; }
         }
 
-        public SemaphoreSlim ReadLock { get; set; }
+        internal SemaphoreSlim ReadLock { get; set; }
 
-        public SemaphoreSlim WriteLock { get; set; }
+        internal SemaphoreSlim WriteLock { get; set; }
 
-        public CancellationTokenSource TokenSource { get; set; }
+        internal CancellationTokenSource TokenSource { get; set; }
 
-        public CancellationToken Token { get; set; }
+        internal CancellationToken Token { get; set; }
 
-        #endregion Public-Members
+        #endregion Internal-Members
 
         #region Private-Members
-         
+
         private TcpClient _TcpClient;
         private NetworkStream _NetworkStream;
         private SslStream _SslStream;
@@ -51,7 +51,7 @@ namespace WatsonTcp
 
         #region Constructors-and-Factories
 
-        public ClientMetadata(TcpClient tcp)
+        internal ClientMetadata(TcpClient tcp)
         {
             _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
             _NetworkStream = tcp.GetStream();
@@ -68,6 +68,9 @@ namespace WatsonTcp
 
         #region Public-Methods
 
+        /// <summary>
+        /// Tear down the object and dispose of resources.
+        /// </summary>
         public void Dispose()
         {
             if (_SslStream != null)

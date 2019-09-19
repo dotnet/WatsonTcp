@@ -1,6 +1,6 @@
 ﻿namespace WatsonTcp.Message
 {
-    public enum FieldType
+    internal enum FieldType
     {
         Int32,
         Int64,

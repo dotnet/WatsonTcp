@@ -1,0 +1,394 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>WatsonTcp</name>
+    </assembly>
+    <members>
+        <member name="M:WatsonTcp.ClientMetadata.Dispose">
+            <summary>
+            Tear down the object and dispose of resources.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Message.WatsonMessage.Length">
+            <summary>
+            Length of all header fields and payload data.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Message.WatsonMessage.ContentLength">
+            <summary>
+            Length of the data.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Message.WatsonMessage.HeaderFields">
+            <summary>
+            Bit array indicating which fields in the header are set.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Message.WatsonMessage.PresharedKey">
+            <summary>
+            Preshared key for connection authentication.  HeaderFields[0], 16 bytes.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Message.WatsonMessage.Status">
+            <summary>
+            Status of the message.  HeaderFields[1], 4 bytes.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Message.WatsonMessage.Data">
+            <summary>
+            Message data.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Message.WatsonMessage.DataStream">
+            <summary>
+            Stream containing the message data.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Message.WatsonMessage.ReadStreamBuffer">
+            <summary>
+            Size of buffer to use while reading message payload.  Default is 64KB.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.#ctor">
+            <summary>
+            Do not use.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.#ctor(System.Byte[],System.Boolean)">
+            <summary>
+            Construct a new message to send.
+            </summary>
+            <param name="data">The data to send.</param>
+            <param name="debug">Enable or disable debugging.</param>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.#ctor(System.Int64,System.IO.Stream,System.Boolean)">
+            <summary>
+            Construct a new message to send.
+            </summary>
+            <param name="contentLength">The number of bytes included in the stream.</param>
+            <param name="stream">The stream containing the data.</param>
+            <param name="debug">Enable or disable debugging.</param>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.#ctor(System.Net.Sockets.NetworkStream,System.Boolean)">
+            <summary>
+            Read from a stream and construct a message.  Call Build() to populate.
+            </summary>
+            <param name="stream">NetworkStream.</param>
+            <param name="debug">Enable or disable console debugging.</param>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.#ctor(System.Net.Security.SslStream,System.Boolean)">
+            <summary>
+            Read from an SSL-based stream and construct a message.  Call Build() to populate.
+            </summary>
+            <param name="stream">SslStream.</param>
+            <param name="debug">Enable or disable console debugging.</param>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.Build">
+            <summary>
+            Awaitable async method to build the Message object from data that awaits in a NetworkStream or SslStream, returning the full message data.
+            </summary>
+            <returns>Always returns true (void cannot be a return parameter).</returns>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.BuildStream">
+            <summary>
+            Awaitable async method to build the Message object from data that awaits in a NetworkStream or SslStream, returning the stream itself.
+            </summary>
+            <returns>Always returns true (void cannot be a return parameter).</returns>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.ToHeaderBytes(System.Int64)">
+            <summary>
+            Creates a byte array useful for transmission, without packaging the data.
+            </summary>
+            <returns>Byte array.</returns>
+        </member>
+        <member name="M:WatsonTcp.Message.WatsonMessage.ToString">
+            <summary>
+            Human-readable string version of the object.
+            </summary>
+            <returns>String.</returns>
+        </member>
+        <member name="T:WatsonTcp.WatsonTcpClient">
+            <summary>
+            Watson TCP client, with or without SSL.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.ReadDataStream">
+            <summary>
+            Enable or disable full reading of input streams.  When enabled, use MessageReceived.  When disabled, use StreamReceived.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.ReadStreamBufferSize">
+            <summary>
+            Buffer size to use when reading input and output streams.  Default is 65536.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.Debug">
+            <summary>
+            Enable or disable console debugging.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.AuthenticationRequested">
+            <summary>
+            Function called when authentication is requested from the server.  Expects the 16-byte preshared key.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.AuthenticationSucceeded">
+            <summary>
+            Function called when authentication has succeeded.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.AuthenticationFailure">
+            <summary>
+            Function called when authentication has failed.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.MessageReceived">
+            <summary>
+            Function called when a message is received.
+            A byte array containing the message data is passed to this function.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.StreamReceived">
+            <summary>
+            Method to call when a message is received from a client.
+            The number of bytes (long) and the stream containing the data are passed to this function.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.ServerConnected">
+            <summary>
+            Function called when the client successfully connects to the server.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.ServerDisconnected">
+            <summary>
+            Function called when the client disconnects from the server.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpClient.AcceptInvalidCertificates">
+            <summary>
+            Enable acceptance of SSL certificates from the server that cannot be validated.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.MutuallyAuthenticate">
+            <summary>
+            Require mutual authentication between the server and this client.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.Connected">
+            <summary>
+            Indicates whether or not the client is connected to the server.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.ConnectTimeoutSeconds">
+            <summary>
+            The number of seconds to wait before timing out a connection attempt.  Default is 5 seconds.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32)">
+            <summary>
+            Initialize the Watson TCP client without SSL.  Call Start() afterward to connect to the server.
+            </summary>
+            <param name="serverIp">The IP address or hostname of the server.</param>
+            <param name="serverPort">The TCP port on which the server is listening.</param>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.String,System.String)">
+            <summary>
+            Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
+            </summary>
+            <param name="serverIp">The IP address or hostname of the server.</param>
+            <param name="serverPort">The TCP port on which the server is listening.</param>
+            <param name="pfxCertFile">The file containing the SSL certificate.</param>
+            <param name="pfxCertPass">The password for the SSL certificate.</param>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Dispose">
+            <summary>
+            Tear down the client and dispose of background workers.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Start">
+            <summary>
+            Start the client and establish a connection to the server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Authenticate(System.String)">
+            <summary>
+            Send a pre-shared key to the server to authenticate.
+            </summary>
+            <param name="presharedKey">Up to 16-character string.</param>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Byte[])">
+            <summary>
+            Send data to the server.
+            </summary>
+            <param name="data">Byte array containing data.</param>
+            <returns>Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Int64,System.IO.Stream)">
+            <summary>
+            Send data to the server using a stream.
+            </summary>
+            <param name="contentLength">The number of bytes in the stream.</param>
+            <param name="stream">The stream containing the data.</param>
+            <returns>Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Byte[])">
+            <summary>
+            Send data to the server asynchronously
+            </summary>
+            <param name="data">Byte array containing data.</param>
+            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Int64,System.IO.Stream)">
+            <summary>
+            Send data to the server from a stream asynchronously.
+            </summary>
+            <param name="contentLength">The number of bytes to send.</param>
+            <param name="stream">The stream containing the data.</param>
+            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="T:WatsonTcp.WatsonTcpServer">
+            <summary>
+            Watson TCP server, with or without SSL.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.ReadDataStream">
+            <summary>
+            Enable or disable full reading of input streams.  When enabled, use MessageReceived.  When disabled, use StreamReceived.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServer.ReadStreamBufferSize">
+            <summary>
+            Buffer size to use when reading input and output streams.  Default is 65536.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.Debug">
+            <summary>
+            Enable or disable console debugging.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.PermittedIPs">
+            <summary>
+            Permitted IP addresses.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.ClientConnected">
+            <summary>
+            Method to call when a client connects to the server.
+            The IP:port is passed to this method as a string.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.ClientDisconnected">
+            <summary>
+            Method to call when a client disconnects from the server.
+            The IP:port is passed to this method as a string.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.MessageReceived">
+            <summary>
+            Method to call when a message is received from a client.
+            The IP:port is passed to this method as a string, along with a byte array containing the message data.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.StreamReceived">
+            <summary>
+            Method to call when a message is received from a client.
+            The IP:port is passed to this method as a string, along with a long indicating the number of bytes to read from the stream.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.AcceptInvalidCertificates">
+            <summary>
+            Enable acceptance of SSL certificates from clients that cannot be validated.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.MutuallyAuthenticate">
+            <summary>
+            Require mutual authentication between SSL clients and this server.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.WatsonTcpServer.PresharedKey">
+            <summary>
+            Preshared key that must be consistent between clients and this server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32)">
+            <summary>
+            Initialize the Watson TCP server without SSL.  
+            Call Start() afterward to start Watson.
+            </summary>
+            <param name="listenerIp">The IP address on which the server should listen, nullable.</param>
+            <param name="listenerPort">The TCP port on which the server should listen.</param>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32,System.String,System.String)">
+            <summary>
+            Initialize the Watson TCP server with SSL.  
+            Call Start() afterward to start Watson.
+            </summary>
+            <param name="listenerIp">The IP address on which the server should listen, nullable.</param>
+            <param name="listenerPort">The TCP port on which the server should listen.</param>
+            <param name="pfxCertFile">The file containing the SSL certificate.</param>
+            <param name="pfxCertPass">The password for the SSL certificate.</param>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.Dispose">
+            <summary>
+            Tear down the server and dispose of background workers.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.Start">
+            <summary>
+            Start the server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Byte[])">
+            <summary>
+            Send data to the specified client.
+            </summary>
+            <param name="ipPort">IP:port of the recipient client.</param>
+            <param name="data">Byte array containing data.</param>
+            <returns>Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Int64,System.IO.Stream)">
+            <summary>
+            Send data to the specified client using a stream.
+            </summary>
+            <param name="ipPort">IP:port of the recipient client.</param>
+            <param name="contentLength">The number of bytes in the stream.</param>
+            <param name="stream">The stream containing the data.</param>
+            <returns>Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Byte[])">
+            <summary>
+            Send data to the specified client, asynchronously.
+            </summary>
+            <param name="ipPort">IP:port of the recipient client.</param>
+            <param name="data">Byte array containing data.</param>
+            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Int64,System.IO.Stream)">
+            <summary>
+            Send data to the specified client using a stream, asynchronously.
+            </summary>
+            <param name="ipPort">IP:port of the recipient client.</param>
+            <param name="contentLength">The number of bytes in the stream.</param>
+            <param name="stream">The stream containing the data.</param>
+            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.IsClientConnected(System.String)">
+            <summary>
+            Determine whether or not the specified client is connected to the server.
+            </summary>
+            <returns>Boolean indicating if the client is connected to the server.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.ListClients">
+            <summary>
+            List the IP:port of each connected client.
+            </summary>
+            <returns>A string list containing each client IP:port.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.DisconnectClient(System.String)">
+            <summary>
+            Disconnects the specified client.
+            </summary>
+            <param name="ipPort">IP:port of the client.</param>
+        </member>
+    </members>
+</doc>
