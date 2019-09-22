@@ -117,10 +117,12 @@ namespace WatsonTcp
         #region Constructors-and-Factories
 
         /// <summary>
-        /// Initialize the Watson TCP server without SSL.  
-        /// Call Start() afterward to start Watson.
+        /// Initialize the Watson TCP server without SSL.
+        /// Supply a specific IP address on which to listen.  Otherwise, use 'null' for the IP address to listen on any IP address.
+        /// If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.  
+        /// Call Start() afterward to start the server.
         /// </summary>
-        /// <param name="listenerIp">The IP address on which the server should listen, nullable.</param>
+        /// <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
         public WatsonTcpServer(
             string listenerIp,
@@ -154,9 +156,11 @@ namespace WatsonTcp
 
         /// <summary>
         /// Initialize the Watson TCP server with SSL.  
-        /// Call Start() afterward to start Watson.
+        /// Supply a specific IP address on which to listen.  Otherwise, use 'null' for the IP address to listen on any IP address.
+        /// If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.  
+        /// Call Start() afterward to start the server.
         /// </summary>
-        /// <param name="listenerIp">The IP address on which the server should listen, nullable.</param>
+        /// <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>

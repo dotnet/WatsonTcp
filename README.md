@@ -7,7 +7,7 @@
 [nuget]:     https://www.nuget.org/packages/WatsonTcp/
 [nuget-img]: https://badge.fury.io/nu/Object.svg
 
-A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data.  
+WatsonTcp is the fastest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, fast disconnect detection, and easy to understand callbacks.
 
 ## New in v2.x
 
@@ -39,13 +39,18 @@ mono --server myapp.exe
 
 ## Contributions
 
-Special thanks to @brudo and @MrMikeJJ for their support of this project!  
-
-If you'd like to contribute, please jump right into the source code and create a pull request. 
+Special thanks to @brudo and @MrMikeJJ for their support of this project!  If you'd like to contribute, please jump right into the source code and create a pull request. 
 
 ## Examples
 
 The following examples show a simple client and server example using WatsonTcp without SSL.
+
+### Local vs External Connections
+
+**IMPORTANT**
+* If you specify ```127.0.0.1``` as the listener IP address in WatsonTcpServer, it will only be able to accept connections from within the local host.  
+* To accept connections from other machines, specify a specific IP address, or, use ```null``` for the listener IP address.
+* If you use ```null``` for the IP address, or any variant representing any IP address such as ```0.0.0.0```, ```+```, or ```*```, you may have to run WatsonTcpServer with administrative privileges (this is required by the operating system).
 
 ### Server
 ```
