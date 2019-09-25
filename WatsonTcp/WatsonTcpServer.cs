@@ -270,6 +270,27 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Start the server.
+        /// </summary>
+        public Task StartAsync()
+        {
+            if (_Mode == Mode.Tcp)
+            {
+                Log("Watson TCP server starting on " + _ListenerIp + ":" + _ListenerPort);
+            }
+            else if (_Mode == Mode.Ssl)
+            {
+                Log("Watson TCP SSL server starting on " + _ListenerIp + ":" + _ListenerPort);
+            }
+            else
+            {
+                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+            }
+
+            return AcceptConnections();
+        }
+
+        /// <summary>
         /// Send data to the specified client.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
@@ -424,6 +445,7 @@ namespace WatsonTcp
         private async Task AcceptConnections()
         {
             _Listener.Start();
+
             while (!_Token.IsCancellationRequested)
             {
                 string clientIpPort = String.Empty;

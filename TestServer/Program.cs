@@ -44,7 +44,9 @@ namespace TestServer
             server.ClientDisconnected = ClientDisconnected;
             server.MessageReceived = MessageReceived;
             server.Debug = debug;
-            server.Start();
+
+            // server.Start();
+            Task serverStart = server.StartAsync();
 
             bool runForever = true;
             while (runForever)

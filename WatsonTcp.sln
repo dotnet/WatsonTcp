@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26403.7
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29306.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WatsonTcp", "WatsonTcp\WatsonTcp.csproj", "{716CCC25-BF6D-40FA-B256-DAABCA5F977B}"
 EndProject
@@ -15,9 +15,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestMultiThread", "TestMult
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestParallel", "TestParallel\TestParallel.csproj", "{C54EB27B-54E5-4A30-989F-3F07EBDDA486}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClientStream", "TestClientStream\TestClientStream.csproj", "{A85C67C6-63C5-47D3-96E3-491A23861791}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestClientStream", "TestClientStream\TestClientStream.csproj", "{A85C67C6-63C5-47D3-96E3-491A23861791}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServerStream", "TestServerStream\TestServerStream.csproj", "{3D7E7B14-8DF6-47A2-B032-9AC52210F932}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestServerStream", "TestServerStream\TestServerStream.csproj", "{3D7E7B14-8DF6-47A2-B032-9AC52210F932}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

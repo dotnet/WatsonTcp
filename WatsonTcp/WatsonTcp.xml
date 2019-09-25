@@ -210,6 +210,12 @@
             Start the client and establish a connection to the server.
             </summary>
         </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.StartAsync">
+            <summary>
+            Start the client and establish a connection to the server.
+            </summary>
+            <returns></returns>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Authenticate(System.String)">
             <summary>
             Send a pre-shared key to the server to authenticate.
@@ -338,6 +344,11 @@
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.Start">
+            <summary>
+            Start the server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.StartAsync">
             <summary>
             Start the server.
             </summary>

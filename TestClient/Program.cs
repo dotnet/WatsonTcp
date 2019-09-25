@@ -12,7 +12,7 @@ namespace TestClient
         private static bool useSsl = false;
         private static string certFile = "";
         private static string certPass = "";
-        private static bool debug = true;
+        private static bool debug = false;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
         private static WatsonTcpClient client = null;
@@ -190,7 +190,9 @@ namespace TestClient
             client.ReadDataStream = true;
             client.ReadStreamBufferSize = 65536;
             client.Debug = debug;
-            client.Start(); 
+
+            // client.Start();
+            Task startClient = client.StartAsync();
         }
 
         private static bool InputBoolean(string question, bool yesDefault)

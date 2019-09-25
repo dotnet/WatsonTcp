@@ -300,7 +300,7 @@ namespace WatsonTcp
 
                 Log("Watson TCP client connecting to " + _ServerIp + ":" + _ServerPort);
 
-                _Client.LingerState = new LingerOption(true, 0); 
+                _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
                 waitHandle = asyncResult.AsyncWaitHandle;
 
@@ -405,10 +405,138 @@ namespace WatsonTcp
 
             if (ServerConnected != null)
             {
-                Task.Run(() => ServerConnected());
+                Task serverConnected = Task.Run(() => ServerConnected());
             }
 
-            Task.Run(async () => await DataReceiver(_Token), _Token);
+            Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
+        }
+
+        /// <summary>
+        /// Start the client and establish a connection to the server.
+        /// </summary>
+        /// <returns></returns>
+        public Task StartAsync()
+        {
+            _Client = new TcpClient();
+            IAsyncResult asyncResult = null;
+            WaitHandle waitHandle = null;
+            bool connectSuccess = false;
+
+            if (_Mode == Mode.Tcp)
+            {
+                #region TCP
+
+                Log("Watson TCP client connecting to " + _ServerIp + ":" + _ServerPort);
+
+                _Client.LingerState = new LingerOption(true, 0);
+                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
+                waitHandle = asyncResult.AsyncWaitHandle;
+
+                try
+                {
+                    connectSuccess = waitHandle.WaitOne(TimeSpan.FromSeconds(_ConnectTimeoutSeconds), false);
+                    if (!connectSuccess)
+                    {
+                        _Client.Close();
+                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
+                    }
+
+                    _Client.EndConnect(asyncResult);
+
+                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
+                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
+                    _TcpStream = _Client.GetStream();
+                    _SslStream = null;
+
+                    Connected = true;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    waitHandle.Close();
+                }
+
+                #endregion TCP
+            }
+            else if (_Mode == Mode.Ssl)
+            {
+                #region SSL
+
+                Log("Watson TCP client connecting with SSL to " + _ServerIp + ":" + _ServerPort);
+
+                _Client.LingerState = new LingerOption(true, 0);
+                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
+                waitHandle = asyncResult.AsyncWaitHandle;
+
+                try
+                {
+                    connectSuccess = waitHandle.WaitOne(TimeSpan.FromSeconds(_ConnectTimeoutSeconds), false);
+                    if (!connectSuccess)
+                    {
+                        _Client.Close();
+                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
+                    }
+
+                    _Client.EndConnect(asyncResult);
+
+                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
+                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
+
+                    if (AcceptInvalidCertificates)
+                    {
+                        // accept invalid certs
+                        _SslStream = new SslStream(_Client.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                    }
+                    else
+                    {
+                        // do not accept invalid SSL certificates
+                        _SslStream = new SslStream(_Client.GetStream(), false);
+                    }
+
+                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !AcceptInvalidCertificates);
+
+                    if (!_SslStream.IsEncrypted)
+                    {
+                        throw new AuthenticationException("Stream is not encrypted");
+                    }
+
+                    if (!_SslStream.IsAuthenticated)
+                    {
+                        throw new AuthenticationException("Stream is not authenticated");
+                    }
+
+                    if (MutuallyAuthenticate && !_SslStream.IsMutuallyAuthenticated)
+                    {
+                        throw new AuthenticationException("Mutual authentication failed");
+                    }
+
+                    Connected = true;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    waitHandle.Close();
+                }
+
+                #endregion SSL
+            }
+            else
+            {
+                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+            }
+
+            if (ServerConnected != null)
+            {
+                Task serverConnected = Task.Run(() => ServerConnected());
+            }
+
+            return DataReceiver();
         }
 
         /// <summary>
@@ -489,7 +617,7 @@ namespace WatsonTcp
             }
         }
          
-        private async Task DataReceiver(CancellationToken token)
+        private async Task DataReceiver()
         {  
             while (true)
             {
@@ -497,7 +625,7 @@ namespace WatsonTcp
                  
                 try
                 {
-                    token.ThrowIfCancellationRequested();
+                    _Token.ThrowIfCancellationRequested();
                      
                     if (_Client == null 
                         || !_Client.Connected
