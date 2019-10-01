@@ -43,7 +43,7 @@ mono --server myapp.exe
 
 ## Contributions
 
-Special thanks to @brudo, @MrMikeJJ, and @pha3z for their support of this project!  If you'd like to contribute, please jump right into the source code and create a pull request. 
+Special thanks to @brudo, @MrMikeJJ, @mikkleini, and @pha3z for their support of this project!  If you'd like to contribute, please jump right into the source code and create a pull request. 
 
 ## Examples
 
