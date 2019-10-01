@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>2.1.0</Version>
+    <Version>2.1.1</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageReleaseNotes>Breaking changes, modified getter and setter for MessageReceived and StreamReceived, eliminated ReadDataStream parameter, ReadStreamBufferSize is now StreamBufferSize, better XML documentation.</PackageReleaseNotes>
+    <PackageReleaseNotes>Breaking changes, modified getter and setter for MessageReceived and StreamReceived, eliminated ReadDataStream parameter, ReadStreamBufferSize is now StreamBufferSize, better XML documentation.  Added idle client timeout and disconnection to server.</PackageReleaseNotes>
     <PackageIconUrl>https://raw.githubusercontent.com/jchristn/watsontcp/master/assets/watson.ico</PackageIconUrl>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>

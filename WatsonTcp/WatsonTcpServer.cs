@@ -40,6 +40,25 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Maximum amount of time to wait before considering a client idle and disconnecting them. 
+        /// By default, this value is set to 0, which will never disconnect a client due to inactivity.
+        /// The timeout is reset any time a message is received from a client or a message is sent to a client.
+        /// For instance, if you set this value to 30, the client will be disconnected if the server has not received a message from the client within 30 seconds or if a message has not been sent to the client in 30 seconds.
+        /// </summary>
+        public int IdleClientTimeoutSeconds
+        {
+            get
+            {
+                return _IdleClientTimeoutSeconds;
+            }
+            set
+            {
+                if (value < 0) throw new ArgumentException("IdleClientTimeoutSeconds must be zero or greater.");
+                _IdleClientTimeoutSeconds = value;
+            }
+        }
+         
+        /// <summary>
         /// Enable or disable console debugging.
         /// </summary>
         public bool Debug = false;
@@ -119,6 +138,7 @@ namespace WatsonTcp
         #region Private-Members
          
         private int _ReadStreamBufferSize = 65536;
+        private int _IdleClientTimeoutSeconds = 0;
         private Mode _Mode;
         private string _ListenerIp;
         private int _ListenerPort;
@@ -126,11 +146,12 @@ namespace WatsonTcp
         private TcpListener _Listener;
 
         private X509Certificate2 _SslCertificate;
-         
-        private ConcurrentDictionary<string, ClientMetadata> _Clients;
-        private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients;
 
-        private CancellationTokenSource _TokenSource;
+        private ConcurrentDictionary<string, ClientMetadata> _Clients = new ConcurrentDictionary<string, ClientMetadata>();
+        private ConcurrentDictionary<string, DateTime> _ClientsLastSeen = new ConcurrentDictionary<string, DateTime>();
+        private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
+
+        private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
 
         private Func<string, byte[], Task> _MessageReceived = null;
@@ -167,15 +188,11 @@ namespace WatsonTcp
                 _ListenerIp = listenerIp;
             }
 
-            _ListenerPort = listenerPort;
-
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
-
-            _TokenSource = new CancellationTokenSource();
+            _ListenerPort = listenerPort; 
+            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort); 
             _Token = _TokenSource.Token;
-             
-            _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
+
+            Task.Run(() => MonitorForIdleClients(), _Token);
         }
 
         /// <summary>
@@ -210,8 +227,6 @@ namespace WatsonTcp
                 _ListenerIp = listenerIp;
             }
 
-            _ListenerPort = listenerPort;
-
             _SslCertificate = null; 
             if (String.IsNullOrEmpty(pfxCertPass))
             {
@@ -220,13 +235,13 @@ namespace WatsonTcp
             else
             {
                 _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
-            } 
+            }
 
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
-            _TokenSource = new CancellationTokenSource();
-            _Token = _TokenSource.Token; 
-            _Clients = new ConcurrentDictionary<string, ClientMetadata>();
-            _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
+            _ListenerPort = listenerPort;
+            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort); 
+            _Token = _TokenSource.Token;
+
+            Task.Run(() => MonitorForIdleClients(), _Token);
         }
 
         #endregion Constructors-and-Factories
@@ -295,7 +310,7 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
-            Task.Run(() => AcceptConnections(), _Token);
+            Task.Run(() => AcceptConnections(), _Token); 
         }
 
         /// <summary>
@@ -508,17 +523,11 @@ namespace WatsonTcp
                     #endregion Accept-Connection-and-Validate-IP
 
                     if (_Mode == Mode.Tcp)
-                    {
-                        #region Tcp
-
-                        Task unawaited = Task.Run(() => FinalizeConnection(client), _Token);
-
-                        #endregion Tcp
+                    { 
+                        Task unawaited = Task.Run(() => FinalizeConnection(client), _Token); 
                     }
                     else if (_Mode == Mode.Ssl)
-                    {
-                        #region SSL
-
+                    { 
                         if (AcceptInvalidCertificates)
                         {
                             client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
@@ -535,9 +544,7 @@ namespace WatsonTcp
                             {
                                 FinalizeConnection(client);
                             }
-                        }, _Token);
-
-                        #endregion SSL
+                        }, _Token); 
                     }
                     else
                     {
@@ -616,8 +623,14 @@ namespace WatsonTcp
         {
             #region Add-to-Client-List
 
-            _Clients.TryRemove(client.IpPort, out ClientMetadata removedClient);
-            _Clients.TryAdd(client.IpPort, client); 
+            ClientMetadata removed = null;
+            DateTime ts;
+
+            _Clients.TryRemove(client.IpPort, out removed);
+            _ClientsLastSeen.TryRemove(client.IpPort, out ts);
+
+            _Clients.TryAdd(client.IpPort, client);
+            _ClientsLastSeen.TryAdd(client.IpPort, DateTime.Now);
              
             #endregion Add-to-Client-List
 
@@ -858,6 +871,8 @@ namespace WatsonTcp
                     {
                         break;
                     }
+
+                    UpdateClientLastSeen(client.IpPort);
                 }  
                 catch (Exception e)
                 {
@@ -871,8 +886,9 @@ namespace WatsonTcp
             }
              
             Log(header + " data receiver terminated");
-             
+
             _Clients.TryRemove(client.IpPort, out ClientMetadata removedClient);
+            _ClientsLastSeen.TryRemove(client.IpPort, out DateTime ts);
             _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime removedDt);
                  
             if (ClientDisconnected != null)
@@ -962,8 +978,9 @@ namespace WatsonTcp
                     }
 
                     client.SslStream.Flush();
-                } 
+                }
 
+                UpdateClientLastSeen(client.IpPort);
                 return true;
             }
             catch (Exception e)
@@ -1055,8 +1072,9 @@ namespace WatsonTcp
                     }
 
                     await client.SslStream.FlushAsync();
-                } 
+                }
 
+                UpdateClientLastSeen(client.IpPort);
                 return true;
             }
             catch (Exception e)
@@ -1068,6 +1086,43 @@ namespace WatsonTcp
             {
                 client.WriteLock.Release();
             }
+        }
+
+        private async Task MonitorForIdleClients()
+        { 
+            while (!_Token.IsCancellationRequested)
+            {
+                if (_IdleClientTimeoutSeconds > 0 && _ClientsLastSeen.Count > 0)
+                {
+                    MonitorForIdleClientsTask();
+                }
+                await Task.Delay(5000, _Token);
+            }
+        }
+
+        private void MonitorForIdleClientsTask()
+        { 
+            DateTime idleTimestamp = DateTime.Now.AddSeconds(-1 * _IdleClientTimeoutSeconds);
+
+            foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
+            { 
+                if (curr.Value < idleTimestamp)
+                { 
+                    Log("Disconnecting client " + curr.Key + " due to idle");
+                    DisconnectClient(curr.Key);
+                }
+            }  
+        }
+
+        private void UpdateClientLastSeen(string ipPort)
+        {
+            if (_ClientsLastSeen.ContainsKey(ipPort))
+            {
+                DateTime ts;
+                _ClientsLastSeen.TryRemove(ipPort, out ts);
+            }
+
+            _ClientsLastSeen.TryAdd(ipPort, DateTime.Now);
         }
 
         #endregion Private-Methods

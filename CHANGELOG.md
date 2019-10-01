@@ -2,6 +2,12 @@
 
 ## Current Version
 
+v2.1.1
+
+- Automatically disconnect idle clients by setting ```WatsonTcpServer.IdleClientTimeoutSeconds``` to a positive integer
+
+## Previous Versions
+
 v2.1.0
 
 - Breaking changes
@@ -9,8 +15,6 @@ v2.1.0
 - Modified getters and setters on StreamReceived and MessageReceived to make them mutually exclusive
 - Removal of (now unnecessary) ReadDataStream parameter
 - ReadStreamBufferSize is now renamed to StreamBufferSize
-
-## Previous Versions
 
 v2.0.8
 

@@ -9,13 +9,9 @@
 
 WatsonTcp is the fastest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, fast disconnect detection, and easy to understand callbacks.
 
-## New in v2.1.0
+## New in v2.1.1
 
-- Breaking changes
-- Better documentation on StreamReceived vs MessageReceived in the XML documentation and in the README
-- Modified getters and setters on StreamReceived and MessageReceived to make them mutually exclusive
-- Removal of (now unnecessary) ReadDataStream parameter
-- ReadStreamBufferSize is now renamed to StreamBufferSize
+- Automatically disconnect idle clients by setting ```WatsonTcpServer.IdleClientTimeoutSeconds``` to a positive integer (excellent suggestion, @pha3z!)
 
 ## Test Applications
 
@@ -47,7 +43,7 @@ mono --server myapp.exe
 
 ## Contributions
 
-Special thanks to @brudo and @MrMikeJJ for their support of this project!  If you'd like to contribute, please jump right into the source code and create a pull request. 
+Special thanks to @brudo, @MrMikeJJ, and @pha3z for their support of this project!  If you'd like to contribute, please jump right into the source code and create a pull request. 
 
 ## Examples
 
@@ -258,6 +254,10 @@ The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically
 | Server-side termination | Abrupt termination due to process abort or CTRL-C | PASS |
 | Client-side dispose | Graceful termination of a client connection | PASS |
 | Client-side termination | Abrupt termination due to a process abort or CTRL-C | PASS |
+
+## Disconnecting Idle Clients
+
+If you wish to have WatsonTcpServer automatically disconnect clients that have been idle for a period of time, set ```WatsonTcpServer.IdleClientTimeoutSeconds``` to a positive integer.  Sending a message to a client or receiving a message from a client automatically resets their timeout.  Client timeouts are evaluated every 5 seconds by Watson, so the disconnection may not be precise (for instance, if you use 7 seconds as your disconnect interval).
 
 ## Version History
 

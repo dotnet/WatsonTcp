@@ -43,6 +43,7 @@ namespace TestServer
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
             server.MessageReceived = MessageReceived;
+            // server.IdleClientTimeoutSeconds = 10;
             server.Debug = debug;
 
             // server.Start();
@@ -140,7 +141,7 @@ namespace TestServer
                         server.Debug = !server.Debug;
                         Console.WriteLine("Debug set to: " + server.Debug);
                         break;
-
+                         
                     default:
                         break;
                 }
