@@ -19,16 +19,11 @@ namespace WatsonTcp
     public class WatsonTcpClient : IDisposable
     {
         #region Public-Members
-
-        /// <summary>
-        /// Enable or disable full reading of input streams.  When enabled, use MessageReceived.  When disabled, use StreamReceived.
-        /// </summary>
-        public bool ReadDataStream = true;
-
+         
         /// <summary>
         /// Buffer size to use when reading input and output streams.  Default is 65536.
         /// </summary>
-        public int ReadStreamBufferSize
+        public int StreamBufferSize
         {
             get
             {
@@ -62,16 +57,42 @@ namespace WatsonTcp
         public Func<Task> AuthenticationFailure = null;
 
         /// <summary>
-        /// Function called when a message is received.
-        /// A byte array containing the message data is passed to this function.
+        /// Use the 'MessageReceived' callback only when 'ReadDataStream' is set to 'true'.
+        /// This callback is called when a message is received from the server.
+        /// The entire message payload is passed to your application in a byte array.
+        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
         /// </summary>
-        public Func<byte[], Task> MessageReceived = null;
+        public Func<byte[], Task> MessageReceived
+        {
+            get
+            {
+                return _MessageReceived;
+            }
+            set
+            {
+                if (_StreamReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _MessageReceived = value;
+            }
+        }
 
         /// <summary>
-        /// Method to call when a message is received from a client.
-        /// The number of bytes (long) and the stream containing the data are passed to this function.
+        /// Use the 'StreamReceived' callback only when 'ReadDataStream' is set to 'false'.
+        /// This callback is called when a message is received from a connected client.
+        /// The number of bytes to read and the stream from which the data should be read are passed to your application.
+        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
         /// </summary>
-        public Func<long, Stream, Task> StreamReceived = null;
+        public Func<long, Stream, Task> StreamReceived
+        {
+            get
+            {
+                return _StreamReceived;
+            }
+            set
+            {
+                if (_MessageReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _StreamReceived = value;
+            }
+        }
 
         /// <summary>
         /// Function called when the client successfully connects to the server.
@@ -155,6 +176,9 @@ namespace WatsonTcp
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
 
+        private Func<byte[], Task> _MessageReceived = null;
+        private Func<long, Stream, Task> _StreamReceived = null;
+
         #endregion Private-Members
 
         #region Constructors-and-Factories
@@ -170,7 +194,7 @@ namespace WatsonTcp
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
-
+             
             _Token = _TokenSource.Token;
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
@@ -192,7 +216,7 @@ namespace WatsonTcp
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
-
+             
             _Token = _TokenSource.Token;
             _Mode = Mode.Ssl;
             _ServerIp = serverIp;
@@ -648,13 +672,17 @@ namespace WatsonTcp
                         msg = new WatsonMessage(_TcpStream, Debug); 
                     }
 
-                    if (ReadDataStream)
+                    if (_MessageReceived != null)
                     {
                         buildSuccess = await msg.Build();
                     }
-                    else
+                    else if (_StreamReceived != null)
                     {
                         buildSuccess = await msg.BuildStream();
+                    }
+                    else
+                    {
+                        break;
                     }
 
                     if (!buildSuccess)
@@ -705,23 +733,21 @@ namespace WatsonTcp
                         }
                         continue;
                     }
-
-                    if (ReadDataStream)
+                     
+                    if (_MessageReceived != null)
                     {
-                        if (MessageReceived != null)
-                        {
-                            // does not need to be awaited, because the stream has been fully read
-                            Task unawaited = Task.Run(() => MessageReceived(msg.Data));
-                        }
+                        // does not need to be awaited, because the stream has been fully read
+                        Task unawaited = Task.Run(() => _MessageReceived(msg.Data));
+                    }
+                    else if (_StreamReceived != null)
+                    {
+                        // must be awaited, because the content has not yet been fully read
+                        await _StreamReceived(msg.ContentLength, msg.DataStream);
                     }
                     else
                     {
-                        if (StreamReceived != null)
-                        {
-                            // must be awaited, because the content has not yet been fully read
-                            await StreamReceived(msg.ContentLength, msg.DataStream);
-                        }
-                    } 
+                        break;
+                    }
                 } 
                 catch (Exception e)
                 {

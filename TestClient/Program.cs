@@ -186,9 +186,7 @@ namespace TestClient
             client.AuthenticationSucceeded = AuthenticationSucceeded;
             client.ServerConnected = ServerConnected;
             client.ServerDisconnected = ServerDisconnected;
-            client.MessageReceived = MessageReceived;
-            client.ReadDataStream = true;
-            client.ReadStreamBufferSize = 65536;
+            client.MessageReceived = MessageReceived; 
             client.Debug = debug;
 
             // client.Start();

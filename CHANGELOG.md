@@ -2,11 +2,19 @@
 
 ## Current Version
 
+v2.1.0
+
+- Breaking changes
+- Better documentation on StreamReceived vs MessageReceived in the XML documentation and in the README
+- Modified getters and setters on StreamReceived and MessageReceived to make them mutually exclusive
+- Removal of (now unnecessary) ReadDataStream parameter
+- ReadStreamBufferSize is now renamed to StreamBufferSize
+
+## Previous Versions
+
 v2.0.8
 
 - StartAsync() method for client and server
-
-## Previous Versions
 
 v2.0.x
 

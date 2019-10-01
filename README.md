@@ -9,9 +9,13 @@
 
 WatsonTcp is the fastest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, fast disconnect detection, and easy to understand callbacks.
 
-## New in v2.0.8
+## New in v2.1.0
 
-- StartAsync() method for client and server
+- Breaking changes
+- Better documentation on StreamReceived vs MessageReceived in the XML documentation and in the README
+- Modified getters and setters on StreamReceived and MessageReceived to make them mutually exclusive
+- Removal of (now unnecessary) ReadDataStream parameter
+- ReadStreamBufferSize is now renamed to StreamBufferSize
 
 ## Test Applications
 
@@ -20,6 +24,16 @@ Test projects for both client and server are included which will help you unders
 ## SSL
 
 WatsonTcp supports data exchange with or without SSL.  The server and client classes include constructors that allow you to include fields for the PFX certificate file and password.  An example certificate can be found in the test projects, which has a password of 'password'.
+
+## To Stream or Not To Stream...
+
+WatsonTcp allows you to receive messages using either streams or byte arrays.  The ```MessageReceived``` callback uses byte arrays and provides the easiest implementation, but the entire message payload is copied into memory, making it inefficient for larger messages.  For larger message sizes (generally measured in 10s or 100s of megabytes or beyond), it is **strongly** recommended that you use the ```StreamReceived``` callback.  Only one of these methods can be assigned; you cannot use both.
+
+When sending messages, the ```Send``` and ```SendAsync``` methods have both byte array and stream variants.  You are free to use whichever, or both, as you choose, regardless of whether you have implemented ```MessageReceived``` or ```StreamReceived```.
+
+It is important to note that when using ```StreamReceived```, the socket is blocked until you have fully read the stream and control has returned from your consuming application back to WatsonTcp.  That's required, because otherwise, WatsonTcp would begin reading at the wrong place in the stream.  With ```MessageReceived```, WatsonTcp will call your callback and begin reading immediately, since the entirety of the message data has already been read from the stream by WatsonTcp.
+
+Please see below for examples with byte arrays and with streams.
 
 ## Running under Mono
 
@@ -47,6 +61,9 @@ The following examples show a simple client and server example using WatsonTcp w
 * If you use ```null``` for the IP address, or any variant representing any IP address such as ```0.0.0.0```, ```+```, or ```*```, you may have to run WatsonTcpServer with administrative privileges (this is required by the operating system).
 
 ### Server
+
+Using byte arrays (```MessageReceived```)
+
 ```
 using WatsonTcp;
 
@@ -55,8 +72,7 @@ static void Main(string[] args)
     WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 9000);
     server.ClientConnected = ClientConnected;
     server.ClientDisconnected = ClientDisconnected;
-    server.MessageReceived = MessageReceived;
-    server.Debug = false;
+    server.MessageReceived = MessageReceived; 
     server.Start();
 
     bool runForever = true;
@@ -117,6 +133,9 @@ static async Task MessageReceived(string ipPort, byte[] data)
 ```
 
 ### Client
+
+Using byte arrays (```MessageReceived```)
+
 ```
 using WatsonTcp;
 
@@ -125,8 +144,7 @@ static void Main(string[] args)
     WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
     client.ServerConnected = ServerConnected;
     client.ServerDisconnected = ServerDisconnected;
-    client.MessageReceived = MessageReceived;
-    client.Debug = false;
+    client.MessageReceived = MessageReceived; 
     client.Start();
 
     bool runForever = true;
@@ -201,14 +219,13 @@ client.Start();
 
 ## Example with Streams
 
-Refer to the ```TestClientStream``` and ```TestServerStream``` projects for a full example
+Refer to the ```TestClientStream``` and ```TestServerStream``` projects for a full example.  
 ```
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000);
 server.ClientConnected = ClientConnected;
 server.ClientDisconnected = ClientDisconnected;
-server.StreamReceived = StreamReceived;
-server.ReadDataStream = false;
+server.StreamReceived = StreamReceived; 
 server.Start();
 
 static async Task StreamReceived(string ipPort, long contentLength, Stream stream)
@@ -221,8 +238,7 @@ static async Task StreamReceived(string ipPort, long contentLength, Stream strea
 WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
 client.ServerConnected = ServerConnected;
 client.ServerDisconnected = ServerDisconnected;
-client.StreamReceived = StreamReceived;
-client.ReadDataStream = false;
+client.StreamReceived = StreamReceived; 
 client.Start();
 
 static async Task StreamReceived(long contentLength, Stream stream)

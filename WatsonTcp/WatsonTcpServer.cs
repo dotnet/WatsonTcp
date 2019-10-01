@@ -22,16 +22,11 @@ namespace WatsonTcp
     public class WatsonTcpServer : IDisposable
     {
         #region Public-Members
-
-        /// <summary>
-        /// Enable or disable full reading of input streams.  When enabled, use MessageReceived.  When disabled, use StreamReceived.
-        /// </summary>
-        public bool ReadDataStream = true;
-
+         
         /// <summary>
         /// Buffer size to use when reading input and output streams.  Default is 65536.
         /// </summary>
-        public int ReadStreamBufferSize
+        public int StreamBufferSize
         {
             get
             {
@@ -67,16 +62,42 @@ namespace WatsonTcp
         public Func<string, Task> ClientDisconnected = null;
 
         /// <summary>
-        /// Method to call when a message is received from a client.
-        /// The IP:port is passed to this method as a string, along with a byte array containing the message data.
+        /// Use the 'MessageReceived' callback only when 'ReadDataStream' is set to 'true'.
+        /// This callback is called when a message is received from a connected client. 
+        /// The entire message payload is passed to your application in a byte array, along with the IP:port of the client.
+        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
         /// </summary>
-        public Func<string, byte[], Task> MessageReceived = null;
+        public Func<string, byte[], Task> MessageReceived
+        {
+            get
+            {
+                return _MessageReceived;
+            }
+            set
+            {
+                if (_StreamReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _MessageReceived = value;
+            }
+        }
 
         /// <summary>
-        /// Method to call when a message is received from a client.
-        /// The IP:port is passed to this method as a string, along with a long indicating the number of bytes to read from the stream.
+        /// Use the 'StreamReceived' callback only when 'ReadDataStream' is set to 'false'.
+        /// This callback is called when a message is received from a connected client.
+        /// The IP:port of the client is passed to your application, along with the number of bytes to read and the stream from which the data should be read.
+        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
         /// </summary>
-        public Func<string, long, Stream, Task> StreamReceived = null;
+        public Func<string, long, Stream, Task> StreamReceived
+        {
+            get
+            {
+                return _StreamReceived;
+            }
+            set
+            {
+                if (_MessageReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _StreamReceived = value;
+            }
+        }
 
         /// <summary>
         /// Enable acceptance of SSL certificates from clients that cannot be validated.
@@ -112,6 +133,9 @@ namespace WatsonTcp
         private CancellationTokenSource _TokenSource;
         private CancellationToken _Token;
 
+        private Func<string, byte[], Task> _MessageReceived = null;
+        private Func<string, long, Stream, Task> _StreamReceived = null;
+
         #endregion Private-Members
 
         #region Constructors-and-Factories
@@ -131,7 +155,7 @@ namespace WatsonTcp
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
 
             _Mode = Mode.Tcp;
-
+             
             if (String.IsNullOrEmpty(listenerIp))
             {
                 _ListenerIpAddress = IPAddress.Any;
@@ -172,7 +196,7 @@ namespace WatsonTcp
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
             if (String.IsNullOrEmpty(pfxCertFile)) throw new ArgumentNullException(nameof(pfxCertFile));
-
+             
             _Mode = Mode.Ssl;
 
             if (String.IsNullOrEmpty(listenerIp))
@@ -253,6 +277,11 @@ namespace WatsonTcp
         /// </summary>
         public void Start()
         {
+            if (_StreamReceived == null && _MessageReceived == null)
+            {
+                throw new InvalidOperationException("Either 'MessageReceived' or 'StreamReceived' must first be set.");
+            }
+
             if (_Mode == Mode.Tcp)
             {
                 Log("Watson TCP server starting on " + _ListenerIp + ":" + _ListenerPort);
@@ -274,6 +303,11 @@ namespace WatsonTcp
         /// </summary>
         public Task StartAsync()
         {
+            if (_StreamReceived == null && _MessageReceived == null)
+            {
+                throw new InvalidOperationException("Either 'MessageReceived' or 'StreamReceived' must first be set.");
+            }
+
             if (_Mode == Mode.Tcp)
             {
                 Log("Watson TCP server starting on " + _ListenerIp + ":" + _ListenerPort);
@@ -718,13 +752,17 @@ namespace WatsonTcp
                         msg = new WatsonMessage(client.NetworkStream, Debug); 
                     } 
                      
-                    if (ReadDataStream)
+                    if (_MessageReceived != null)
                     {
                         buildSuccess = await msg.Build();
                     }
-                    else
+                    else if (_StreamReceived != null)
                     {
                         buildSuccess = await msg.BuildStream();
+                    }
+                    else
+                    {
+                        break;
                     }
 
                     if (!buildSuccess)
@@ -805,22 +843,20 @@ namespace WatsonTcp
                         Log(header + " sent notification of removal");
                         break;
                     }
-
-                    if (ReadDataStream)
+                     
+                    if (_MessageReceived != null)
                     {
-                        if (MessageReceived != null)
-                        {
-                            // does not need to be awaited, because the stream has been fully read
-                            Task unawaited = Task.Run(() => MessageReceived(client.IpPort, msg.Data));
-                        }
+                        // does not need to be awaited, because the stream has been fully read
+                        Task unawaited = Task.Run(() => _MessageReceived(client.IpPort, msg.Data));
+                    }
+                    else if (_StreamReceived != null)
+                    {
+                        // must be awaited, the stream has not been fully read
+                        await _StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
                     }
                     else
                     {
-                        if (StreamReceived != null)
-                        {
-                            // must be awaited, the stream has not been fully read
-                            await StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
-                        }
+                        break;
                     }
                 }  
                 catch (Exception e)

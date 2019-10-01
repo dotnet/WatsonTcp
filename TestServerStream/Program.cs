@@ -42,8 +42,7 @@ namespace TestServerStream
 
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
-            server.StreamReceived = StreamReceived;
-            server.ReadDataStream = false;
+            server.StreamReceived = StreamReceived; 
             // server.Debug = true;
             server.Start();
 

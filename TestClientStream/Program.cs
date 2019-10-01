@@ -212,8 +212,7 @@ namespace TestClientStream
             client.AuthenticationSucceeded = AuthenticationSucceeded;
             client.ServerConnected = ServerConnected;
             client.ServerDisconnected = ServerDisconnected;
-            client.StreamReceived = StreamReceived;
-            client.ReadDataStream = false;
+            client.StreamReceived = StreamReceived; 
             // client.Debug = true;
             client.Start();
         }
