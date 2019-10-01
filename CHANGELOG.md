@@ -2,11 +2,15 @@
 
 ## Current Version
 
-v2.1.1
+v2.1.2
 
-- Automatically disconnect idle clients by setting ```WatsonTcpServer.IdleClientTimeoutSeconds``` to a positive integer
+- Client timeout now only reset upon receiving a message from a client, and no longer reset when sending a message to a client
 
 ## Previous Versions
+
+v2.1.1
+
+- Automatically disconnect idle clients by setting ```WatsonTcpServer.IdleClientTimeoutSeconds``` to a positive integer (excellent suggestion, @pha3z!)
 
 v2.1.0
 

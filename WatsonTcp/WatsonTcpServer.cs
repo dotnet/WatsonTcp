@@ -979,8 +979,7 @@ namespace WatsonTcp
 
                     client.SslStream.Flush();
                 }
-
-                UpdateClientLastSeen(client.IpPort);
+                 
                 return true;
             }
             catch (Exception e)
@@ -1073,8 +1072,7 @@ namespace WatsonTcp
 
                     await client.SslStream.FlushAsync();
                 }
-
-                UpdateClientLastSeen(client.IpPort);
+                 
                 return true;
             }
             catch (Exception e)
