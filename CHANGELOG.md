@@ -2,11 +2,16 @@
 
 ## Current Version
 
+v2.1.3
+
+- Fix for ClientMetadata dispose (too many extranneous Dispose calls)
+- TestThroughput project
+
+## Previous Versions
+
 v2.1.2
 
 - Client timeout now only reset upon receiving a message from a client, and no longer reset when sending a message to a client
-
-## Previous Versions
 
 v2.1.1
 

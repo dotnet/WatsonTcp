@@ -979,7 +979,7 @@ namespace WatsonTcp
 
                     client.SslStream.Flush();
                 }
-                 
+
                 return true;
             }
             catch (Exception e)
@@ -989,7 +989,10 @@ namespace WatsonTcp
             }
             finally
             {
-                client.WriteLock.Release();
+                if (client != null && client.WriteLock != null)
+                {
+                    client.WriteLock.Release();
+                }
             }
         }
 
