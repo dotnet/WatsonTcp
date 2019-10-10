@@ -282,10 +282,10 @@ namespace TestServerStream
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
-        private static async Task ClientDisconnected(string ipPort)
+        private static async Task ClientDisconnected(string ipPort, DisconnectReason reason)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
-            Console.WriteLine("Client disconnected: " + ipPort);
+            Console.WriteLine("Client disconnected: " + ipPort + ": " + reason.ToString());
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously

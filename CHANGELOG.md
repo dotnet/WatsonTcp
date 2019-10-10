@@ -2,12 +2,16 @@
 
 ## Current Version
 
+v2.1.4
+
+- Minor breaking change; ClientDisconnect now includes DisconnectReason to differentiate between normal, kicked, or timeout disconnections
+
+## Previous Versions
+
 v2.1.3
 
 - Fix for ClientMetadata dispose (too many extranneous Dispose calls)
 - TestThroughput project
-
-## Previous Versions
 
 v2.1.2
 

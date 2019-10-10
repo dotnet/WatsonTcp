@@ -76,9 +76,9 @@ namespace WatsonTcp
 
         /// <summary>
         /// Method to call when a client disconnects from the server.
-        /// The IP:port is passed to this method as a string.
+        /// The IP:port is passed to this method as a string, along with the reason for the client disconnection.
         /// </summary>
-        public Func<string, Task> ClientDisconnected = null;
+        public Func<string, DisconnectReason, Task> ClientDisconnected = null;
 
         /// <summary>
         /// Use the 'MessageReceived' callback only when 'ReadDataStream' is set to 'true'.
@@ -150,6 +150,8 @@ namespace WatsonTcp
         private ConcurrentDictionary<string, ClientMetadata> _Clients = new ConcurrentDictionary<string, ClientMetadata>();
         private ConcurrentDictionary<string, DateTime> _ClientsLastSeen = new ConcurrentDictionary<string, DateTime>();
         private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
+        private ConcurrentDictionary<string, DateTime> _ClientsKicked = new ConcurrentDictionary<string, DateTime>();
+        private ConcurrentDictionary<string, DateTime> _ClientsTimedout = new ConcurrentDictionary<string, DateTime>();
 
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
@@ -451,12 +453,24 @@ namespace WatsonTcp
             }
             else
             {
-                byte[] data = Encoding.UTF8.GetBytes("Removed from server");
+                byte[] data = null;
+
+                if (_ClientsTimedout.ContainsKey(ipPort))
+                {
+                    data = Encoding.UTF8.GetBytes("Removed from server due to timeout.");
+                }
+                else
+                {
+                    data = Encoding.UTF8.GetBytes("Removed from server.");
+                    _ClientsKicked.TryAdd(ipPort, DateTime.Now); 
+                }
+                 
                 WatsonMessage removeMsg = new WatsonMessage();
                 removeMsg.Status = MessageStatus.Removed;
                 removeMsg.Data = null;
                 removeMsg.ContentLength = 0;
                 MessageWrite(client, removeMsg, null); 
+
                 client.Dispose();
                 _Clients.TryRemove(ipPort, out ClientMetadata removed);
             }
@@ -887,15 +901,31 @@ namespace WatsonTcp
              
             Log(header + " data receiver terminated");
 
-            _Clients.TryRemove(client.IpPort, out ClientMetadata removedClient);
-            _ClientsLastSeen.TryRemove(client.IpPort, out DateTime ts);
-            _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime removedDt);
-                 
             if (ClientDisconnected != null)
             {
-                Task unawaited = Task.Run(() => ClientDisconnected(client.IpPort));
+                Task unawaited = null;
+                 
+                if (_ClientsKicked.ContainsKey(client.IpPort))
+                {
+                    unawaited = Task.Run(() => ClientDisconnected(client.IpPort, DisconnectReason.Kicked));
+                }
+                else if (_ClientsTimedout.ContainsKey(client.IpPort))
+                {
+                    unawaited = Task.Run(() => ClientDisconnected(client.IpPort, DisconnectReason.Timeout));
+                }
+                else
+                {
+                    unawaited = Task.Run(() => ClientDisconnected(client.IpPort, DisconnectReason.Normal));
+                }
             }
 
+            DateTime removedTs; 
+            _Clients.TryRemove(client.IpPort, out ClientMetadata removedClient);
+            _ClientsLastSeen.TryRemove(client.IpPort, out removedTs);
+            _ClientsKicked.TryRemove(client.IpPort, out removedTs);
+            _ClientsTimedout.TryRemove(client.IpPort, out removedTs); 
+            _UnauthenticatedClients.TryRemove(client.IpPort, out removedTs);
+                
             Log(header + " disposing"); 
             client.Dispose();  
         }
@@ -1108,8 +1138,9 @@ namespace WatsonTcp
             foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
             { 
                 if (curr.Value < idleTimestamp)
-                { 
-                    Log("Disconnecting client " + curr.Key + " due to idle");
+                {
+                    _ClientsTimedout.TryAdd(curr.Key, DateTime.Now);
+                    Log("Disconnecting client " + curr.Key + " due to idle timeout");
                     DisconnectClient(curr.Key);
                 }
             }  

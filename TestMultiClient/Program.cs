@@ -200,11 +200,11 @@ namespace TestMultiClient
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
-        private static async Task ServerClientDisconnected(string ipPort)
+        private static async Task ServerClientDisconnected(string ipPort, DisconnectReason reason)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             connectionCount--;
-            Console.WriteLine("[server] disconnection from " + ipPort + " (now " + connectionCount + ")");
+            Console.WriteLine("[server] disconnection from " + ipPort + " [now " + connectionCount + "]: " + reason.ToString());
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
