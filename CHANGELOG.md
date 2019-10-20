@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v2.1.5
+
+- Fix for larger message cases (thanks @mikkleini!)
+
+## Previous Versions
+
 v2.1.4
 
 - Minor breaking change; ClientDisconnect now includes DisconnectReason to differentiate between normal, kicked, or timeout disconnections
-
-## Previous Versions
 
 v2.1.3
 

@@ -615,41 +615,29 @@ namespace WatsonTcp.Message
             try
             {
                 if (count <= 0) return null;
-                int read = 0;
-                byte[] buffer = new byte[count];
-
-                // TODO Looks excessive because buffer is already full of zeroes. See here:
-                // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/default-values-table
-                InitByteArray(buffer);
-
+                int bytesRead = 0;
+                byte[] readBuffer = new byte[count];
+                 
                 if (DataStream != null)
-                {
-                    // Read as much as required even with multiple frames
-                    while (read < count)
+                { 
+                    while (bytesRead < count)
                     {
-                        int readNow = await DataStream.ReadAsync(buffer, read, buffer.Length - read);
-
-                        // Indirect, but quite reliable method of detecting connection problems
-                        if (readNow == 0)
-                        {
-                            throw new SocketException();
-                        }
-
-                        read += readNow;
+                        int read = await DataStream.ReadAsync(readBuffer, bytesRead, readBuffer.Length - bytesRead);
+                        if (read == 0) throw new SocketException();
+                        bytesRead += read;
                     }
                 }
                 else
                 {
                     throw new IOException("No suitable input stream found.");
                 }
-
-                // Don't spend CPU on stringification unless debugging is enabled
+                 
                 if (_Debug)
                 {
-                    logMessage = ByteArrayToHex(buffer);
+                    logMessage = ByteArrayToHex(readBuffer);
                 }
 
-                return buffer;
+                return readBuffer;
             }
             finally
             {

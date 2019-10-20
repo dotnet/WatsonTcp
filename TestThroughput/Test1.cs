@@ -89,12 +89,16 @@ namespace TestThroughput
             Console.WriteLine("");
         }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         private async Task Test1ServerMsgRcv(string ipPort, byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             _BytesReceived += data.Length;
         }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         private async Task Test1ClientMsgRcv(byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
 
         }

@@ -19,7 +19,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestClientStream", "TestCli
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestServerStream", "TestServerStream\TestServerStream.csproj", "{3D7E7B14-8DF6-47A2-B032-9AC52210F932}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestThroughput", "TestThroughput\TestThroughput.csproj", "{BBBB941F-21E5-4CA5-B7F0-D4CAA5A0EDA4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestThroughput", "TestThroughput\TestThroughput.csproj", "{BBBB941F-21E5-4CA5-B7F0-D4CAA5A0EDA4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestLargeMessages", "TestLargeMessages\TestLargeMessages.csproj", "{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,6 +65,10 @@ Global
 		{BBBB941F-21E5-4CA5-B7F0-D4CAA5A0EDA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BBBB941F-21E5-4CA5-B7F0-D4CAA5A0EDA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BBBB941F-21E5-4CA5-B7F0-D4CAA5A0EDA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
