@@ -101,8 +101,6 @@ namespace WatsonTcp.Message
         //                                123456789012345678901234567890
         private string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
 
-        private NetworkStream _NetworkStream;
-        private SslStream _SslStream;
         private int _ReadStreamBuffer = 65536;
         private byte[] _PresharedKey;
         private MessageStatus _Status;
@@ -186,7 +184,7 @@ namespace WatsonTcp.Message
             InitBitArray(HeaderFields);
             Status = MessageStatus.Normal;
 
-            _NetworkStream = stream;
+            DataStream = stream;
             _Debug = debug;
         }
 
@@ -204,7 +202,7 @@ namespace WatsonTcp.Message
             InitBitArray(HeaderFields);
             Status = MessageStatus.Normal;
 
-            _SslStream = stream;
+            DataStream = stream;
             _Debug = debug;
         }
 
@@ -263,7 +261,6 @@ namespace WatsonTcp.Message
                 }
 
                 ContentLength = payloadLength;
-                DataStream = null;
                 Data = await ReadFromNetwork(ContentLength, "Payload");
 
                 #endregion Process-Header-Fields
@@ -336,15 +333,6 @@ namespace WatsonTcp.Message
 
                 ContentLength = payloadLength;
                 Data = null;
-
-                if (_NetworkStream != null)
-                {
-                    DataStream = _NetworkStream;
-                }
-                else if (_SslStream != null)
-                {
-                    DataStream = _SslStream;
-                } 
 
                 #endregion Process-Header-Fields
 
@@ -629,44 +617,25 @@ namespace WatsonTcp.Message
                 if (count <= 0) return null;
                 int read = 0;
                 byte[] buffer = new byte[count];
-                byte[] ret = null;
 
+                // TODO Looks excessive because buffer is already full of zeroes. See here:
+                // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/default-values-table
                 InitByteArray(buffer);
 
-                if (_NetworkStream != null)
+                if (DataStream != null)
                 {
-                    while (true)
+                    // Read as much as required even with multiple frames
+                    while (read < count)
                     {
-                        read = await _NetworkStream.ReadAsync(buffer, 0, buffer.Length);
-                        if (read == count)
+                        int readNow = await DataStream.ReadAsync(buffer, read, buffer.Length - read);
+
+                        // Indirect, but quite reliable method of detecting connection problems
+                        if (readNow == 0)
                         {
-                            ret = new byte[read];
-                            Buffer.BlockCopy(buffer, 0, ret, 0, read);
-                            break;
+                            throw new SocketException();
                         }
 
-                        if (read == 0)
-                        {
-                            throw new SocketException();
-                        }
-                    }
-                }
-                else if (_SslStream != null)
-                {
-                    while (true)
-                    {
-                        read = await _SslStream.ReadAsync(buffer, 0, buffer.Length);
-                        if (read == count)
-                        {
-                            ret = new byte[read];
-                            Buffer.BlockCopy(buffer, 0, ret, 0, read);
-                            break;
-                        }
-                        
-                        if (read == 0)
-                        {
-                            throw new SocketException();
-                        }
+                        read += readNow;
                     }
                 }
                 else
@@ -674,10 +643,13 @@ namespace WatsonTcp.Message
                     throw new IOException("No suitable input stream found.");
                 }
 
-                if (ret != null && ret.Length > 0) logMessage = ByteArrayToHex(ret);
-                else logMessage = "(null)";
+                // Don't spend CPU on stringification unless debugging is enabled
+                if (_Debug)
+                {
+                    logMessage = ByteArrayToHex(buffer);
+                }
 
-                return ret;
+                return buffer;
             }
             finally
             {
