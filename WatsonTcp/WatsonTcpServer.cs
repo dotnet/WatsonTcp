@@ -427,16 +427,10 @@ namespace WatsonTcp
         /// <summary>
         /// List the IP:port of each connected client.
         /// </summary>
-        /// <returns>A string list containing each client IP:port.</returns>
-        public List<string> ListClients()
+        /// <returns>An enumerable string list containing each client IP:port.</returns>
+        public IEnumerable<string> ListClients()
         {
-            Dictionary<string, ClientMetadata> clients = _Clients.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-            List<string> ret = new List<string>();
-            foreach (KeyValuePair<string, ClientMetadata> curr in clients)
-            {
-                ret.Add(curr.Key);
-            }
-            return ret;
+            return _Clients.Keys.ToList();
         }
 
         /// <summary>

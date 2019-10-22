@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v2.1.6
+
+- ListClients now returns IEnumerable<string> (thanks @pha3z!)
+
+## Previous Versions
+
 v2.1.5
 
 - Fix for larger message cases (thanks @mikkleini!)
-
-## Previous Versions
 
 v2.1.4
 

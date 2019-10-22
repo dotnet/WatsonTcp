@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WatsonTcp;
@@ -85,7 +86,7 @@ namespace TestServerStream
                         break;
 
                     case "list":
-                        clients = server.ListClients();
+                        clients = server.ListClients().ToList();
                         if (clients != null && clients.Count > 0)
                         {
                             Console.WriteLine("Clients");

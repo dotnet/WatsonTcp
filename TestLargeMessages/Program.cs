@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -55,7 +56,8 @@ namespace TestLargeMessages
 
             Console.WriteLine("");
             Console.WriteLine("---");
-            string ipPort = server.ListClients()[0];
+
+            string ipPort = server.ListClients().ToList()[0];
             Console.WriteLine("Sending messages from server to client " + ipPort + "...");
 
             for (int i = 0; i < msgCount; i++)
