@@ -147,9 +147,9 @@ namespace WatsonTcp
 
         private X509Certificate2 _SslCertificate;
 
+        private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
         private ConcurrentDictionary<string, ClientMetadata> _Clients = new ConcurrentDictionary<string, ClientMetadata>();
         private ConcurrentDictionary<string, DateTime> _ClientsLastSeen = new ConcurrentDictionary<string, DateTime>();
-        private ConcurrentDictionary<string, DateTime> _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
         private ConcurrentDictionary<string, DateTime> _ClientsKicked = new ConcurrentDictionary<string, DateTime>();
         private ConcurrentDictionary<string, DateTime> _ClientsTimedout = new ConcurrentDictionary<string, DateTime>();
 
@@ -345,10 +345,24 @@ namespace WatsonTcp
         /// Send data to the specified client.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(string ipPort, string data)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (String.IsNullOrEmpty(data)) return Send(ipPort, new byte[0]);
+            else return Send(ipPort, Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
+        /// Send data to the specified client.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">Byte array containing data.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, byte[] data)
         {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
                 Log("*** Send unable to find client " + ipPort);
@@ -368,6 +382,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, long contentLength, Stream stream)
         {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
                 Log("*** Send unable to find client " + ipPort);
@@ -382,10 +397,24 @@ namespace WatsonTcp
         /// Send data to the specified client, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(string ipPort, string data)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (String.IsNullOrEmpty(data)) return await SendAsync(ipPort, new byte[0]);
+            else return await SendAsync(ipPort, Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
+        /// Send data to the specified client, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">Byte array containing data.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, byte[] data)
         {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
                 Log("*** SendAsync unable to find client " + ipPort);
@@ -405,6 +434,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, long contentLength, Stream stream)
         {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
                 Log("*** SendAsync unable to find client " + ipPort);
@@ -421,6 +451,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
         public bool IsClientConnected(string ipPort)
         {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             return (_Clients.TryGetValue(ipPort, out ClientMetadata client));
         }
 
@@ -439,8 +470,7 @@ namespace WatsonTcp
         /// <param name="ipPort">IP:port of the client.</param>
         public void DisconnectClient(string ipPort)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort)); 
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
                 Log("*** DisconnectClient unable to find client " + ipPort);
@@ -630,13 +660,7 @@ namespace WatsonTcp
         private void FinalizeConnection(ClientMetadata client)
         {
             #region Add-to-Client-List
-
-            ClientMetadata removed = null;
-            DateTime ts;
-
-            _Clients.TryRemove(client.IpPort, out removed);
-            _ClientsLastSeen.TryRemove(client.IpPort, out ts);
-
+             
             _Clients.TryAdd(client.IpPort, client);
             _ClientsLastSeen.TryAdd(client.IpPort, DateTime.Now);
              

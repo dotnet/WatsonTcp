@@ -584,6 +584,17 @@ namespace WatsonTcp
         /// <summary>
         /// Send data to the server.
         /// </summary>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(string data)
+        {
+            if (String.IsNullOrEmpty(data)) return Send(new byte[0]);
+            else return Send(Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
+        /// Send data to the server.
+        /// </summary>
         /// <param name="data">Byte array containing data.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(byte[] data)
@@ -603,7 +614,18 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Send data to the server asynchronously
+        /// Send data to the server asynchronously.
+        /// </summary>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(string data)
+        {
+            if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0]);
+            else return await SendAsync(Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
+        /// Send data to the server asynchronously.
         /// </summary>
         /// <param name="data">Byte array containing data.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>

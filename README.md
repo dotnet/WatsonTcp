@@ -9,9 +9,9 @@
 
 WatsonTcp is the fastest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, fast disconnect detection, and easy to understand callbacks.
 
-## New in v2.1.6
+## New in v2.1.7
 
-- ListClients now returns IEnumerable<string> (thanks @pha3z!)
+- Add support for Send(string) and SendAsync(string) 
 
 ## Test Applications
 

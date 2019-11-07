@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v2.1.7
+
+- Add support for Send(string) and SendAsync(string) 
+
+## Previous Versions
+
 v2.1.6
 
 - ListClients now returns IEnumerable<string> (thanks @pha3z!)
-
-## Previous Versions
 
 v2.1.5
 
