@@ -44,7 +44,7 @@ namespace TestServer
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
             server.MessageReceived = MessageReceived;
-            server.IdleClientTimeoutSeconds = 10;
+            // server.IdleClientTimeoutSeconds = 10;
             server.Debug = debug;
 
             // server.Start();
