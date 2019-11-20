@@ -115,9 +115,9 @@ static async Task ClientConnected(string ipPort)
     Console.WriteLine("Client connected: " + ipPort);
 }
 
-static async Task ClientDisconnected(string ipPort)
+static async Task ClientDisconnected(string ipPort, DisconnectReason reason)
 {
-    Console.WriteLine("Client disconnected: " + ipPort);
+    Console.WriteLine("Client disconnected: " + ipPort + ": " + reason.ToString());
 }
 
 static async Task MessageReceived(string ipPort, byte[] data)
