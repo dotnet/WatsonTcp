@@ -79,12 +79,12 @@ namespace WatsonTcp
         /// The IP:port is passed to this method as a string, along with the reason for the client disconnection.
         /// </summary>
         public Func<string, DisconnectReason, Task> ClientDisconnected = null;
-
+         
         /// <summary>
-        /// Use the 'MessageReceived' callback only when 'ReadDataStream' is set to 'true'.
-        /// This callback is called when a message is received from a connected client. 
-        /// The entire message payload is passed to your application in a byte array, along with the IP:port of the client.
-        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
+        /// Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'. 
+        /// If receiving messages with metadata, 'MessageReceivedWithMetadata' must be set and 'StreamReceivedWithMetadata' cannot be used.
+        /// This callback is called when a message is received from the server.
+        /// The IP:port of the client and entire message payload is passed to your application in a byte array.
         /// </summary>
         public Func<string, byte[], Task> MessageReceived
         {
@@ -95,15 +95,35 @@ namespace WatsonTcp
             set
             {
                 if (_StreamReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceived' when 'StreamReceivedWithMetadata' has been set.");
                 _MessageReceived = value;
             }
         }
 
         /// <summary>
-        /// Use the 'StreamReceived' callback only when 'ReadDataStream' is set to 'false'.
-        /// This callback is called when a message is received from a connected client.
-        /// The IP:port of the client is passed to your application, along with the number of bytes to read and the stream from which the data should be read.
-        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
+        /// Use of 'MessageReceivedWithMetadata' is exclusive and cannot be used with 'StreamReceivedWithMetadata'.
+        /// This callback is called when a message is received from the server with attached metadata.
+        /// The IP:port of the client, metadata dictionary, and the entire message payload is passed into the supplied byte array.
+        /// </summary>
+        public Func<string, Dictionary<object, object>, byte[], Task> MessageReceivedWithMetadata
+        {
+            get
+            {
+                return _MessageReceivedWithMetadata;
+            }
+            set
+            {
+                if (_StreamReceived != null) throw new InvalidOperationException("'MessageReceivedWithMetadata' cannot be used when 'StreamReceived' has been set.");
+                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceivedWithMetadata' when 'StreamReceivedWithMetadata' has been set.");
+                _MessageReceivedWithMetadata = value;
+            }
+        }
+
+        /// <summary>
+        /// Use of 'StreamReceived' is exclusive and cannot be used with 'StreamReceived'. 
+        /// If receiving messages with metadata, 'StreamReceivedWithMetadata' must be set and 'MessageReceivedWithMetadata' cannot be used.
+        /// This callback is called when a stream is received from the server.
+        /// The IP:port of the client, stream, and its length are passed to your application. 
         /// </summary>
         public Func<string, long, Stream, Task> StreamReceived
         {
@@ -114,7 +134,27 @@ namespace WatsonTcp
             set
             {
                 if (_MessageReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceived' when 'MessageReceivedWithMetadata' has been set.");
                 _StreamReceived = value;
+            }
+        }
+
+        /// <summary>
+        /// Use of 'StreamReceivedWithMetadata' is exclusive and cannot be used with 'MessageReceivedWithMetadata'.
+        /// This callback is called when a stream is received from the server with attached metadata.
+        /// The IP:port of the client, metadata dictionary, the stream, and its length are passed into your application.
+        /// </summary>
+        public Func<string, Dictionary<object, object>, long, Stream, Task> StreamReceivedWithMetadata
+        {
+            get
+            {
+                return _StreamReceivedWithMetadata;
+            }
+            set
+            {
+                if (_MessageReceived != null) throw new InvalidOperationException("'StreamReceivedWithMetadata' cannot be used when 'MessageReceived' has been set.");
+                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceivedWithMetadata' when 'MessageReceivedWithMetadata' has been set.");
+                _StreamReceivedWithMetadata = value;
             }
         }
 
@@ -157,7 +197,9 @@ namespace WatsonTcp
         private CancellationToken _Token;
 
         private Func<string, byte[], Task> _MessageReceived = null;
+        private Func<string, Dictionary<object, object>, byte[], Task> _MessageReceivedWithMetadata = null;
         private Func<string, long, Stream, Task> _StreamReceived = null;
+        private Func<string, Dictionary<object, object>, long, Stream, Task> _StreamReceivedWithMetadata = null;
 
         #endregion Private-Members
 
@@ -355,6 +397,20 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Send data and metadata to the specified client.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(string ipPort, Dictionary<object, object> metadata, string data)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (String.IsNullOrEmpty(data)) return Send(ipPort, new byte[0]);
+            else return Send(ipPort, metadata, Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
         /// Send data to the specified client.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
@@ -369,7 +425,27 @@ namespace WatsonTcp
                 return false;
             }
 
-            WatsonMessage msg = new WatsonMessage(data, Debug);
+            WatsonMessage msg = new WatsonMessage(null, data, Debug);
+            return MessageWrite(client, msg, data);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the specified client.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">Byte array containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(string ipPort, Dictionary<object, object> metadata, byte[] data)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Log("*** Send unable to find client " + ipPort);
+                return false;
+            }
+
+            WatsonMessage msg = new WatsonMessage(metadata, data, Debug);
             return MessageWrite(client, msg, data);
         }
 
@@ -389,7 +465,28 @@ namespace WatsonTcp
                 return false;
             }
 
-            WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
+            WatsonMessage msg = new WatsonMessage(null, contentLength, stream, Debug);
+            return MessageWrite(client, msg, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the specified client using a stream.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="contentLength">The number of bytes in the stream.</param>
+        /// <param name="stream">The stream containing the data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Log("*** Send unable to find client " + ipPort);
+                return false;
+            }
+
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, Debug);
             return MessageWrite(client, msg, contentLength, stream);
         }
 
@@ -407,6 +504,20 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Send data and metadata to the specified client, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, string data)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (String.IsNullOrEmpty(data)) return await SendAsync(ipPort, new byte[0]);
+            else return await SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
         /// Send data to the specified client, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
@@ -421,7 +532,27 @@ namespace WatsonTcp
                 return false;
             }
 
-            WatsonMessage msg = new WatsonMessage(data, Debug);
+            WatsonMessage msg = new WatsonMessage(null, data, Debug);
+            return await MessageWriteAsync(client, msg, data);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the specified client, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">Byte array containing data.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, byte[] data)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Log("*** SendAsync unable to find client " + ipPort);
+                return false;
+            }
+
+            WatsonMessage msg = new WatsonMessage(metadata, data, Debug);
             return await MessageWriteAsync(client, msg, data);
         }
 
@@ -441,7 +572,28 @@ namespace WatsonTcp
                 return false;
             }
 
-            WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
+            WatsonMessage msg = new WatsonMessage(null, contentLength, stream, Debug);
+            return await MessageWriteAsync(client, msg, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the specified client using a stream, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="contentLength">The number of bytes in the stream.</param>
+        /// <param name="stream">The stream containing the data.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Log("*** SendAsync unable to find client " + ipPort);
+                return false;
+            }
+
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, Debug);
             return await MessageWriteAsync(client, msg, contentLength, stream);
         }
 
@@ -839,7 +991,7 @@ namespace WatsonTcp
                                         Log(header + " accepted authentication");
                                         _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime dt);
                                         byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
-                                        WatsonMessage authMsg = new WatsonMessage(data, Debug);
+                                        WatsonMessage authMsg = new WatsonMessage(null, data, Debug);
                                         authMsg.Status = MessageStatus.AuthSuccess;
                                         MessageWrite(client, authMsg, null);
                                         continue;
@@ -848,7 +1000,7 @@ namespace WatsonTcp
                                     {
                                         Log(header + " declined authentication");
                                         byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
-                                        WatsonMessage authMsg = new WatsonMessage(data, Debug);
+                                        WatsonMessage authMsg = new WatsonMessage(null, data, Debug);
                                         authMsg.Status = MessageStatus.AuthFailure;
                                         MessageWrite(client, authMsg, null);
                                         continue;
@@ -858,7 +1010,7 @@ namespace WatsonTcp
                                 {
                                     Log(header + " no authentication material");
                                     byte[] data = Encoding.UTF8.GetBytes("No authentication material");
-                                    WatsonMessage authMsg = new WatsonMessage(data, Debug);
+                                    WatsonMessage authMsg = new WatsonMessage(null, data, Debug);
                                     authMsg.Status = MessageStatus.AuthFailure;
                                     MessageWrite(client, authMsg, null);
                                     continue;
@@ -869,7 +1021,7 @@ namespace WatsonTcp
                                 // decline the message
                                 Log(header + " no authentication material");
                                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
-                                WatsonMessage authMsg = new WatsonMessage(data, Debug);
+                                WatsonMessage authMsg = new WatsonMessage(null, data, Debug);
                                 authMsg.Status = MessageStatus.AuthRequired;
                                 MessageWrite(client, authMsg, null);
                                 continue;
@@ -888,20 +1040,40 @@ namespace WatsonTcp
                         Log(header + " sent notification of removal");
                         break;
                     }
-                     
-                    if (_MessageReceived != null)
+
+                    if (msg.Metadata.Count > 0)
                     {
-                        // does not need to be awaited, because the stream has been fully read
-                        Task unawaited = Task.Run(() => _MessageReceived(client.IpPort, msg.Data));
-                    }
-                    else if (_StreamReceived != null)
-                    {
-                        // must be awaited, the stream has not been fully read
-                        await _StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
+                        if (_MessageReceivedWithMetadata != null)
+                        {
+                            // does not need to be awaited, because the stream has been fully read
+                            Task unawaited = Task.Run(() => _MessageReceivedWithMetadata(client.IpPort, msg.Metadata, msg.Data));
+                        }
+                        else if (_StreamReceivedWithMetadata != null)
+                        {
+                            // must be awaited, the stream has not been fully read
+                            await _StreamReceivedWithMetadata(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
                     else
                     {
-                        break;
+                        if (_MessageReceived != null)
+                        {
+                            // does not need to be awaited, because the stream has been fully read
+                            Task unawaited = Task.Run(() => _MessageReceived(client.IpPort, msg.Data));
+                        }
+                        else if (_StreamReceived != null)
+                        {
+                            // must be awaited, the stream has not been fully read
+                            await _StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
 
                     UpdateClientLastSeen(client.IpPort);
@@ -991,8 +1163,16 @@ namespace WatsonTcp
             {
                 if (_Mode == Mode.Tcp)
                 {
+                    // write headers
                     client.NetworkStream.Write(headerBytes, 0, headerBytes.Length);
 
+                    // write metadata
+                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                    {
+                        client.NetworkStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                    }
+
+                    // write data
                     if (contentLength > 0)
                     {
                         while (bytesRemaining > 0)
@@ -1010,8 +1190,16 @@ namespace WatsonTcp
                 }
                 else if (_Mode == Mode.Ssl)
                 {
+                    // write headers
                     client.SslStream.Write(headerBytes, 0, headerBytes.Length);
 
+                    // write metadata
+                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                    {
+                        client.SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                    }
+
+                    // write data
                     if (contentLength > 0)
                     {
                         while (bytesRemaining > 0)
@@ -1087,8 +1275,16 @@ namespace WatsonTcp
             {
                 if (_Mode == Mode.Tcp)
                 {
+                    // write headers
                     await client.NetworkStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
+                    // write metadata
+                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                    {
+                        await client.NetworkStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                    }
+
+                    // write data
                     if (contentLength > 0)
                     {
                         while (bytesRemaining > 0)
@@ -1106,8 +1302,16 @@ namespace WatsonTcp
                 }
                 else if (_Mode == Mode.Ssl)
                 {
+                    // write headers
                     await client.SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
+                    // write metadata
+                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                    {
+                        await client.SslStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                    }
+
+                    // write data
                     if (contentLength > 0)
                     {
                         while (bytesRemaining > 0)

@@ -9,9 +9,12 @@
 
 WatsonTcp is the fastest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, fast disconnect detection, and easy to understand callbacks.
 
-## New in v2.1.7
-
-- Add support for Send(string) and SendAsync(string) 
+## New in v2.2.0
+ 
+- Add support for sending and receiving messages with metadata ```Dictionary<object, object>```
+- New callbacks for receiving messages with metadata: MessageReceivedWithMetadata and StreamReceivedWithMetadata  - 
+- New callbacks for sending messages with metadata (overloads on existing methods added)
+- Now dependent upon Newtonsoft.Json as metadata must be serialized; only serializable types are supported in metadata
 
 ## Test Applications
 
@@ -30,6 +33,12 @@ When sending messages, the ```Send``` and ```SendAsync``` methods have both byte
 It is important to note that when using ```StreamReceived```, the socket is blocked until you have fully read the stream and control has returned from your consuming application back to WatsonTcp.  That's required, because otherwise, WatsonTcp would begin reading at the wrong place in the stream.  With ```MessageReceived```, WatsonTcp will call your callback and begin reading immediately, since the entirety of the message data has already been read from the stream by WatsonTcp.
 
 Please see below for examples with byte arrays and with streams.
+
+## Sending and Receiving Metadata with Messages
+
+```Send``` and ```SendAsync``` methods include overloads that allow you to send metadata (in the form of ```Dictionary<object, object>```) in addition to message data (byte arrays or streams).  In order to receive these messages, you must implement either ```MessageReceivedWithMetadata``` (if using ```MessageReceived```) or ```StreamReceivedWithMetadata``` (if using ```StreamReceived```).  Metadata is serialized and deserialized using Newtonsoft.Json, therefore, only serializable types are supported in the keys/values of the metadata dictionary object you supply.
+
+Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.
 
 ## Running under Mono
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using WatsonTcp;
@@ -23,6 +24,9 @@ namespace TestClient
             InitializeClient();
 
             bool runForever = true;
+            Dictionary<object, object> metadata;
+            bool success;
+
             while (runForever)
             {
                 Console.Write("Command [? for help]: ");
@@ -36,18 +40,20 @@ namespace TestClient
                 {
                     case "?":
                         Console.WriteLine("Available commands:");
-                        Console.WriteLine("  ?          help (this menu)");
-                        Console.WriteLine("  q          quit");
-                        Console.WriteLine("  cls        clear screen");
-                        Console.WriteLine("  send       send message to server");
-                        Console.WriteLine("  sendasync  send message to server asynchronously");
-                        Console.WriteLine("  status     show if client connected");
-                        Console.WriteLine("  dispose    dispose of the connection");
-                        Console.WriteLine("  connect    connect to the server if not connected");
-                        Console.WriteLine("  reconnect  disconnect if connected, then reconnect");
-                        Console.WriteLine("  psk        set the preshared key");
-                        Console.WriteLine("  auth       authenticate using the preshared key");
-                        Console.WriteLine("  debug      enable/disable debug (currently " + client.Debug + ")");
+                        Console.WriteLine("  ?              help (this menu)");
+                        Console.WriteLine("  q              quit");
+                        Console.WriteLine("  cls            clear screen");
+                        Console.WriteLine("  send           send message to server");
+                        Console.WriteLine("  send md        send message with metadata to server");
+                        Console.WriteLine("  sendasync      send message to server asynchronously");
+                        Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
+                        Console.WriteLine("  status         show if client connected");
+                        Console.WriteLine("  dispose        dispose of the connection");
+                        Console.WriteLine("  connect        connect to the server if not connected");
+                        Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
+                        Console.WriteLine("  psk            set the preshared key");
+                        Console.WriteLine("  auth           authenticate using the preshared key");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + client.Debug + ")");
                         break;
 
                     case "q":
@@ -61,23 +67,33 @@ namespace TestClient
                     case "send":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput))
-                        {
-                            break;
-                        }
-
+                        if (String.IsNullOrEmpty(userInput)) break;
                         if (!client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
+                        break;
+
+                    case "send md":
+                        metadata = InputDictionary();
+                        Console.Write("Data: ");
+                        userInput = Console.ReadLine();
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        if (!client.Send(metadata, Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput))
-                        {
-                            break;
-                        }
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        success = client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
+                        if (!success) Console.WriteLine("Failed");
+                        break;
 
-                        if (!client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result) Console.WriteLine("Failed");
+                    case "sendasync md":
+                        metadata = InputDictionary();
+                        Console.Write("Data: ");
+                        userInput = Console.ReadLine();
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        success = client.SendAsync(metadata, Encoding.UTF8.GetBytes(userInput)).Result;
+                        if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "status":
@@ -186,7 +202,8 @@ namespace TestClient
             client.AuthenticationSucceeded = AuthenticationSucceeded;
             client.ServerConnected = ServerConnected;
             client.ServerDisconnected = ServerDisconnected;
-            client.MessageReceived = MessageReceived; 
+            client.MessageReceived = MessageReceived;
+            client.MessageReceivedWithMetadata = MessageReceivedWithMetadata;
             client.Debug = debug;
 
             // client.Start();
@@ -304,6 +321,24 @@ namespace TestClient
             }
         }
 
+        private static Dictionary<object, object> InputDictionary()
+        {
+            Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
+
+            Dictionary<object, object> ret = new Dictionary<object, object>();
+
+            while (true)
+            {
+                Console.Write("Key   : ");
+                string key = Console.ReadLine();
+                if (String.IsNullOrEmpty(key)) return ret;
+
+                Console.Write("Value : ");
+                string val = Console.ReadLine();
+                ret.Add(key, val);
+            }
+        }
+
         private static string AuthenticationRequested()
         {
             Console.WriteLine("");
@@ -339,7 +374,32 @@ namespace TestClient
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task MessageReceivedWithMetadata(Dictionary<object, object> metadata, byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        {
+            Console.WriteLine("Message with metadata received from server");
+            if (metadata != null && metadata.Count > 0)
+            {
+                Console.WriteLine("Metadata:");
+                foreach (KeyValuePair<object, object> curr in metadata)
+                {
+                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                }
+            }
 
+            string msg = "";
+            if (data != null && data.Length > 0)
+            {
+                msg = Encoding.UTF8.GetString(data);
+                Console.WriteLine("Data: " + msg);
+            }
+            else
+            {
+                Console.WriteLine("Data: [null]");
+            }
+        }
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         private static async Task ServerConnected()
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {

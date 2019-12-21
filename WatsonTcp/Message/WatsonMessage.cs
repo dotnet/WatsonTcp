@@ -51,7 +51,7 @@ namespace WatsonTcp.Message
         }
 
         /// <summary>
-        /// Status of the message.  HeaderFields[1], 4 bytes.
+        /// Status of the message.  HeaderFields[1], 4 bytes (Int32).
         /// </summary>
         internal MessageStatus Status
         {
@@ -65,6 +65,21 @@ namespace WatsonTcp.Message
                 HeaderFields[1] = true;
             }
         }
+
+        /// <summary>
+        /// Length of metadata attached to the message.  HeaderFields[2], 4 bytes (Int32).
+        /// </summary>
+        internal int MetadataLength = 0;
+
+        /// <summary>
+        /// Bytes associated with metadata.
+        /// </summary>
+        internal byte[] MetadataBytes = null;
+
+        /// <summary>
+        /// Metadata dictionary.
+        /// </summary>
+        internal Dictionary<object, object> Metadata = new Dictionary<object, object>();
 
         /// <summary>
         /// Message data.
@@ -124,21 +139,25 @@ namespace WatsonTcp.Message
         /// </summary>
         /// <param name="data">The data to send.</param>
         /// <param name="debug">Enable or disable debugging.</param>
-        internal WatsonMessage(byte[] data, bool debug)
+        internal WatsonMessage(Dictionary<object, object> metadata, byte[] data, bool debug)
         {
             if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
 
             HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-
-            Status = MessageStatus.Normal;
-
+            InitBitArray(HeaderFields); 
+            Status = MessageStatus.Normal; 
             ContentLength = data.Length;
             Data = new byte[data.Length];
             Buffer.BlockCopy(data, 0, Data, 0, data.Length);
-            DataStream = null;
-
+            DataStream = null; 
             _Debug = debug;
+
+            if (metadata != null && metadata.Count > 0)
+            {
+                Metadata = metadata;
+                MetadataBytes = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(Metadata, false));
+                MetadataLength = MetadataBytes.Length;
+            }
         }
 
         /// <summary>
@@ -147,7 +166,7 @@ namespace WatsonTcp.Message
         /// <param name="contentLength">The number of bytes included in the stream.</param>
         /// <param name="stream">The stream containing the data.</param>
         /// <param name="debug">Enable or disable debugging.</param>
-        internal WatsonMessage(long contentLength, Stream stream, bool debug)
+        internal WatsonMessage(Dictionary<object, object> metadata, long contentLength, Stream stream, bool debug)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (contentLength > 0)
@@ -159,15 +178,19 @@ namespace WatsonTcp.Message
             }
 
             HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-
-            Status = MessageStatus.Normal;
-
+            InitBitArray(HeaderFields); 
+            Status = MessageStatus.Normal; 
             ContentLength = contentLength;
             Data = null;
-            DataStream = stream;
-
+            DataStream = stream; 
             _Debug = debug;
+
+            if (metadata != null && metadata.Count > 0)
+            {
+                Metadata = metadata;
+                MetadataBytes = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(Metadata, false));
+                MetadataLength = MetadataBytes.Length;
+            }
         }
 
         /// <summary>
@@ -260,6 +283,13 @@ namespace WatsonTcp.Message
                     }
                 }
 
+                if (MetadataLength > 0)
+                {
+                    MetadataBytes = await ReadFromNetwork(MetadataLength, "MetadataBytes");
+                    // payloadLength -= MetadataLength;
+                    Metadata = SerializationHelper.DeserializeJson<Dictionary<object, object>>(Encoding.UTF8.GetString(MetadataBytes));
+                }
+
                 ContentLength = payloadLength;
                 Data = await ReadFromNetwork(ContentLength, "Payload");
 
@@ -331,6 +361,13 @@ namespace WatsonTcp.Message
                     }
                 }
 
+                if (MetadataLength > 0)
+                {
+                    MetadataBytes = await ReadFromNetwork(MetadataLength, "MetadataBytes");
+                    // payloadLength -= MetadataLength;
+                    Metadata = SerializationHelper.DeserializeJson<Dictionary<object, object>>(Encoding.UTF8.GetString(MetadataBytes));
+                }
+
                 ContentLength = payloadLength;
                 Data = null;
 
@@ -383,6 +420,11 @@ namespace WatsonTcp.Message
                         case 1: // status
                             Log("Status: " + Status.ToString() + " " + (int)Status);
                             ret = AppendBytes(ret, IntegerToBytes((int)Status));
+                            break;
+
+                        case 2: // metadata
+                            Log("Metadata: [present, " + MetadataLength + " bytes]");
+                            ret = AppendBytes(ret, IntegerToBytes(MetadataLength));
                             break;
 
                         default:
@@ -442,8 +484,14 @@ namespace WatsonTcp.Message
             HeaderFields = new BitArray(64);
             InitBitArray(HeaderFields);
 
+            // HeaderFields[0]: preshared key
             if (PresharedKey != null && PresharedKey.Length > 0) HeaderFields[0] = true;
+
+            // HeaderFields[1]: status
             HeaderFields[1] = true;  // messages will always have a status
+
+            // HeaderFields[2]: metadata
+            if (Metadata != null && Metadata.Count > 0) HeaderFields[2] = true;
         }
 
         private async Task<object> ReadField(FieldType fieldType, int maxLength, string name)
@@ -783,6 +831,10 @@ namespace WatsonTcp.Message
                     Log("Returning field Status");
                     return new MessageField(1, "Status", FieldType.Int32, 4);
 
+                case 2:
+                    Log("Returning field MetadataLength");
+                    return new MessageField(2, "MetadataLength", FieldType.Int32, 4);
+
                 default:
                     throw new KeyNotFoundException("Unable to retrieve field with bit number: " + bitNumber);
             }
@@ -803,6 +855,11 @@ namespace WatsonTcp.Message
                 case 1:
                     Status = (MessageStatus)((int)val);
                     Log("Status set: " + Status.ToString());
+                    return;
+
+                case 2:
+                    MetadataLength = (int)val;
+                    Log("MetadataLength set: " + MetadataLength);
                     return;
 
                 default:

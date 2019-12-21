@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Security;
@@ -57,10 +58,10 @@ namespace WatsonTcp
         public Func<Task> AuthenticationFailure = null;
 
         /// <summary>
-        /// Use the 'MessageReceived' callback only when 'ReadDataStream' is set to 'true'.
+        /// Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'. 
+        /// If receiving messages with metadata, 'MessageReceivedWithMetadata' must be set and 'StreamReceivedWithMetadata' cannot be used.
         /// This callback is called when a message is received from the server.
         /// The entire message payload is passed to your application in a byte array.
-        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
         /// </summary>
         public Func<byte[], Task> MessageReceived
         {
@@ -71,15 +72,35 @@ namespace WatsonTcp
             set
             {
                 if (_StreamReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceived' when 'StreamReceivedWithMetadata' has been set.");
                 _MessageReceived = value;
             }
         }
 
         /// <summary>
-        /// Use the 'StreamReceived' callback only when 'ReadDataStream' is set to 'false'.
-        /// This callback is called when a message is received from a connected client.
-        /// The number of bytes to read and the stream from which the data should be read are passed to your application.
-        /// You cannot set both 'MessageReceived' and 'StreamReceived' simultaneously.
+        /// Use of 'MessageReceivedWithMetadata' is exclusive and cannot be used with 'StreamReceivedWithMetadata'.
+        /// This callback is called when a message is received from the server with attached metadata.
+        /// The metadata is contained in the supplied Dictionary, and the entire message payload is passed into the supplied byte array.
+        /// </summary>
+        public Func<Dictionary<object, object>, byte[], Task> MessageReceivedWithMetadata
+        {
+            get
+            {
+                return _MessageReceivedWithMetadata;
+            }
+            set
+            {
+                if (_StreamReceived != null) throw new InvalidOperationException("'MessageReceivedWithMetadata' cannot be used when 'StreamReceived' has been set.");
+                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceivedWithMetadata' when 'StreamReceivedWithMetadata' has been set.");
+                _MessageReceivedWithMetadata = value;
+            }
+        }
+
+        /// <summary>
+        /// Use of 'StreamReceived' is exclusive and cannot be used with 'StreamReceived'. 
+        /// If receiving messages with metadata, 'StreamReceivedWithMetadata' must be set and 'MessageReceivedWithMetadata' cannot be used.
+        /// This callback is called when a stream is received from the server.
+        /// The stream and its length are passed to your application. 
         /// </summary>
         public Func<long, Stream, Task> StreamReceived
         {
@@ -90,7 +111,27 @@ namespace WatsonTcp
             set
             {
                 if (_MessageReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceived' when 'MessageReceivedWithMetadata' has been set.");
                 _StreamReceived = value;
+            }
+        }
+
+        /// <summary>
+        /// Use of 'StreamReceivedWithMetadata' is exclusive and cannot be used with 'MessageReceivedWithMetadata'.
+        /// This callback is called when a stream is received from the server with attached metadata.
+        /// The metadata is contained in the supplied Dictionary, and the stream and its length are passed into your application.
+        /// </summary>
+        public Func<Dictionary<object, object>, long, Stream, Task> StreamReceivedWithMetadata
+        {
+            get
+            {
+                return _StreamReceivedWithMetadata;
+            }
+            set
+            {
+                if (_MessageReceived != null) throw new InvalidOperationException("'StreamReceivedWithMetadata' cannot be used when 'MessageReceived' has been set.");
+                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceivedWithMetadata' when 'MessageReceivedWithMetadata' has been set.");
+                _StreamReceivedWithMetadata = value;
             }
         }
 
@@ -177,7 +218,9 @@ namespace WatsonTcp
         private CancellationToken _Token;
 
         private Func<byte[], Task> _MessageReceived = null;
+        private Func<Dictionary<object, object>, byte[], Task> _MessageReceivedWithMetadata = null;
         private Func<long, Stream, Task> _StreamReceived = null;
+        private Func<Dictionary<object, object>, long, Stream, Task> _StreamReceivedWithMetadata = null;
 
         #endregion Private-Members
 
@@ -589,7 +632,19 @@ namespace WatsonTcp
         public bool Send(string data)
         {
             if (String.IsNullOrEmpty(data)) return Send(new byte[0]);
-            else return Send(Encoding.UTF8.GetBytes(data));
+            else return MessageWrite(null, Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
+        /// Send data and metadata to the server.
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(Dictionary<object, object> metadata, string data)
+        {
+            if (String.IsNullOrEmpty(data)) return Send(new byte[0]);
+            else return MessageWrite(metadata, Encoding.UTF8.GetBytes(data));
         }
 
         /// <summary>
@@ -599,7 +654,18 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(byte[] data)
         {
-            return MessageWrite(data);
+            return MessageWrite(null, data);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the server.
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">Byte array containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(Dictionary<object, object> metadata, byte[] data)
+        {
+            return MessageWrite(metadata, data);
         }
 
         /// <summary>
@@ -610,7 +676,19 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(long contentLength, Stream stream)
         {
-            return MessageWrite(contentLength, stream);
+            return MessageWrite(null, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the server using a stream.
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="contentLength">The number of bytes in the stream.</param>
+        /// <param name="stream">The stream containing the data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(Dictionary<object, object> metadata, long contentLength, Stream stream)
+        {
+            return MessageWrite(metadata, contentLength, stream);
         }
 
         /// <summary>
@@ -621,7 +699,19 @@ namespace WatsonTcp
         public async Task<bool> SendAsync(string data)
         {
             if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0]);
-            else return await SendAsync(Encoding.UTF8.GetBytes(data));
+            else return await MessageWriteAsync(null, Encoding.UTF8.GetBytes(data));
+        }
+
+        /// <summary>
+        /// Send data and metadata to the server asynchronously.
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">String containing data.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(Dictionary<object, object> metadata, string data)
+        {
+            if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0]);
+            else return await MessageWriteAsync(metadata, Encoding.UTF8.GetBytes(data));
         }
 
         /// <summary>
@@ -631,7 +721,18 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(byte[] data)
         {
-            return await MessageWriteAsync(data);
+            return await MessageWriteAsync(null, data);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the server asynchronously.
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="data">Byte array containing data.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(Dictionary<object, object> metadata, byte[] data)
+        {
+            return await MessageWriteAsync(metadata, data);
         }
 
         /// <summary>
@@ -642,13 +743,25 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(long contentLength, Stream stream)
         {
-            return await MessageWriteAsync(contentLength, stream);
+            return await MessageWriteAsync(null, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send data and metadata to the server from a stream asynchronously.
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="contentLength">The number of bytes to send.</param>
+        /// <param name="stream">The stream containing the data.</param>
+        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(Dictionary<object, object> metadata, long contentLength, Stream stream)
+        {
+            return await MessageWriteAsync(metadata, contentLength, stream);
         }
 
         #endregion Public-Methods
 
         #region Private-Methods
-         
+
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
@@ -755,20 +868,40 @@ namespace WatsonTcp
                         }
                         continue;
                     }
-                     
-                    if (_MessageReceived != null)
+
+                    if (msg.Metadata.Count > 0)
                     {
-                        // does not need to be awaited, because the stream has been fully read
-                        Task unawaited = Task.Run(() => _MessageReceived(msg.Data));
-                    }
-                    else if (_StreamReceived != null)
-                    {
-                        // must be awaited, because the content has not yet been fully read
-                        await _StreamReceived(msg.ContentLength, msg.DataStream);
+                        if (_MessageReceivedWithMetadata != null)
+                        {
+                            // does not need to be awaited, because the stream has been fully read
+                            Task unawaited = Task.Run(() => _MessageReceivedWithMetadata(msg.Metadata, msg.Data));
+                        }
+                        else if (_StreamReceivedWithMetadata != null)
+                        {
+                            // must be awaited, because the content has not yet been fully read
+                            await _StreamReceivedWithMetadata(msg.Metadata, msg.ContentLength, msg.DataStream);
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
                     else
                     {
-                        break;
+                        if (_MessageReceived != null)
+                        {
+                            // does not need to be awaited, because the stream has been fully read
+                            Task unawaited = Task.Run(() => _MessageReceived(msg.Data));
+                        }
+                        else if (_StreamReceived != null)
+                        {
+                            // must be awaited, because the content has not yet been fully read
+                            await _StreamReceived(msg.ContentLength, msg.DataStream);
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
                 } 
                 catch (Exception e)
@@ -792,7 +925,7 @@ namespace WatsonTcp
             Dispose();
         }
 
-        private bool MessageWrite(byte[] data)
+        private bool MessageWrite(Dictionary<object, object> metadata, byte[] data)
         {
             long dataLen = 0;
             MemoryStream ms = new MemoryStream();
@@ -807,10 +940,10 @@ namespace WatsonTcp
                 ms = new MemoryStream(new byte[0]);
             }
 
-            return MessageWrite(dataLen, ms);
+            return MessageWrite(metadata, dataLen, ms);
         }
 
-        private bool MessageWrite(long contentLength, Stream stream)
+        private bool MessageWrite(Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater bytes.");
             if (contentLength > 0)
@@ -832,7 +965,7 @@ namespace WatsonTcp
                     return false;
                 }
 
-                WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
+                WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, Debug);
                 byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
                 int bytesRead = 0;
@@ -845,8 +978,16 @@ namespace WatsonTcp
                 {
                     if (_Mode == Mode.Tcp)
                     {
+                        // write headers
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
 
+                        // write metadata
+                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                        {
+                            _TcpStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                        }
+
+                        // write data
                         if (contentLength > 0)
                         {
                             while (bytesRemaining > 0)
@@ -864,8 +1005,16 @@ namespace WatsonTcp
                     }
                     else if (_Mode == Mode.Ssl)
                     {
+                        // write headers
                         _SslStream.Write(headerBytes, 0, headerBytes.Length);
 
+                        // write metadata
+                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                        {
+                            _SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                        }
+
+                        // write data
                         if (contentLength > 0)
                         {
                             while (bytesRemaining > 0)
@@ -933,14 +1082,40 @@ namespace WatsonTcp
                 {
                     if (_Mode == Mode.Tcp)
                     {
+                        // write headers
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-                        if (msg.Data != null && msg.Data.Length > 0) _TcpStream.Write(msg.Data, 0, msg.Data.Length);
+
+                        // write metadata
+                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                        {
+                            _TcpStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                        }
+
+                        // write data
+                        if (msg.Data != null && msg.Data.Length > 0)
+                        {
+                            _TcpStream.Write(msg.Data, 0, msg.Data.Length);
+                        }
+
                         _TcpStream.Flush();
                     }
                     else if (_Mode == Mode.Ssl)
                     {
+                        // write headers
                         _SslStream.Write(headerBytes, 0, headerBytes.Length);
-                        if (msg.Data != null && msg.Data.Length > 0) _SslStream.Write(msg.Data, 0, msg.Data.Length);
+
+                        // write metadata
+                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                        {
+                            _SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                        }
+
+                        // write data
+                        if (msg.Data != null && msg.Data.Length > 0)
+                        {
+                            _SslStream.Write(msg.Data, 0, msg.Data.Length);
+                        }
+
                         _SslStream.Flush();
                     }
                 }
@@ -972,7 +1147,7 @@ namespace WatsonTcp
             }
         }
 
-        private async Task<bool> MessageWriteAsync(byte[] data)
+        private async Task<bool> MessageWriteAsync(Dictionary<object, object> metadata, byte[] data)
         {
             long dataLen = 0;
             MemoryStream ms = new MemoryStream();
@@ -987,10 +1162,10 @@ namespace WatsonTcp
                 ms = new MemoryStream(new byte[0]);
             }
 
-            return await MessageWriteAsync(dataLen, ms);
+            return await MessageWriteAsync(metadata, dataLen, ms);
         }
 
-        private async Task<bool> MessageWriteAsync(long contentLength, Stream stream)
+        private async Task<bool> MessageWriteAsync(Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
             if (!Connected) return false;
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater bytes.");
@@ -1012,7 +1187,7 @@ namespace WatsonTcp
                     return false;
                 }
 
-                WatsonMessage msg = new WatsonMessage(contentLength, stream, Debug);
+                WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, Debug);
                 byte[] headerBytes = msg.ToHeaderBytes(contentLength);
 
                 int bytesRead = 0;
@@ -1025,8 +1200,16 @@ namespace WatsonTcp
                 {
                     if (_Mode == Mode.Tcp)
                     {
+                        // write headers
                         await _TcpStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
+                        // write metadata
+                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                        {
+                            await _TcpStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                        }
+
+                        // write data
                         if (contentLength > 0)
                         {
                             while (bytesRemaining > 0)
@@ -1044,8 +1227,16 @@ namespace WatsonTcp
                     }
                     else if (_Mode == Mode.Ssl)
                     {
+                        // write headers
                         await _SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
 
+                        // write metadata
+                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
+                        {
+                            await _SslStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
+                        }
+
+                        // write data
                         if (contentLength > 0)
                         {
                             while (bytesRemaining > 0)

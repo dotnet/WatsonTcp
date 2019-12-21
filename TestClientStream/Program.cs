@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,13 +28,15 @@ namespace TestClientStream
             InitializeClient();
 
             bool runForever = true;
+            Dictionary<object, object> metadata;
+            bool success;
+
             while (runForever)
             {
                 Console.Write("Command [? for help]: ");
                 string userInput = Console.ReadLine();
                 byte[] data = null;
-                MemoryStream ms = null;
-                bool success = false;
+                MemoryStream ms = null; 
 
                 if (String.IsNullOrEmpty(userInput))
                 {
@@ -44,18 +47,20 @@ namespace TestClientStream
                 {
                     case "?":
                         Console.WriteLine("Available commands:");
-                        Console.WriteLine("  ?          help (this menu)");
-                        Console.WriteLine("  q          quit");
-                        Console.WriteLine("  cls        clear screen");
-                        Console.WriteLine("  send       send message to server");
-                        Console.WriteLine("  sendasync  send message to server asynchronously");
-                        Console.WriteLine("  status     show if client connected");
-                        Console.WriteLine("  dispose    dispose of the connection");
-                        Console.WriteLine("  connect    connect to the server if not connected");
-                        Console.WriteLine("  reconnect  disconnect if connected, then reconnect");
-                        Console.WriteLine("  psk        set the preshared key");
-                        Console.WriteLine("  auth       authenticate using the preshared key");
-                        Console.WriteLine("  debug      enable/disable debug (currently " + client.Debug + ")");
+                        Console.WriteLine("  ?              help (this menu)");
+                        Console.WriteLine("  q              quit");
+                        Console.WriteLine("  cls            clear screen");
+                        Console.WriteLine("  send           send message to server");
+                        Console.WriteLine("  send md        send message with metadata to server");
+                        Console.WriteLine("  sendasync      send message to server asynchronously");
+                        Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
+                        Console.WriteLine("  status         show if client connected");
+                        Console.WriteLine("  dispose        dispose of the connection");
+                        Console.WriteLine("  connect        connect to the server if not connected");
+                        Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
+                        Console.WriteLine("  psk            set the preshared key");
+                        Console.WriteLine("  auth           authenticate using the preshared key");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + client.Debug + ")");
                         break;
 
                     case "q":
@@ -76,6 +81,17 @@ namespace TestClientStream
                         Console.WriteLine(success);
                         break;
 
+                    case "send md":
+                        metadata = InputDictionary();
+                        Console.Write("Data: ");
+                        userInput = Console.ReadLine();
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        data = Encoding.UTF8.GetBytes(userInput);
+                        ms = new MemoryStream(data);
+                        success = client.Send(metadata, data.Length, ms);
+                        Console.WriteLine(success);
+                        break;
+
                     case "sendasync":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
@@ -83,6 +99,17 @@ namespace TestClientStream
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
                         success = client.SendAsync(data.Length, ms).Result;
+                        Console.WriteLine(success);
+                        break;
+
+                    case "sendasync md":
+                        metadata = InputDictionary();
+                        Console.Write("Data: ");
+                        userInput = Console.ReadLine();
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        data = Encoding.UTF8.GetBytes(userInput);
+                        ms = new MemoryStream(data);
+                        success = client.SendAsync(metadata, data.Length, ms).Result;
                         Console.WriteLine(success);
                         break;
 
@@ -145,50 +172,6 @@ namespace TestClientStream
             }
         }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task StreamReceived(long contentLength, Stream stream)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        {
-            try
-            {
-                Console.Write("Stream from server [" + contentLength + " bytes]: ");
-
-                int bytesRead = 0;
-                int bufferSize = 65536;
-                byte[] buffer = new byte[bufferSize];
-                long bytesRemaining = contentLength;
-
-                if (stream != null && stream.CanRead)
-                {
-                    while (bytesRemaining > 0)
-                    {
-                        bytesRead = stream.Read(buffer, 0, buffer.Length);
-                        Console.WriteLine("Read " + bytesRead);
-
-                        if (bytesRead > 0)
-                        {
-                            byte[] consoleBuffer = new byte[bytesRead];
-                            Buffer.BlockCopy(buffer, 0, consoleBuffer, 0, bytesRead);
-                            Console.Write(Encoding.UTF8.GetString(consoleBuffer));
-                        }
-
-                        bytesRemaining -= bytesRead;
-                    }
-
-                    Console.WriteLine("");
-                }
-                else
-                {
-                    Console.WriteLine("[null]");
-                }
-            }
-            catch (Exception e)
-            {
-                LogException("StreamReceived", e);
-            }
-        }
-
         private static void InitializeClient()
         {
             if (!useSsl)
@@ -212,7 +195,8 @@ namespace TestClientStream
             client.AuthenticationSucceeded = AuthenticationSucceeded;
             client.ServerConnected = ServerConnected;
             client.ServerDisconnected = ServerDisconnected;
-            client.StreamReceived = StreamReceived; 
+            client.StreamReceived = StreamReceived;
+            client.StreamReceivedWithMetadata = StreamReceivedWithMetadata;
             // client.Debug = true;
             client.Start();
         }
@@ -328,6 +312,24 @@ namespace TestClientStream
             }
         }
 
+        private static Dictionary<object, object> InputDictionary()
+        {
+            Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
+
+            Dictionary<object, object> ret = new Dictionary<object, object>();
+
+            while (true)
+            {
+                Console.Write("Key   : ");
+                string key = Console.ReadLine();
+                if (String.IsNullOrEmpty(key)) return ret;
+
+                Console.Write("Value : ");
+                string val = Console.ReadLine();
+                ret.Add(key, val);
+            }
+        }
+
         private static void LogException(string method, Exception e)
         {
             Console.WriteLine("");
@@ -340,6 +342,102 @@ namespace TestClientStream
             Console.WriteLine("   Source        : " + e.Source);
             Console.WriteLine("   StackTrace    : " + e.StackTrace);
             Console.WriteLine("");
+        }
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously 
+        private static async Task StreamReceived(long contentLength, Stream stream)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        {
+            try
+            {
+                Console.Write("Stream from server [" + contentLength + " bytes]: ");
+
+                int bytesRead = 0;
+                int bufferSize = 65536;
+                byte[] buffer = new byte[bufferSize];
+                long bytesRemaining = contentLength;
+
+                if (stream != null && stream.CanRead)
+                {
+                    while (bytesRemaining > 0)
+                    {
+                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        Console.WriteLine("Read " + bytesRead);
+
+                        if (bytesRead > 0)
+                        {
+                            byte[] consoleBuffer = new byte[bytesRead];
+                            Buffer.BlockCopy(buffer, 0, consoleBuffer, 0, bytesRead);
+                            Console.Write(Encoding.UTF8.GetString(consoleBuffer));
+                        }
+
+                        bytesRemaining -= bytesRead;
+                    }
+
+                    Console.WriteLine("");
+                }
+                else
+                {
+                    Console.WriteLine("[null]");
+                }
+            }
+            catch (Exception e)
+            {
+                LogException("StreamReceived", e);
+            }
+        }
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously 
+        private static async Task StreamReceivedWithMetadata(Dictionary<object, object> metadata, long contentLength, Stream stream)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        {
+            Console.WriteLine("Message with metadata received from server");
+            if (metadata != null && metadata.Count > 0)
+            {
+                Console.WriteLine("Metadata:");
+                foreach (KeyValuePair<object, object> curr in metadata)
+                {
+                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                }
+            }
+
+            try
+            {
+                Console.Write("Stream from server [" + contentLength + " bytes]: ");
+
+                int bytesRead = 0;
+                int bufferSize = 65536;
+                byte[] buffer = new byte[bufferSize];
+                long bytesRemaining = contentLength;
+
+                if (stream != null && stream.CanRead)
+                {
+                    while (bytesRemaining > 0)
+                    {
+                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        Console.WriteLine("Read " + bytesRead);
+
+                        if (bytesRead > 0)
+                        {
+                            byte[] consoleBuffer = new byte[bytesRead];
+                            Buffer.BlockCopy(buffer, 0, consoleBuffer, 0, bytesRead);
+                            Console.Write(Encoding.UTF8.GetString(consoleBuffer));
+                        }
+
+                        bytesRemaining -= bytesRead;
+                    }
+
+                    Console.WriteLine("");
+                }
+                else
+                {
+                    Console.WriteLine("[null]");
+                }
+            }
+            catch (Exception e)
+            {
+                LogException("StreamReceived", e);
+            }
         }
 
         private static string AuthenticationRequested()

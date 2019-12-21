@@ -44,6 +44,7 @@ namespace TestServer
             server.ClientConnected = ClientConnected;
             server.ClientDisconnected = ClientDisconnected;
             server.MessageReceived = MessageReceived;
+            server.MessageReceivedWithMetadata = MessageReceivedWithMetadata;
             // server.IdleClientTimeoutSeconds = 10;
             server.Debug = debug;
 
@@ -58,6 +59,7 @@ namespace TestServer
 
                 List<string> clients;
                 string ipPort;
+                Dictionary<object, object> metadata;
                 bool success = false;
 
                 if (String.IsNullOrEmpty(userInput)) continue;
@@ -66,16 +68,18 @@ namespace TestServer
                 {
                     case "?":
                         Console.WriteLine("Available commands:");
-                        Console.WriteLine("  ?          help (this menu)");
-                        Console.WriteLine("  q          quit");
-                        Console.WriteLine("  cls        clear screen");
-                        Console.WriteLine("  list       list clients");
-                        Console.WriteLine("  dispose    dispose of the connection");
-                        Console.WriteLine("  send       send message to client");
-                        Console.WriteLine("  sendasync  send message to a client asynchronously");
-                        Console.WriteLine("  remove     disconnect client");
-                        Console.WriteLine("  psk        set preshared key");
-                        Console.WriteLine("  debug      enable/disable debug (currently " + server.Debug + ")");
+                        Console.WriteLine("  ?              help (this menu)");
+                        Console.WriteLine("  q              quit");
+                        Console.WriteLine("  cls            clear screen");
+                        Console.WriteLine("  list           list clients");
+                        Console.WriteLine("  dispose        dispose of the connection");
+                        Console.WriteLine("  send           send message to client");
+                        Console.WriteLine("  send md        send message with metadata to client");
+                        Console.WriteLine("  sendasync      send message to a client asynchronously");
+                        Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
+                        Console.WriteLine("  remove         disconnect client");
+                        Console.WriteLine("  psk            set preshared key");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + server.Debug + ")");
                         break;
 
                     case "q":
@@ -117,6 +121,18 @@ namespace TestServer
                         Console.WriteLine(success);
                         break;
 
+                    case "send md":
+                        Console.Write("IP:Port: ");
+                        ipPort = Console.ReadLine();
+                        if (String.IsNullOrEmpty(ipPort)) break;
+                        metadata = InputDictionary();
+                        Console.Write("Data: ");
+                        userInput = Console.ReadLine();
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        success = server.Send(ipPort, metadata, Encoding.UTF8.GetBytes(userInput));
+                        Console.WriteLine(success);
+                        break;
+
                     case "sendasync":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();
@@ -125,6 +141,18 @@ namespace TestServer
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
                         success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput)).Result;
+                        Console.WriteLine(success);
+                        break;
+
+                    case "sendasync md":
+                        Console.Write("IP:Port: ");
+                        ipPort = Console.ReadLine();
+                        if (String.IsNullOrEmpty(ipPort)) break;
+                        metadata = InputDictionary();
+                        Console.Write("Data: ");
+                        userInput = Console.ReadLine();
+                        if (String.IsNullOrEmpty(userInput)) break;
+                        success = server.SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(userInput)).Result;
                         Console.WriteLine(success);
                         break;
 
@@ -260,6 +288,24 @@ namespace TestServer
             }
         }
 
+        private static Dictionary<object, object> InputDictionary()
+        {
+            Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
+
+            Dictionary<object, object> ret = new Dictionary<object, object>();
+
+            while (true)
+            {
+                Console.Write("Key   : ");
+                string key = Console.ReadLine();
+                if (String.IsNullOrEmpty(key)) return ret;
+
+                Console.Write("Value : ");
+                string val = Console.ReadLine();
+                ret.Add(key, val);
+            }
+        }
+
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
         private static async Task ClientConnected(string ipPort)
@@ -288,6 +334,32 @@ namespace TestServer
             }
 
             Console.WriteLine("Message received from " + ipPort + ": " + msg);
+        }
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task MessageReceivedWithMetadata(string ipPort, Dictionary<object, object> metadata, byte[] data)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        {
+            Console.WriteLine("Message with metadata received from " + ipPort);
+            if (metadata != null && metadata.Count > 0)
+            {
+                Console.WriteLine("Metadata:");
+                foreach (KeyValuePair<object, object> curr in metadata)
+                {
+                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                }
+            }
+
+            string msg = "";
+            if (data != null && data.Length > 0)
+            {
+                msg = Encoding.UTF8.GetString(data);
+                Console.WriteLine("Data: " + msg);
+            }
+            else
+            {
+                Console.WriteLine("Data: [null]");
+            }
         }
     }
 }
