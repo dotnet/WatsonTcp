@@ -155,12 +155,8 @@ namespace TestClient
             serverIp = InputString("Server IP:", "127.0.0.1", false);
             serverPort = InputInteger("Server port:", 9000, true, false);
             useSsl = InputBoolean("Use SSL:", false);
-
-            if (!useSsl)
-            {
-                client = new WatsonTcpClient(serverIp, serverPort);
-            }
-            else
+             
+            if (useSsl)
             {
                 bool supplyCert = InputBoolean("Supply SSL certificate:", false);
 
@@ -171,14 +167,9 @@ namespace TestClient
                 }
 
                 acceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
-                mutualAuthentication = InputBoolean("Mutually authenticate:", false);
-
-                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
-                client.AcceptInvalidCertificates = acceptInvalidCerts;
-                client.MutuallyAuthenticate = mutualAuthentication;
+                mutualAuthentication = InputBoolean("Mutually authenticate:", false); 
             }
 
-            client.Debug = debug;
             ConnectClient();
         }
 
@@ -205,7 +196,7 @@ namespace TestClient
             client.MessageReceived = MessageReceived;
             client.MessageReceivedWithMetadata = MessageReceivedWithMetadata;
             client.Debug = debug;
-
+            client.Logger = Logger;
             // client.Start();
             Task startClient = client.StartAsync();
         }
@@ -412,6 +403,11 @@ namespace TestClient
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Server disconnected");
+        }
+
+        private static void Logger(string msg)
+        {
+            Console.WriteLine(msg);
         }
     }
 }

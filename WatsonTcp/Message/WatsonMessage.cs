@@ -137,6 +137,7 @@ namespace WatsonTcp.Message
         /// <summary>
         /// Construct a new message to send.
         /// </summary>
+        /// <param name="metadata">Metadata to attach to the message.</param>
         /// <param name="data">The data to send.</param>
         /// <param name="debug">Enable or disable debugging.</param>
         internal WatsonMessage(Dictionary<object, object> metadata, byte[] data, bool debug)
@@ -163,6 +164,7 @@ namespace WatsonTcp.Message
         /// <summary>
         /// Construct a new message to send.
         /// </summary>
+        /// <param name="metadata">Metadata to attach to the message.</param>
         /// <param name="contentLength">The number of bytes included in the stream.</param>
         /// <param name="stream">The stream containing the data.</param>
         /// <param name="debug">Enable or disable debugging.</param>

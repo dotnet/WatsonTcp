@@ -2,14 +2,18 @@
 
 ## Current Version
 
+v2.2.1
+
+- Added Logger method to both WatsonTcpServer and WatsonTcpClient (thanks @crushedice)
+
+## Previous Versions
+
 v2.2.0
 
 - Add support for sending and receiving messages with metadata ```Dictionary<object, object>```
 - New callbacks for receiving messages with metadata: MessageReceivedWithMetadata and StreamReceivedWithMetadata  - 
 - New callbacks for sending messages with metadata (overloads on existing methods added)
 - Now dependent upon Newtonsoft.Json as metadata must be serialized; only serializable types are supported in metadata
-
-## Previous Versions
 
 v2.1.7
 

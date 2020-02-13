@@ -46,6 +46,7 @@ namespace TestServer
             server.MessageReceived = MessageReceived;
             server.MessageReceivedWithMetadata = MessageReceivedWithMetadata;
             // server.IdleClientTimeoutSeconds = 10;
+            server.Logger = Logger;
             server.Debug = debug;
 
             // server.Start();
@@ -360,6 +361,11 @@ namespace TestServer
             {
                 Console.WriteLine("Data: [null]");
             }
+        }
+
+        private static void Logger(string msg)
+        {
+            Console.WriteLine(msg);
         }
     }
 }
