@@ -80,6 +80,7 @@ namespace TestServer
                         Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  psk            set preshared key");
+                        Console.WriteLine("  stats          display server statistics");
                         Console.WriteLine("  debug          enable/disable debug (currently " + server.Debug + ")");
                         break;
 
@@ -165,6 +166,10 @@ namespace TestServer
 
                     case "psk":
                         server.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        break;
+
+                    case "stats":
+                        Console.WriteLine(server.Stats.ToString());
                         break;
 
                     case "debug":

@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v2.2.2
+
+- Added Statistics object.
+
+## Previous Versions
+
 v2.2.1
 
 - Added Logger method to both WatsonTcpServer and WatsonTcpClient (thanks @crushedice)
-
-## Previous Versions
 
 v2.2.0
 

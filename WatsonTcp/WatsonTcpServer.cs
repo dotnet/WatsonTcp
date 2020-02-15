@@ -178,6 +178,17 @@ namespace WatsonTcp
         /// </summary>
         public Action<string> Logger = null;
 
+        /// <summary>
+        /// Access Watson TCP statistics.
+        /// </summary>
+        public Statistics Stats
+        {
+            get
+            {
+                return _Stats;
+            }
+        }
+
         #endregion Public-Members
 
         #region Private-Members
@@ -206,6 +217,8 @@ namespace WatsonTcp
         private Func<string, long, Stream, Task> _StreamReceived = null;
         private Func<string, Dictionary<object, object>, long, Stream, Task> _StreamReceivedWithMetadata = null;
 
+        private Statistics _Stats = new Statistics();
+
         #endregion Private-Members
 
         #region Constructors-and-Factories
@@ -224,7 +237,7 @@ namespace WatsonTcp
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
 
-            _Mode = Mode.Tcp;
+            _Mode = Mode.Tcp; 
              
             if (String.IsNullOrEmpty(listenerIp))
             {
@@ -311,6 +324,8 @@ namespace WatsonTcp
         /// </summary>
         public void Start()
         {
+            _Stats = new Statistics();
+
             if (_StreamReceived == null && _MessageReceived == null)
             {
                 throw new InvalidOperationException("Either 'MessageReceived' or 'StreamReceived' must first be set.");
@@ -337,6 +352,8 @@ namespace WatsonTcp
         /// </summary>
         public Task StartAsync()
         {
+            _Stats = new Statistics();
+
             if (_StreamReceived == null && _MessageReceived == null)
             {
                 throw new InvalidOperationException("Either 'MessageReceived' or 'StreamReceived' must first be set.");
@@ -1088,6 +1105,8 @@ namespace WatsonTcp
                         }
                     }
 
+                    _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
+                    _Stats.ReceivedBytes += msg.ContentLength;
                     UpdateClientLastSeen(client.IpPort);
                 }  
                 catch (Exception e)
@@ -1227,6 +1246,8 @@ namespace WatsonTcp
                     client.SslStream.Flush();
                 }
 
+                _Stats.SentMessages += 1;
+                _Stats.SentBytes += contentLength;
                 return true;
             }
             catch (Exception e)
@@ -1338,7 +1359,9 @@ namespace WatsonTcp
 
                     await client.SslStream.FlushAsync();
                 }
-                 
+
+                _Stats.SentMessages += 1;
+                _Stats.SentBytes += contentLength;
                 return true;
             }
             catch (Exception e)

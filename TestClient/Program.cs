@@ -53,6 +53,7 @@ namespace TestClient
                         Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
                         Console.WriteLine("  psk            set the preshared key");
                         Console.WriteLine("  auth           authenticate using the preshared key");
+                        Console.WriteLine("  stats          display client statistics");
                         Console.WriteLine("  debug          enable/disable debug (currently " + client.Debug + ")");
                         break;
 
@@ -137,6 +138,10 @@ namespace TestClient
 
                     case "auth":
                         client.Authenticate(presharedKey);
+                        break;
+
+                    case "stats":
+                        Console.WriteLine(client.Stats.ToString());
                         break;
 
                     case "debug":

@@ -197,6 +197,17 @@ namespace WatsonTcp
         /// </summary>
         public Action<string> Logger = null;
 
+        /// <summary>
+        /// Access Watson TCP statistics.
+        /// </summary>
+        public Statistics Stats
+        {
+            get
+            {
+                return _Stats;
+            }
+        }
+
         #endregion Public-Members
 
         #region Private-Members
@@ -226,6 +237,8 @@ namespace WatsonTcp
         private Func<Dictionary<object, object>, byte[], Task> _MessageReceivedWithMetadata = null;
         private Func<long, Stream, Task> _StreamReceived = null;
         private Func<Dictionary<object, object>, long, Stream, Task> _StreamReceivedWithMetadata = null;
+
+        private Statistics _Stats = new Statistics();
 
         #endregion Private-Members
 
@@ -311,6 +324,7 @@ namespace WatsonTcp
         public void Start()
         {
             _Client = new TcpClient();
+            _Stats = new Statistics();
             IAsyncResult asyncResult = null;
             WaitHandle waitHandle = null;
             bool connectSuccess = false;
@@ -439,6 +453,7 @@ namespace WatsonTcp
         public Task StartAsync()
         {
             _Client = new TcpClient();
+            _Stats = new Statistics();
             IAsyncResult asyncResult = null;
             WaitHandle waitHandle = null;
             bool connectSuccess = false;
@@ -894,7 +909,7 @@ namespace WatsonTcp
                         else
                         {
                             break;
-                        }
+                        } 
                     }
                     else
                     {
@@ -913,6 +928,9 @@ namespace WatsonTcp
                             break;
                         }
                     }
+
+                    _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
+                    _Stats.ReceivedBytes += msg.ContentLength;
                 } 
                 catch (Exception e)
                 {
@@ -1045,7 +1063,9 @@ namespace WatsonTcp
                 {
                     _WriteLock.Release();
                 }
-                 
+
+                _Stats.SentMessages += 1;
+                _Stats.SentBytes += contentLength;
                 return true;
             }
             catch (Exception e)
@@ -1134,6 +1154,8 @@ namespace WatsonTcp
                     _WriteLock.Release();
                 }
 
+                _Stats.SentMessages += 1;
+                _Stats.SentBytes += msg.Data.Length;
                 return true;
             }
             catch (Exception e)
@@ -1271,7 +1293,9 @@ namespace WatsonTcp
                 {
                     _WriteLock.Release();
                 }
-                 
+
+                _Stats.SentMessages += 1;
+                _Stats.SentBytes += contentLength;
                 return true;
             }
             catch (Exception e)
