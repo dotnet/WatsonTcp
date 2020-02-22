@@ -341,6 +341,7 @@ namespace TestClient
 
         private static string AuthenticationRequested()
         {
+            // return "0000000000000000";
             Console.WriteLine("");
             Console.WriteLine("");
             Console.WriteLine("Server requests authentication");

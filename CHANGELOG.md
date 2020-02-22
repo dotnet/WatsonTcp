@@ -2,12 +2,16 @@
 
 ## Current Version
 
+v3.0.1
+
+- Bugfix in pre-shared key authentication
+
+## Previous Versions
+
 v3.0.0
 
 - Breaking changes; move from Func-based callbacks to Event
 - Added MaxConnections and Connection values in WatsonTcpServer
-
-## Previous Versions
 
 v2.2.2
 

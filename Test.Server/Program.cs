@@ -46,6 +46,7 @@ namespace TestServer
                 server.ClientConnected += ClientConnected;
                 server.ClientDisconnected += ClientDisconnected;
                 server.MessageReceived += MessageReceived;
+                // server.PresharedKey = "0000000000000000";
                 // server.IdleClientTimeoutSeconds = 10;
                 server.Logger = Logger;
                 server.Debug = debug;

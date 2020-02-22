@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Security;
@@ -9,7 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Newtonsoft.Json;
 using WatsonTcp.Message;
 
 namespace WatsonTcp
@@ -1033,18 +1034,18 @@ namespace WatsonTcp
             if (msg.Data != null) dataLen = msg.Data.Length;
 
             try
-            {
+            { 
                 if (_Client == null
                     || !_Client.Connected)
                 {
                     disconnectDetected = true;
                     return false;
                 }
-
+                 
                 byte[] headerBytes = msg.ToHeaderBytes(dataLen);
-
+                 
                 _WriteLock.Wait(1);
-
+                 
                 try
                 {
                     if (_Mode == Mode.Tcp)
@@ -1085,18 +1086,18 @@ namespace WatsonTcp
 
                         _SslStream.Flush();
                     }
-                }
+                } 
                 finally
                 {
                     _WriteLock.Release();
                 }
-
-                _Stats.SentMessages += 1;
-                _Stats.SentBytes += msg.Data.Length;
+                 
+                _Stats.SentMessages += 1; 
+                _Stats.SentBytes += dataLen; 
                 return true;
             }
             catch (Exception e)
-            {
+            { 
                 Logger?.Invoke(
                     "[WatsonTcpClient] Message write exception: " +
                     Environment.NewLine +
@@ -1115,7 +1116,7 @@ namespace WatsonTcp
                 }
             }
         }
-
+         
         private async Task<bool> MessageWriteAsync(Dictionary<object, object> metadata, byte[] data)
         {
             long dataLen = 0;
