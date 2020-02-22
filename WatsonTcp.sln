@@ -5,23 +5,25 @@ VisualStudioVersion = 16.0.29306.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WatsonTcp", "WatsonTcp\WatsonTcp.csproj", "{716CCC25-BF6D-40FA-B256-DAABCA5F977B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestServer", "TestServer\TestServer.csproj", "{960EC67F-14A4-43B9-B0A7-63B35F648DB5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Server", "Test.Server\Test.Server.csproj", "{960EC67F-14A4-43B9-B0A7-63B35F648DB5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestClient", "TestClient\TestClient.csproj", "{AD9343A5-3A3F-431D-AAC9-A1D7A84E3BDF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Client", "Test.Client\Test.Client.csproj", "{AD9343A5-3A3F-431D-AAC9-A1D7A84E3BDF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestMultiClient", "TestMultiClient\TestMultiClient.csproj", "{ECCAB4D7-95CD-40F4-9871-16B6B0BF6270}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.MultiClient", "Test.MultiClient\Test.MultiClient.csproj", "{ECCAB4D7-95CD-40F4-9871-16B6B0BF6270}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestMultiThread", "TestMultiThread\TestMultiThread.csproj", "{96A910C6-D82D-4B66-A474-12FE6337FE9A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.MultiThread", "Test.MultiThread\Test.MultiThread.csproj", "{96A910C6-D82D-4B66-A474-12FE6337FE9A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestParallel", "TestParallel\TestParallel.csproj", "{C54EB27B-54E5-4A30-989F-3F07EBDDA486}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Parallel", "Test.Parallel\Test.Parallel.csproj", "{C54EB27B-54E5-4A30-989F-3F07EBDDA486}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestClientStream", "TestClientStream\TestClientStream.csproj", "{A85C67C6-63C5-47D3-96E3-491A23861791}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.ClientStream", "Test.ClientStream\Test.ClientStream.csproj", "{A85C67C6-63C5-47D3-96E3-491A23861791}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestServerStream", "TestServerStream\TestServerStream.csproj", "{3D7E7B14-8DF6-47A2-B032-9AC52210F932}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.ServerStream", "Test.ServerStream\Test.ServerStream.csproj", "{3D7E7B14-8DF6-47A2-B032-9AC52210F932}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestThroughput", "TestThroughput\TestThroughput.csproj", "{BBBB941F-21E5-4CA5-B7F0-D4CAA5A0EDA4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Throughput", "Test.Throughput\Test.Throughput.csproj", "{BBBB941F-21E5-4CA5-B7F0-D4CAA5A0EDA4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestLargeMessages", "TestLargeMessages\TestLargeMessages.csproj", "{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.LargeMessages", "Test.LargeMessages\Test.LargeMessages.csproj", "{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MaxConnections", "Test.MaxConnections\Test.MaxConnections.csproj", "{3000AE43-3347-4EAC-B109-04900E1990F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +71,10 @@ Global
 		{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{529A5F34-72D1-4DEF-B5D5-C2A545F7109A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3000AE43-3347-4EAC-B109-04900E1990F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3000AE43-3347-4EAC-B109-04900E1990F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3000AE43-3347-4EAC-B109-04900E1990F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3000AE43-3347-4EAC-B109-04900E1990F3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

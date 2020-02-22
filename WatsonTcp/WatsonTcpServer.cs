@@ -57,7 +57,45 @@ namespace WatsonTcp
                 _IdleClientTimeoutSeconds = value;
             }
         }
-         
+        
+        /// <summary>
+        /// Specify the maximum number of connections the server will accept.
+        /// </summary>
+        public int MaxConnections
+        {
+            get
+            {
+                return _MaxConnections;
+            }
+            set
+            {
+                if (value < 1) throw new ArgumentException("Max connections must be greater than zero.");
+                _MaxConnections = value;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve the number of current connected clients.
+        /// </summary>
+        public int Connections
+        {
+            get
+            {
+                return _Connections;
+            }
+        }
+
+        /// <summary>
+        /// Flag to indicate if Watson TCP is listening for incoming TCP connections.
+        /// </summary>
+        public bool IsListening
+        {
+            get
+            {
+                return _IsListening;
+            }
+        }
+
         /// <summary>
         /// Enable or disable message debugging.
         /// </summary>
@@ -66,98 +104,58 @@ namespace WatsonTcp
         /// <summary>
         /// Permitted IP addresses.
         /// </summary>
-        public List<string> PermittedIPs = null;
+        public List<string> PermittedIPs = new List<string>();
 
         /// <summary>
-        /// Method to call when a client connects to the server.
-        /// The IP:port is passed to this method as a string.
+        /// Event to fire when a client connects to the server.
+        /// The IP:port of the client is passed in the arguments.
         /// </summary>
-        public Func<string, Task> ClientConnected = null;
+        public event EventHandler<ClientConnectedEventArgs> ClientConnected;
 
         /// <summary>
-        /// Method to call when a client disconnects from the server.
-        /// The IP:port is passed to this method as a string, along with the reason for the client disconnection.
+        /// Event to fire when a client disconnects from the server.
+        /// The IP:port is passed in the arguments along with the reason for the disconnection.
         /// </summary>
-        public Func<string, DisconnectReason, Task> ClientDisconnected = null;
+        public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
+
+        /// <summary>
+        /// Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'.  
+        /// This event is fired when a message is received from a client and it is desired that WatsonTcp pass the byte array containing the message payload. 
+        /// </summary>
+        public event EventHandler<MessageReceivedFromClientEventArgs> MessageReceived
+        {
+            add
+            {
+                if (_StreamReceived != null 
+                    && _StreamReceived.GetInvocationList().Length > 0) 
+                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _MessageReceived += value;
+            }
+            remove
+            {
+                _MessageReceived -= value;
+            }
+        }
+
+        /// <summary>
+        /// Use of 'StreamReceived' is exclusive and cannot be used with 'StreamReceived'.  
+        /// This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
+        /// </summary>
+        public event EventHandler<StreamReceivedFromClientEventArgs> StreamReceived
+        {
+            add
+            {
+                if (_MessageReceived != null 
+                    && _MessageReceived.GetInvocationList().Length > 0) 
+                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _StreamReceived += value;
+            }
+            remove
+            {
+                _StreamReceived -= value;
+            }
+        }
          
-        /// <summary>
-        /// Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'. 
-        /// If receiving messages with metadata, 'MessageReceivedWithMetadata' must be set and 'StreamReceivedWithMetadata' cannot be used.
-        /// This callback is called when a message is received from the server.
-        /// The IP:port of the client and entire message payload is passed to your application in a byte array.
-        /// </summary>
-        public Func<string, byte[], Task> MessageReceived
-        {
-            get
-            {
-                return _MessageReceived;
-            }
-            set
-            {
-                if (_StreamReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
-                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceived' when 'StreamReceivedWithMetadata' has been set.");
-                _MessageReceived = value;
-            }
-        }
-
-        /// <summary>
-        /// Use of 'MessageReceivedWithMetadata' is exclusive and cannot be used with 'StreamReceivedWithMetadata'.
-        /// This callback is called when a message is received from the server with attached metadata.
-        /// The IP:port of the client, metadata dictionary, and the entire message payload is passed into the supplied byte array.
-        /// </summary>
-        public Func<string, Dictionary<object, object>, byte[], Task> MessageReceivedWithMetadata
-        {
-            get
-            {
-                return _MessageReceivedWithMetadata;
-            }
-            set
-            {
-                if (_StreamReceived != null) throw new InvalidOperationException("'MessageReceivedWithMetadata' cannot be used when 'StreamReceived' has been set.");
-                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceivedWithMetadata' when 'StreamReceivedWithMetadata' has been set.");
-                _MessageReceivedWithMetadata = value;
-            }
-        }
-
-        /// <summary>
-        /// Use of 'StreamReceived' is exclusive and cannot be used with 'StreamReceived'. 
-        /// If receiving messages with metadata, 'StreamReceivedWithMetadata' must be set and 'MessageReceivedWithMetadata' cannot be used.
-        /// This callback is called when a stream is received from the server.
-        /// The IP:port of the client, stream, and its length are passed to your application. 
-        /// </summary>
-        public Func<string, long, Stream, Task> StreamReceived
-        {
-            get
-            {
-                return _StreamReceived;
-            }
-            set
-            {
-                if (_MessageReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
-                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceived' when 'MessageReceivedWithMetadata' has been set.");
-                _StreamReceived = value;
-            }
-        }
-
-        /// <summary>
-        /// Use of 'StreamReceivedWithMetadata' is exclusive and cannot be used with 'MessageReceivedWithMetadata'.
-        /// This callback is called when a stream is received from the server with attached metadata.
-        /// The IP:port of the client, metadata dictionary, the stream, and its length are passed into your application.
-        /// </summary>
-        public Func<string, Dictionary<object, object>, long, Stream, Task> StreamReceivedWithMetadata
-        {
-            get
-            {
-                return _StreamReceivedWithMetadata;
-            }
-            set
-            {
-                if (_MessageReceived != null) throw new InvalidOperationException("'StreamReceivedWithMetadata' cannot be used when 'MessageReceived' has been set.");
-                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceivedWithMetadata' when 'MessageReceivedWithMetadata' has been set.");
-                _StreamReceivedWithMetadata = value;
-            }
-        }
-
         /// <summary>
         /// Enable acceptance of SSL certificates from clients that cannot be validated.
         /// </summary>
@@ -194,6 +192,9 @@ namespace WatsonTcp
         #region Private-Members
 
         private int _ReadStreamBufferSize = 65536;
+        private int _MaxConnections = 4096;
+        private int _Connections = 0;
+        private bool _IsListening = false;
         private int _IdleClientTimeoutSeconds = 0;
         private Mode _Mode;
         private string _ListenerIp;
@@ -212,10 +213,8 @@ namespace WatsonTcp
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
 
-        private Func<string, byte[], Task> _MessageReceived = null;
-        private Func<string, Dictionary<object, object>, byte[], Task> _MessageReceivedWithMetadata = null;
-        private Func<string, long, Stream, Task> _StreamReceived = null;
-        private Func<string, Dictionary<object, object>, long, Stream, Task> _StreamReceivedWithMetadata = null;
+        private event EventHandler<MessageReceivedFromClientEventArgs> _MessageReceived;
+        private event EventHandler<StreamReceivedFromClientEventArgs> _StreamReceived;
 
         private Statistics _Stats = new Statistics();
 
@@ -714,6 +713,7 @@ namespace WatsonTcp
 
         private async Task AcceptConnections()
         {
+            _IsListening = true;
             _Listener.Start();
 
             while (!_Token.IsCancellationRequested)
@@ -722,26 +722,52 @@ namespace WatsonTcp
 
                 try
                 {
+                    #region Check-for-Maximum-Connections
+
+                    if (!_IsListening 
+                        && _Connections >= _MaxConnections)
+                    {
+                        continue;
+                    }
+                    else if (!_IsListening)
+                    {
+                        _Listener.Start();
+                        _IsListening = true;
+                    }
+
+                    #endregion
+
                     #region Accept-Connection-and-Validate-IP
 
                     TcpClient tcpClient = await _Listener.AcceptTcpClientAsync();
                     tcpClient.LingerState.Enabled = false;
 
                     string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
-                    if (PermittedIPs != null && PermittedIPs.Count > 0)
+                    if (PermittedIPs.Count > 0 && !PermittedIPs.Contains(clientIp))
                     {
-                        if (!PermittedIPs.Contains(clientIp))
-                        {
-                            Logger?.Invoke("[WatsonTcpServer] Rejecting connection from " + clientIp + " (not permitted)");
-                            tcpClient.Close();
-                            continue;
-                        }
+                        Logger?.Invoke("[WatsonTcpServer] Rejecting connection from " + clientIp + " (not permitted)");
+                        tcpClient.Close();
+                        continue;
                     }
 
                     ClientMetadata client = new ClientMetadata(tcpClient);
                     clientIpPort = client.IpPort;
 
                     #endregion Accept-Connection-and-Validate-IP
+
+                    #region Check-for-Maximum-Connections
+
+                    _Connections++; 
+                    if (_Connections >= _MaxConnections)
+                    {
+                        Logger?.Invoke("[WatsonTcpServer] Maximum connections " + _MaxConnections + " met or exceeded (currently " + _Connections + " connections), pausing listener");
+                        _IsListening = false;
+                        _Listener.Stop();
+                    }
+
+                    #endregion
+
+                    #region Initialize-Client-and-Finalize-Connection
 
                     if (_Mode == Mode.Tcp)
                     { 
@@ -773,6 +799,12 @@ namespace WatsonTcp
                     }
 
                     Logger?.Invoke("[WatsonTcpServer] Accepted connection from " + client.IpPort);
+
+                    #endregion 
+                }
+                catch (ObjectDisposedException)
+                {
+                    Logger?.Invoke("[WatsonTcpServer] Disposal detected, closing connection listener");
                 }
                 catch (Exception e)
                 {
@@ -791,6 +823,7 @@ namespace WatsonTcp
                 {
                     Logger?.Invoke("[WatsonTcpServer] Stream from " + client.IpPort + " not encrypted");
                     client.Dispose();
+                    _Connections--;
                     return false;
                 }
 
@@ -798,6 +831,7 @@ namespace WatsonTcp
                 {
                     Logger?.Invoke("[WatsonTcpServer] Stream from " + client.IpPort + " not authenticated");
                     client.Dispose();
+                    _Connections--;
                     return false;
                 }
 
@@ -805,6 +839,7 @@ namespace WatsonTcp
                 {
                     Logger?.Invoke("[WatsonTcpServer] Stream from " + client.IpPort + " failed mutual authentication");
                     client.Dispose();
+                    _Connections--;
                     return false;
                 }
             }
@@ -828,12 +863,14 @@ namespace WatsonTcp
                 }
 
                 client.Dispose();
+                _Connections--;
                 return false;
             }
             catch (Exception ex)
             {
                 Logger?.Invoke("[WatsonTcpServer] Exception on " + client.IpPort + " during TLS negotiation: " + Environment.NewLine + ex.ToString());
                 client.Dispose();
+                _Connections--;
                 return false;
             }
 
@@ -871,7 +908,7 @@ namespace WatsonTcp
             Logger?.Invoke("[WatsonTcpServer] Starting data receiver for " + client.IpPort);
             if (ClientConnected != null)
             {
-                Task.Run(() => ClientConnected(client.IpPort));
+                ClientConnected?.Invoke(this, new ClientConnectedEventArgs(client.IpPort));
             }
 
             Task.Run(async () => await DataReceiver(client, client.Token));
@@ -961,7 +998,7 @@ namespace WatsonTcp
             while (true)
             {
                 try
-                { 
+                {
                     token.ThrowIfCancellationRequested();
 
                     if (!IsConnected(client)) break;
@@ -971,18 +1008,20 @@ namespace WatsonTcp
 
                     if (_Mode == Mode.Ssl)
                     {
-                        msg = new WatsonMessage(client.SslStream, Debug); 
+                        msg = new WatsonMessage(client.SslStream, Debug);
                     }
                     else if (_Mode == Mode.Tcp)
                     {
-                        msg = new WatsonMessage(client.NetworkStream, Debug); 
-                    } 
-                     
-                    if (_MessageReceived != null)
+                        msg = new WatsonMessage(client.NetworkStream, Debug);
+                    }
+
+                    if (_MessageReceived != null
+                        && _MessageReceived.GetInvocationList().Length > 0)
                     {
                         buildSuccess = await msg.Build();
                     }
-                    else if (_StreamReceived != null)
+                    else if (_StreamReceived != null
+                        && _StreamReceived.GetInvocationList().Length > 0)
                     {
                         buildSuccess = await msg.BuildStream();
                     }
@@ -993,12 +1032,12 @@ namespace WatsonTcp
 
                     if (!buildSuccess)
                     {
+                        Logger?.Invoke("[WatsonTcpServer] Message build failed due to disconnect for client " + client.IpPort);
                         break;
                     }
-                     
+
                     if (msg == null)
                     {
-                        // no message available
                         await Task.Delay(30);
                         continue;
                     }
@@ -1070,41 +1109,23 @@ namespace WatsonTcp
                         break;
                     }
 
-                    if (msg.Metadata.Count > 0)
+                    if (_MessageReceived != null
+                        && _MessageReceived.GetInvocationList().Length > 0)
                     {
-                        if (_MessageReceivedWithMetadata != null)
-                        {
-                            // does not need to be awaited, because the stream has been fully read
-                            Task unawaited = Task.Run(() => _MessageReceivedWithMetadata(client.IpPort, msg.Metadata, msg.Data));
-                        }
-                        else if (_StreamReceivedWithMetadata != null)
-                        {
-                            // must be awaited, the stream has not been fully read
-                            await _StreamReceivedWithMetadata(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        MessageReceivedFromClientEventArgs args = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.Data);
+                        _MessageReceived?.Invoke(this, args);
                     }
+                    else if (_StreamReceived != null
+                        && _StreamReceived.GetInvocationList().Length > 0)
+                    {
+                        StreamReceivedFromClientEventArgs args = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
+                        _StreamReceived?.Invoke(this, args);
+                    } 
                     else
                     {
-                        if (_MessageReceived != null)
-                        {
-                            // does not need to be awaited, because the stream has been fully read
-                            Task unawaited = Task.Run(() => _MessageReceived(client.IpPort, msg.Data));
-                        }
-                        else if (_StreamReceived != null)
-                        {
-                            // must be awaited, the stream has not been fully read
-                            await _StreamReceived(client.IpPort, msg.ContentLength, msg.DataStream);
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        break;
                     }
-
+                     
                     _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
                     _Stats.ReceivedBytes += msg.ContentLength;
                     UpdateClientLastSeen(client.IpPort);
@@ -1122,20 +1143,18 @@ namespace WatsonTcp
             Logger?.Invoke("[WatsonTcpServer] Data receiver terminated for " + client.IpPort);
 
             if (ClientDisconnected != null)
-            {
-                Task unawaited = null;
-                 
+            { 
                 if (_ClientsKicked.ContainsKey(client.IpPort))
                 {
-                    unawaited = Task.Run(() => ClientDisconnected(client.IpPort, DisconnectReason.Kicked));
+                    ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Kicked));
                 }
                 else if (_ClientsTimedout.ContainsKey(client.IpPort))
                 {
-                    unawaited = Task.Run(() => ClientDisconnected(client.IpPort, DisconnectReason.Timeout));
+                    ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Timeout));
                 }
                 else
                 {
-                    unawaited = Task.Run(() => ClientDisconnected(client.IpPort, DisconnectReason.Normal));
+                    ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Normal));
                 }
             }
 
@@ -1145,6 +1164,7 @@ namespace WatsonTcp
             _ClientsKicked.TryRemove(client.IpPort, out removedTs);
             _ClientsTimedout.TryRemove(client.IpPort, out removedTs); 
             _UnauthenticatedClients.TryRemove(client.IpPort, out removedTs);
+            _Connections--;
 
             Logger?.Invoke("[WatsonTcpServer] Disposing data receiver for " + client.IpPort);
             client.Dispose();  

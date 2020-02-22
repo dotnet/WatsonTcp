@@ -2,11 +2,16 @@
 
 ## Current Version
 
+v3.0.0
+
+- Breaking changes; move from Func-based callbacks to Event
+- Added MaxConnections and Connection values in WatsonTcpServer
+
+## Previous Versions
+
 v2.2.2
 
 - Added Statistics object.
-
-## Previous Versions
 
 v2.2.1
 

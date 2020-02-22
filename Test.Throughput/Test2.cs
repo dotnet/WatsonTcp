@@ -21,8 +21,9 @@ namespace TestThroughput
         private Stopwatch _Stopwatch = new Stopwatch();
         private int _RunningTasks = 0;
 
-        private int _MessageSuccess = 0;
-        private int _MessageFailed = 0;
+        private int _MessagesSentSuccess = 0;
+        private int _MessagesSentFailed = 0;
+        private int _MessagesProcessing = 0;
         private long _BytesSent = 0;
         private long _BytesReceived = 0;
 
@@ -46,7 +47,7 @@ namespace TestThroughput
         {  
             using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 10000))
             {
-                server.MessageReceived = Test2ServerMsgRcv;
+                server.MessageReceived += Test2ServerMsgRcv;
                 server.Start();
                  
                 Stopwatch sw = new Stopwatch();
@@ -59,28 +60,37 @@ namespace TestThroughput
 
                 while (_RunningTasks > 0)
                 {
-                    Task.Delay(100).Wait();
+                    Console.WriteLine("Waiting on " + _RunningTasks + " running tasks (1 second pause)");
+                    Thread.Sleep(1000);
                 }
 
                 _Stopwatch.Stop();
+
+                while (_MessagesProcessing > 0)
+                {
+                    Console.WriteLine("Waiting on " + _MessagesProcessing + " to complete processing (1 second pause)");
+                    Thread.Sleep(1000);
+                }
             }
 
             Console.WriteLine("");
             Console.WriteLine("Results:");
             Console.WriteLine("  Number of clients             : " + _NumClients);
             Console.WriteLine("  Number of messages per client : " + _NumMessages);
-            Console.WriteLine("  Messages sent successfully    : " + _MessageSuccess);
-            Console.WriteLine("  Messages failed               : " + _MessageFailed);
+            Console.WriteLine("  Messages sent successfully    : " + _MessagesSentSuccess);
+            Console.WriteLine("  Messages failed               : " + _MessagesSentFailed);
             Console.WriteLine("  Bytes sent successfully       : " + _BytesSent);
             Console.WriteLine("  Bytes received successfully   : " + _BytesReceived);
 
             decimal secondsTotal = _Stopwatch.ElapsedMilliseconds / 1000;
+            if (secondsTotal < 1) secondsTotal = 1;
+
             decimal bytesPerSecond = _BytesSent / secondsTotal;
             decimal kbPerSecond = bytesPerSecond / 1024;
             decimal mbPerSecond = kbPerSecond / 1024;
             Console.WriteLine("  Elapsed time (ms)             : " + _Stopwatch.ElapsedMilliseconds + "ms");
             Console.WriteLine("  Elapsed time (seconds)        : " + decimal.Round(secondsTotal, 2) + "s");
-            Console.WriteLine("  Messages per second           : " + decimal.Round(_MessageSuccess / secondsTotal, 2) + "msg/s");
+            Console.WriteLine("  Messages per second           : " + decimal.Round(_MessagesSentSuccess / secondsTotal, 2) + "msg/s");
             Console.WriteLine("  Bytes per second              : " + decimal.Round(bytesPerSecond, 2) + "B/s");
             Console.WriteLine("  Kilobytes per second          : " + decimal.Round(kbPerSecond, 2) + "kB/s");
             Console.WriteLine("  Megabytes per second          : " + decimal.Round(mbPerSecond, 2) + "MB/s");
@@ -89,39 +99,50 @@ namespace TestThroughput
 
         private void Test2ClientWorker()
         {
-            using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
+            try
             {
-                client.MessageReceived = Test2ClientMsgRcv;
-                client.Start();
-                 
-                for (int i = 0; i < _NumMessages; i++)
+                using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
                 {
-                    if (client.Send(_MsgBytes))
+                    client.MessageReceived += Test2ClientMsgRcv;
+                    client.Start();
+
+                    for (int i = 0; i < _NumMessages; i++)
                     {
-                        _MessageSuccess++;
-                        _BytesSent += _MsgBytes.Length;
+                        if (client.Send(_MsgBytes))
+                        {
+                            _MessagesSentSuccess++;
+                            _MessagesProcessing++;
+                            _BytesSent += _MsgBytes.Length;
+                        }
+                        else
+                        {
+                            _MessagesSentFailed++;
+                        }
                     }
-                    else
-                    {
-                        _MessageFailed++;
-                    }
-                } 
+                }
+
+                _RunningTasks--;
             }
-
-            _RunningTasks--;
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        private async Task Test2ServerMsgRcv(string ipPort, byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private void Test2ServerMsgRcv(object sender, MessageReceivedFromClientEventArgs args) 
         {
-            if (!_Stopwatch.IsRunning) _Stopwatch.Start(); 
-            _BytesReceived += data.Length;
+            try
+            {
+                _BytesReceived += args.Data.Length;
+                _MessagesProcessing--;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
         }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        private async Task Test2ClientMsgRcv(byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        private void Test2ClientMsgRcv(object sender, MessageReceivedFromServerEventArgs args)
         {
 
         }

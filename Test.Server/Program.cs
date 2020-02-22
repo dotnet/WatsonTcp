@@ -25,29 +25,36 @@ namespace TestServer
             serverPort = InputInteger("Server port:", 9000, true, false);
             useSsl = InputBoolean("Use SSL:", false);
 
-            if (!useSsl)
+            try
             {
-                server = new WatsonTcpServer(serverIp, serverPort);
-            }
-            else
-            { 
-                certFile = InputString("Certificate file:", "test.pfx", false);
-                certPass = InputString("Certificate password:", "password", false); 
-                acceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
-                mutualAuthentication = InputBoolean("Mutually authenticate:", false);
+                if (!useSsl)
+                {
+                    server = new WatsonTcpServer(serverIp, serverPort);
+                }
+                else
+                {
+                    certFile = InputString("Certificate file:", "test.pfx", false);
+                    certPass = InputString("Certificate password:", "password", false);
+                    acceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
+                    mutualAuthentication = InputBoolean("Mutually authenticate:", false);
 
-                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
-                server.AcceptInvalidCertificates = acceptInvalidCerts;
-                server.MutuallyAuthenticate = mutualAuthentication;
-            }
+                    server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
+                    server.AcceptInvalidCertificates = acceptInvalidCerts;
+                    server.MutuallyAuthenticate = mutualAuthentication;
+                }
 
-            server.ClientConnected = ClientConnected;
-            server.ClientDisconnected = ClientDisconnected;
-            server.MessageReceived = MessageReceived;
-            server.MessageReceivedWithMetadata = MessageReceivedWithMetadata;
-            // server.IdleClientTimeoutSeconds = 10;
-            server.Logger = Logger;
-            server.Debug = debug;
+                server.ClientConnected += ClientConnected;
+                server.ClientDisconnected += ClientDisconnected;
+                server.MessageReceived += MessageReceived;
+                // server.IdleClientTimeoutSeconds = 10;
+                server.Logger = Logger;
+                server.Debug = debug;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                return;
+            }
 
             // server.Start();
             Task serverStart = server.StartAsync();
@@ -81,6 +88,7 @@ namespace TestServer
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  psk            set preshared key");
                         Console.WriteLine("  stats          display server statistics");
+                        Console.WriteLine("  stats reset    reset statistics other than start time and uptime");
                         Console.WriteLine("  debug          enable/disable debug (currently " + server.Debug + ")");
                         break;
 
@@ -170,6 +178,10 @@ namespace TestServer
 
                     case "stats":
                         Console.WriteLine(server.Stats.ToString());
+                        break;
+
+                    case "stats reset":
+                        server.Stats.Reset();
                         break;
 
                     case "debug":
@@ -311,63 +323,30 @@ namespace TestServer
                 ret.Add(key, val);
             }
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientConnected(string ipPort)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ClientConnected(object sender, ClientConnectedEventArgs args) 
         {
-            Console.WriteLine("Client connected: " + ipPort);
+            Console.WriteLine("Client connected: " + args.IpPort);
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientDisconnected(string ipPort, DisconnectReason reason)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
         {
-            Console.WriteLine("Client disconnected: " + ipPort + ": " + reason.ToString());
+            Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task MessageReceived(string ipPort, byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        {
-            string msg = "";
-            if (data != null && data.Length > 0)
-            {
-                msg = Encoding.UTF8.GetString(data);
-            }
-
-            Console.WriteLine("Message received from " + ipPort + ": " + msg);
-        }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        private static async Task MessageReceivedWithMetadata(string ipPort, Dictionary<object, object> metadata, byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        {
-            Console.WriteLine("Message with metadata received from " + ipPort);
-            if (metadata != null && metadata.Count > 0)
+         
+        private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        { 
+            Console.WriteLine("Message received from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
+            if (args.Metadata != null && args.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in metadata)
+                foreach (KeyValuePair<object, object> curr in args.Metadata)
                 {
                     Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                 }
             }
-
-            string msg = "";
-            if (data != null && data.Length > 0)
-            {
-                msg = Encoding.UTF8.GetString(data);
-                Console.WriteLine("Data: " + msg);
-            }
-            else
-            {
-                Console.WriteLine("Data: [null]");
-            }
         }
-
+         
         private static void Logger(string msg)
         {
             Console.WriteLine(msg);

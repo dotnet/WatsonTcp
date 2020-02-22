@@ -1,48 +1,42 @@
-﻿using ConcurrentList;
-using System;
+﻿using System;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using WatsonTcp;
 
-namespace TestMultiClient
+namespace TestParallel
 {
     internal class Program
     {
-        private static int serverPort = 9000;
-        private static WatsonTcpServer server = null;
-        private static int clientThreads = 16;
-        private static int numIterations = 1000;
-        private static int connectionCount = 0;
-        private static ConcurrentList<string> connections = new ConcurrentList<string>();
-        private static bool clientsStarted = false;
-
+        private static int serverPort = 8000;
+        private static int clientThreads = 8;
+        private static int numIterations = 10000;
         private static Random rng;
         private static byte[] data;
+        private static WatsonTcpServer server;
 
         private static void Main(string[] args)
         {
             rng = new Random((int)DateTime.Now.Ticks);
-            data = InitByteArray(65536, 0x00);
+            data = InitByteArray(262144, 0x00);
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
+            Console.WriteLine("Starting in 3 seconds...");
 
-            Console.WriteLine("Starting server");
             server = new WatsonTcpServer(null, serverPort);
-            server.ClientConnected = ServerClientConnected;
-            server.ClientDisconnected = ServerClientDisconnected;
-            server.MessageReceived = ServerMsgReceived;
+            server.ClientConnected += ServerClientConnected;
+            server.ClientDisconnected += ServerClientDisconnected;
+            server.MessageReceived += ServerMsgReceived;
             server.Start();
 
             Thread.Sleep(3000);
 
-            Console.WriteLine("Starting clients");
+            Console.WriteLine("Press ENTER to exit");
+
             for (int i = 0; i < clientThreads; i++)
             {
-                Console.WriteLine("Starting client " + i);
                 Task.Run(() => ClientTask());
             }
 
-            Console.WriteLine("Press ENTER to exit");
             Console.ReadLine();
         }
 
@@ -159,80 +153,49 @@ namespace TestMultiClient
 
         private static void ClientTask()
         {
-            Console.WriteLine("ClientTask entering");
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
-                client.ServerConnected = ClientServerConnected;
-                client.ServerDisconnected = ClientServerDisconnected;
-                client.MessageReceived = ClientMsgReceived;
+                client.ServerConnected += ClientServerConnected;
+                client.ServerDisconnected += ClientServerDisconnected;
+                client.MessageReceived += ClientMsgReceived;
                 client.Start();
-
-                while (!clientsStarted)
-                {
-                    Thread.Sleep(100);
-                }
 
                 for (int i = 0; i < numIterations; i++)
                 {
-                    Task.Delay(rng.Next(0, 1000)).Wait();
+                    Task.Delay(rng.Next(0, 25)).Wait();
                     client.Send(data);
                 }
             }
 
             Console.WriteLine("[client] finished");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ServerClientConnected(string ipPort)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
         {
-            connectionCount++;
-            Console.WriteLine("[server] connection from " + ipPort + " (now " + connectionCount + ")");
-
-            if (connectionCount >= clientThreads)
-            {
-                clientsStarted = true;
-            }
-
-            connections.Add(ipPort);
+            Console.WriteLine("[server] connection from " + args.IpPort);
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ServerClientDisconnected(string ipPort, DisconnectReason reason)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args) 
         {
-            connectionCount--;
-            Console.WriteLine("[server] disconnection from " + ipPort + " [now " + connectionCount + "]: " + reason.ToString());
+            Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ServerMsgReceived(string ipPort, byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        {
+            Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
+        }
+         
+        private static void ClientServerConnected(object sender, EventArgs args) 
         {
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientServerConnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ClientServerDisconnected(object sender, EventArgs args) 
         {
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientServerDisconnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
         {
-        }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientMsgReceived(byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        {
+            Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
 
         public static byte[] InitByteArray(int count, byte val)
@@ -252,10 +215,8 @@ namespace TestMultiClient
                 return null;
             }
 
-            using (MD5 m = MD5.Create())
-            {
-                return m.ComputeHash(data);
-            }
+            MD5 m = MD5.Create();
+            return m.ComputeHash(data);
         }
 
         public static string BytesToHex(byte[] bytes)

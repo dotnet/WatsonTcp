@@ -1,23 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WatsonTcp;
 
-namespace TestServerStream
+namespace TestClientStream
 {
-    internal class TestServerStream
+    internal class TestClientStream
     {
         private static string serverIp = "";
         private static int serverPort = 0;
         private static bool useSsl = false;
-        private static WatsonTcpServer server = null;
         private static string certFile = "";
         private static string certPass = "";
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
+        private static WatsonTcpClient client = null;
+        private static string presharedKey = null;
 
         private static void Main(string[] args)
         {
@@ -25,44 +25,23 @@ namespace TestServerStream
             serverPort = InputInteger("Server port:", 9000, true, false);
             useSsl = InputBoolean("Use SSL:", false);
 
-            if (!useSsl)
-            {
-                server = new WatsonTcpServer(serverIp, serverPort);
-            }
-            else
-            {
-                certFile = InputString("Certificate file:", "test.pfx", false);
-                certPass = InputString("Certificate password:", "password", false);
-                acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
-                mutualAuthentication = InputBoolean("Mutually authenticate:", true);
-
-                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
-                server.AcceptInvalidCertificates = acceptInvalidCerts;
-                server.MutuallyAuthenticate = mutualAuthentication;
-            }
-
-            server.ClientConnected = ClientConnected;
-            server.ClientDisconnected = ClientDisconnected;
-            server.StreamReceived = StreamReceived;
-            server.StreamReceivedWithMetadata = StreamReceivedWithMetadata;
-            // server.Debug = true;
-            server.Start();
+            InitializeClient();
 
             bool runForever = true;
+            Dictionary<object, object> metadata;
+            bool success;
+
             while (runForever)
             {
                 Console.Write("Command [? for help]: ");
                 string userInput = Console.ReadLine();
-
                 byte[] data = null;
-                MemoryStream ms = null;
-                Dictionary<object, object> metadata;
-                bool success = false;
+                MemoryStream ms = null; 
 
-                List<string> clients;
-                string ipPort;
-
-                if (String.IsNullOrEmpty(userInput)) continue;
+                if (String.IsNullOrEmpty(userInput))
+                {
+                    continue;
+                }
 
                 switch (userInput)
                 {
@@ -71,14 +50,17 @@ namespace TestServerStream
                         Console.WriteLine("  ?              help (this menu)");
                         Console.WriteLine("  q              quit");
                         Console.WriteLine("  cls            clear screen");
-                        Console.WriteLine("  list           list clients");
-                        Console.WriteLine("  send           send message to client");
-                        Console.WriteLine("  send md        send message with metadata to client");
-                        Console.WriteLine("  sendasync      send message to a client asynchronously");
-                        Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
-                        Console.WriteLine("  remove         disconnect client");
-                        Console.WriteLine("  psk            set preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + server.Debug + ")");
+                        Console.WriteLine("  send           send message to server");
+                        Console.WriteLine("  send md        send message with metadata to server");
+                        Console.WriteLine("  sendasync      send message to server asynchronously");
+                        Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
+                        Console.WriteLine("  status         show if client connected");
+                        Console.WriteLine("  dispose        dispose of the connection");
+                        Console.WriteLine("  connect        connect to the server if not connected");
+                        Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
+                        Console.WriteLine("  psk            set the preshared key");
+                        Console.WriteLine("  auth           authenticate using the preshared key");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + client.Debug + ")");
                         break;
 
                     case "q":
@@ -89,95 +71,134 @@ namespace TestServerStream
                         Console.Clear();
                         break;
 
-                    case "list":
-                        clients = server.ListClients().ToList();
-                        if (clients != null && clients.Count > 0)
-                        {
-                            Console.WriteLine("Clients");
-                            foreach (string curr in clients)
-                            {
-                                Console.WriteLine("  " + curr);
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("None");
-                        }
-                        break;
-
                     case "send":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = server.Send(ipPort, data.Length, ms);
+                        success = client.Send(data.Length, ms);
                         Console.WriteLine(success);
                         break;
 
                     case "send md":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
                         metadata = InputDictionary();
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = server.Send(ipPort, metadata, data.Length, ms);
+                        success = client.Send(metadata, data.Length, ms);
                         Console.WriteLine(success);
                         break;
 
                     case "sendasync":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = server.SendAsync(ipPort, data.Length, ms).Result;
+                        success = client.SendAsync(data.Length, ms).Result;
                         Console.WriteLine(success);
                         break;
 
                     case "sendasync md":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
                         metadata = InputDictionary();
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = server.SendAsync(ipPort, metadata, data.Length, ms).Result;
+                        success = client.SendAsync(metadata, data.Length, ms).Result;
                         Console.WriteLine(success);
                         break;
 
-                    case "remove":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        server.DisconnectClient(ipPort);
+                    case "status":
+                        if (client == null)
+                        {
+                            Console.WriteLine("Connected: False (null)");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Connected: " + client.Connected);
+                        }
+
+                        break;
+
+                    case "dispose":
+                        client.Dispose();
+                        break;
+
+                    case "connect":
+                        if (client != null && client.Connected)
+                        {
+                            Console.WriteLine("Already connected");
+                        }
+                        else
+                        {
+                            client = new WatsonTcpClient(serverIp, serverPort);
+                            client.ServerConnected += ServerConnected;
+                            client.ServerDisconnected += ServerDisconnected;
+                            client.StreamReceived += StreamReceived;
+                            client.Start();
+                        }
+                        break;
+
+                    case "reconnect":
+                        if (client != null) client.Dispose();
+                        client = new WatsonTcpClient(serverIp, serverPort);
+                        client.ServerConnected += ServerConnected;
+                        client.ServerDisconnected += ServerDisconnected;
+                        client.StreamReceived += StreamReceived;
+                        client.Start();
                         break;
 
                     case "psk":
-                        server.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        presharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        break;
+
+                    case "auth":
+                        client.Authenticate(presharedKey);
                         break;
 
                     case "debug":
-                        server.Debug = !server.Debug;
-                        Console.WriteLine("Debug set to: " + server.Debug);
+                        client.Debug = !client.Debug;
+                        Console.WriteLine("Debug set to: " + client.Debug);
                         break;
 
                     default:
                         break;
                 }
             }
+        }
+
+        private static void InitializeClient()
+        {
+            if (!useSsl)
+            {
+                client = new WatsonTcpClient(serverIp, serverPort);
+            }
+            else
+            {
+                certFile = InputString("Certificate file:", "test.pfx", false);
+                certPass = InputString("Certificate password:", "password", false);
+                acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = InputBoolean("Mutually authenticate:", true);
+
+                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.MutuallyAuthenticate = mutualAuthentication;
+            }
+
+            client.AuthenticationFailure += AuthenticationFailure;
+            client.AuthenticationRequested = AuthenticationRequested;
+            client.AuthenticationSucceeded += AuthenticationSucceeded;
+            client.ServerConnected += ServerConnected;
+            client.ServerDisconnected += ServerDisconnected;
+            client.StreamReceived += StreamReceived;
+            client.Logger = Logger;
+            // client.Debug = true;
+            client.Start();
         }
 
         private static bool InputBoolean(string question, bool yesDefault)
@@ -322,42 +343,23 @@ namespace TestServerStream
             Console.WriteLine("   StackTrace    : " + e.StackTrace);
             Console.WriteLine("");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientConnected(string ipPort)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        {
-            Console.WriteLine("Client connected: " + ipPort);
-        }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientDisconnected(string ipPort, DisconnectReason reason)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        {
-            Console.WriteLine("Client disconnected: " + ipPort + ": " + reason.ToString());
-        }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task StreamReceived(string ipPort, long contentLength, Stream stream)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args) 
         {
             try
             {
-                Console.Write("Stream from " + ipPort + " [" + contentLength + " bytes]: ");
+                Console.Write("Stream from server [" + args.ContentLength + " bytes]: ");
 
                 int bytesRead = 0;
                 int bufferSize = 65536;
                 byte[] buffer = new byte[bufferSize];
-                long bytesRemaining = contentLength;
+                long bytesRemaining = args.ContentLength;
 
-                if (stream != null && stream.CanRead)
+                if (args.DataStream != null && args.DataStream.CanRead)
                 {
                     while (bytesRemaining > 0)
                     {
-                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        bytesRead = args.DataStream.Read(buffer, 0, buffer.Length);
                         Console.WriteLine("Read " + bytesRead);
 
                         if (bytesRead > 0)
@@ -376,64 +378,55 @@ namespace TestServerStream
                 {
                     Console.WriteLine("[null]");
                 }
+                  
+                if (args.Metadata != null && args.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in args.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                } 
             }
             catch (Exception e)
             {
                 LogException("StreamReceived", e);
             }
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task StreamReceivedWithMetadata(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static string AuthenticationRequested()
         {
-            Console.WriteLine("Message with metadata received from " + ipPort);
-            if (metadata != null && metadata.Count > 0)
-            {
-                Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in metadata)
-                {
-                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                }
-            }
+            Console.WriteLine("");
+            Console.WriteLine("");
+            Console.WriteLine("Server requests authentication");
+            Console.WriteLine("Press ENTER and THEN enter your preshared key");
+            if (String.IsNullOrEmpty(presharedKey)) presharedKey = InputString("Preshared key:", "1234567812345678", false);
+            return presharedKey;
+        }
+         
+        private static void AuthenticationSucceeded(object sender, EventArgs args) 
+        {
+            Console.WriteLine("Authentication succeeded");
+        }
+         
+        private static void AuthenticationFailure(object sender, EventArgs args) 
+        {
+            Console.WriteLine("Authentication failed");
+        }
+         
+        private static void ServerConnected(object sender, EventArgs args)
+        {
+            Console.WriteLine("Server connected");
+        }
 
-            try
-            {
-                Console.Write("Stream from " + ipPort + " [" + contentLength + " bytes]: ");
+        private static void ServerDisconnected(object sender, EventArgs args)
+        {
+            Console.WriteLine("Server disconnected");
+        } 
 
-                int bytesRead = 0;
-                int bufferSize = 65536;
-                byte[] buffer = new byte[bufferSize];
-                long bytesRemaining = contentLength;
-
-                if (stream != null && stream.CanRead)
-                {
-                    while (bytesRemaining > 0)
-                    {
-                        bytesRead = stream.Read(buffer, 0, buffer.Length); 
-
-                        if (bytesRead > 0)
-                        {
-                            byte[] consoleBuffer = new byte[bytesRead];
-                            Buffer.BlockCopy(buffer, 0, consoleBuffer, 0, bytesRead);
-                            Console.Write(Encoding.UTF8.GetString(consoleBuffer));
-                        }
-
-                        bytesRemaining -= bytesRead;
-                    }
-
-                    Console.WriteLine("");
-                }
-                else
-                {
-                    Console.WriteLine("[null]");
-                }
-            }
-            catch (Exception e)
-            {
-                LogException("StreamReceived", e);
-            }
+        private static void Logger(string msg)
+        {
+            Console.WriteLine(msg);
         }
     }
 }

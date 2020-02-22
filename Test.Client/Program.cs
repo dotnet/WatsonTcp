@@ -54,6 +54,7 @@ namespace TestClient
                         Console.WriteLine("  psk            set the preshared key");
                         Console.WriteLine("  auth           authenticate using the preshared key");
                         Console.WriteLine("  stats          display client statistics");
+                        Console.WriteLine("  stats reset    reset statistics other than start time and uptime");
                         Console.WriteLine("  debug          enable/disable debug (currently " + client.Debug + ")");
                         break;
 
@@ -121,9 +122,9 @@ namespace TestClient
                         else
                         {
                             client = new WatsonTcpClient(serverIp, serverPort);
-                            client.ServerConnected = ServerConnected;
-                            client.ServerDisconnected = ServerDisconnected;
-                            client.MessageReceived = MessageReceived;
+                            client.ServerConnected += ServerConnected;
+                            client.ServerDisconnected += ServerDisconnected;
+                            client.MessageReceived += MessageReceived;
                             client.Start();
                         }
                         break;
@@ -142,6 +143,10 @@ namespace TestClient
 
                     case "stats":
                         Console.WriteLine(client.Stats.ToString());
+                        break;
+
+                    case "stats reset":
+                        client.Stats.Reset();
                         break;
 
                     case "debug":
@@ -193,13 +198,12 @@ namespace TestClient
                 client.MutuallyAuthenticate = mutualAuthentication;
             }
 
-            client.AuthenticationFailure = AuthenticationFailure;
+            client.AuthenticationFailure += AuthenticationFailure;
             client.AuthenticationRequested = AuthenticationRequested;
-            client.AuthenticationSucceeded = AuthenticationSucceeded;
-            client.ServerConnected = ServerConnected;
-            client.ServerDisconnected = ServerDisconnected;
-            client.MessageReceived = MessageReceived;
-            client.MessageReceivedWithMetadata = MessageReceivedWithMetadata;
+            client.AuthenticationSucceeded += AuthenticationSucceeded;
+            client.ServerConnected += ServerConnected;
+            client.ServerDisconnected += ServerDisconnected;
+            client.MessageReceived += MessageReceived; 
             client.Debug = debug;
             client.Logger = Logger;
             // client.Start();
@@ -344,68 +348,37 @@ namespace TestClient
             if (String.IsNullOrEmpty(presharedKey)) presharedKey = InputString("Preshared key:", "1234567812345678", false);
             return presharedKey;
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task AuthenticationSucceeded()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void AuthenticationSucceeded(object sender, EventArgs args) 
         {
             Console.WriteLine("Authentication succeeded");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task AuthenticationFailure()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void AuthenticationFailure(object sender, EventArgs args) 
         {
             Console.WriteLine("Authentication failed");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task MessageReceived(byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
         {
-            Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(data));
-        }
+            Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(args.Data));
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        private static async Task MessageReceivedWithMetadata(Dictionary<object, object> metadata, byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        {
-            Console.WriteLine("Message with metadata received from server");
-            if (metadata != null && metadata.Count > 0)
+            if (args.Metadata != null && args.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in metadata)
+                foreach (KeyValuePair<object, object> curr in args.Metadata)
                 {
                     Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                 }
-            }
-
-            string msg = "";
-            if (data != null && data.Length > 0)
-            {
-                msg = Encoding.UTF8.GetString(data);
-                Console.WriteLine("Data: " + msg);
-            }
-            else
-            {
-                Console.WriteLine("Data: [null]");
-            }
+            } 
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        private static async Task ServerConnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+           
+        private static void ServerConnected(object sender, EventArgs args) 
         {
             Console.WriteLine("Server connected");
         }
 
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ServerDisconnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static void ServerDisconnected(object sender, EventArgs args)
         {
             Console.WriteLine("Server disconnected");
         }

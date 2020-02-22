@@ -25,17 +25,17 @@ namespace TestMultiThread
             Console.WriteLine("Starting in 3 seconds...");
 
             server = new WatsonTcpServer(null, serverPort);
-            server.ClientConnected = ServerClientConnected;
-            server.ClientDisconnected = ServerClientDisconnected;
-            server.MessageReceived = ServerMsgReceived;
+            server.ClientConnected += ServerClientConnected;
+            server.ClientDisconnected += ServerClientDisconnected;
+            server.MessageReceived += ServerMsgReceived;
             server.Start();
 
             Thread.Sleep(3000);
 
             c = new WatsonTcpClient("localhost", serverPort);
-            c.ServerConnected = ClientServerConnected;
-            c.ServerDisconnected = ClientServerDisconnected;
-            c.MessageReceived = ClientMsgReceived;
+            c.ServerConnected += ClientServerConnected;
+            c.ServerDisconnected += ClientServerDisconnected;
+            c.MessageReceived += ClientMsgReceived;
             c.Start();
 
             Console.WriteLine("Press ENTER to exit");
@@ -169,51 +169,33 @@ namespace TestMultiThread
 
             Console.WriteLine("[client] finished");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ServerClientConnected(string ipPort)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
         {
-            Console.WriteLine("[server] connection from " + ipPort);
+            Console.WriteLine("[server] connection from " + args.IpPort);
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ServerClientDisconnected(string ipPort, DisconnectReason reason)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args)
         {
-            Console.WriteLine("[server] disconnection from " + ipPort + ": " + reason.ToString());
+            Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ServerMsgReceived(string ipPort, byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args)
         {
-            Console.WriteLine("[server] msg from " + ipPort + ": " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
+            Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientServerConnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ClientServerConnected(object sender, EventArgs args) 
         {
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientServerDisconnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ClientServerDisconnected(object sender, EventArgs args) 
         {
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-
-        private static async Task ClientMsgReceived(byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
         {
-            Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(data)) + " (" + data.Length + " bytes)");
+            Console.WriteLine("[client] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
 
         public static byte[] InitByteArray(int count, byte val)

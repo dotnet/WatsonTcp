@@ -7,11 +7,12 @@
 [nuget]:     https://www.nuget.org/packages/WatsonTcp/
 [nuget-img]: https://badge.fury.io/nu/Object.svg
 
-WatsonTcp is the fastest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, fast disconnect detection, and easy to understand callbacks.
+WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-## New in v2.2.2
+## New in v3.0.0
 
-- Added Statistics object.
+- Breaking changes; move from Func-based callbacks to Event
+- Added ```MaxConnections``` and ```Connection``` values in WatsonTcpServer
 
 ## Test Applications
 
@@ -23,19 +24,15 @@ WatsonTcp supports data exchange with or without SSL.  The server and client cla
 
 ## To Stream or Not To Stream...
 
-WatsonTcp allows you to receive messages using either streams or byte arrays.  The ```MessageReceived``` callback uses byte arrays and provides the easiest implementation, but the entire message payload is copied into memory, making it inefficient for larger messages.  For larger message sizes (generally measured in 10s or 100s of megabytes or beyond), it is **strongly** recommended that you use the ```StreamReceived``` callback.  Only one of these methods can be assigned; you cannot use both.
+WatsonTcp allows you to receive messages using either streams or byte arrays.  The ```MessageReceived``` event uses byte arrays and provides the easiest implementation, but the entire message payload is copied into memory, making it inefficient for larger messages.  For larger message sizes (generally measured in 10s or 100s of megabytes or beyond), it is **strongly** recommended that you use the ```StreamReceived``` event.  Only one of these methods can be assigned; you cannot use both.
 
 When sending messages, the ```Send``` and ```SendAsync``` methods have both byte array and stream variants.  You are free to use whichever, or both, as you choose, regardless of whether you have implemented ```MessageReceived``` or ```StreamReceived```.
 
-It is important to note that when using ```StreamReceived```, the socket is blocked until you have fully read the stream and control has returned from your consuming application back to WatsonTcp.  That's required, because otherwise, WatsonTcp would begin reading at the wrong place in the stream.  With ```MessageReceived```, WatsonTcp will call your callback and begin reading immediately, since the entirety of the message data has already been read from the stream by WatsonTcp.
+It is important to note that when using ```StreamReceived```, the socket is blocked until you have fully read the stream and control has returned from your consuming application back to WatsonTcp.  That's required, because otherwise, WatsonTcp would begin reading at the wrong place in the stream.  With ```MessageReceived```, WatsonTcp will fire the event and begin reading immediately, since the entirety of the message data has already been read from the stream by WatsonTcp.
+
+Should you with to include a ```Dictionary<object, object>``` of metadata with any message, use the ```Send``` or ```SendAsync``` method that allows you to pass in metadata.  Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.
 
 Please see below for examples with byte arrays and with streams.
-
-## Sending and Receiving Metadata with Messages
-
-```Send``` and ```SendAsync``` methods include overloads that allow you to send metadata (in the form of ```Dictionary<object, object>```) in addition to message data (byte arrays or streams).  In order to receive these messages, you must implement either ```MessageReceivedWithMetadata``` (if using ```MessageReceived```) or ```StreamReceivedWithMetadata``` (if using ```StreamReceived```).  Metadata is serialized and deserialized using Newtonsoft.Json, therefore, only serializable types are supported in the keys/values of the metadata dictionary object you supply.
-
-Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.
 
 ## Running under Mono
 
@@ -49,7 +46,7 @@ mono --server myapp.exe
 
 ## Contributions
 
-Special thanks to @brudo, @MrMikeJJ, @mikkleini, and @pha3z for their support of this project!  If you'd like to contribute, please jump right into the source code and create a pull request. 
+Special thanks to @brudo, @MrMikeJJ, @mikkleini, @pha3z, and @crushedice for their support of this project!  If you'd like to contribute, please jump right into the source code and create a pull request. 
 
 ## Examples
 
@@ -72,9 +69,9 @@ using WatsonTcp;
 static void Main(string[] args)
 {
     WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 9000);
-    server.ClientConnected = ClientConnected;
-    server.ClientDisconnected = ClientDisconnected;
-    server.MessageReceived = MessageReceived; 
+    server.ClientConnected += ClientConnected;
+    server.ClientDisconnected += ClientDisconnected;
+    server.MessageReceived += MessageReceived; 
     server.Start();
 
     bool runForever = true;
@@ -116,21 +113,19 @@ static void Main(string[] args)
     }
 }
 
-static async Task ClientConnected(string ipPort)
+static void ClientConnected(object sender, ClientConnectedEventArgs args)
 {
-    Console.WriteLine("Client connected: " + ipPort);
+    Console.WriteLine("Client connected: " + args.IpPort);
 }
 
-static async Task ClientDisconnected(string ipPort, DisconnectReason reason)
+static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
 {
-    Console.WriteLine("Client disconnected: " + ipPort + ": " + reason.ToString());
+    Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
 }
 
-static async Task MessageReceived(string ipPort, byte[] data)
+static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
 {
-    string msg = "";
-    if (data != null && data.Length > 0) msg = Encoding.UTF8.GetString(data);
-    Console.WriteLine("Message received from " + ipPort + ": " + msg);
+    Console.WriteLine("Message received from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
 }
 ```
 
@@ -144,9 +139,9 @@ using WatsonTcp;
 static void Main(string[] args)
 {
     WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
-    client.ServerConnected = ServerConnected;
-    client.ServerDisconnected = ServerDisconnected;
-    client.MessageReceived = MessageReceived; 
+    client.ServerConnected += ServerConnected;
+    client.ServerDisconnected += ServerDisconnected;
+    client.MessageReceived += MessageReceived; 
     client.Start();
 
     bool runForever = true;
@@ -180,17 +175,17 @@ static void Main(string[] args)
     }
 }
 
-static async Task MessageReceived(byte[] data)
+static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
 {
-    Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(data));
+    Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(args.Data));
 }
 
-static async Task ServerConnected()
+static void ServerConnected(object sender, EventArgs args)
 {
     Console.WriteLine("Server connected");
 }
 
-static async Task ServerDisconnected()
+static void ServerDisconnected(object sender, EventArgs args)
 {
     Console.WriteLine("Server disconnected");
 }
@@ -202,18 +197,18 @@ The examples above can be modified to use SSL as follows.  No other changes are 
 ```
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000, "test.pfx", "password");
-server.ClientConnected = ClientConnected;
-server.ClientDisconnected = ClientDisconnected;
-server.MessageReceived = MessageReceived;
+server.ClientConnected += ClientConnected;
+server.ClientDisconnected += ClientDisconnected;
+server.MessageReceived += MessageReceived;
 server.AcceptInvalidCertificates = true;
 server.MutuallyAuthenticate = true;
 server.Start();
 
 // client
 WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000, "test.pfx", "password");
-client.ServerConnected = ServerConnected;
-client.ServerDisconnected = ServerDisconnected;
-client.MessageReceived = MessageReceived;
+client.ServerConnected += ServerConnected;
+client.ServerDisconnected += ServerDisconnected;
+client.MessageReceived += MessageReceived;
 client.AcceptInvalidCertificates = true;
 client.MutuallyAuthenticate = true;
 client.Start();
@@ -225,27 +220,26 @@ Refer to the ```TestClientStream``` and ```TestServerStream``` projects for a fu
 ```
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000);
-server.ClientConnected = ClientConnected;
-server.ClientDisconnected = ClientDisconnected;
-server.StreamReceived = StreamReceived; 
+server.ClientConnected += ClientConnected;
+server.ClientDisconnected += ClientDisconnected;
+server.StreamReceived += StreamReceived; 
 server.Start();
 
-static async Task StreamReceived(string ipPort, long contentLength, Stream stream)
+static void StreamReceived(object sender, StreamReceivedFromClientEventArgs args)
 {
-    // read contentLength bytes from the stream from client ipPort and process
-    return true;
+    // read args.ContentLength bytes from args.DataStream and process
 }
 
 // client
 WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
-client.ServerConnected = ServerConnected;
-client.ServerDisconnected = ServerDisconnected;
-client.StreamReceived = StreamReceived; 
+client.ServerConnected += ServerConnected;
+client.ServerDisconnected += ServerDisconnected;
+client.StreamReceived += StreamReceived; 
 client.Start();
 
-static async Task StreamReceived(long contentLength, Stream stream)
+static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args)
 {
-    // read contentLength bytes from the stream and process
+    // read args.ContentLength bytes from args.DataStream and process
 }
 ```
 

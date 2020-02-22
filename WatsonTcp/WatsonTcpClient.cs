@@ -48,102 +48,62 @@ namespace WatsonTcp
         public Func<string> AuthenticationRequested = null;
 
         /// <summary>
-        /// Function called when authentication has succeeded.
+        /// Event fired when authentication has succeeded.
         /// </summary>
-        public Func<Task> AuthenticationSucceeded = null;
+        public event EventHandler AuthenticationSucceeded;
 
         /// <summary>
-        /// Function called when authentication has failed.
+        /// Event fired when authentication has failed.
         /// </summary>
-        public Func<Task> AuthenticationFailure = null;
+        public event EventHandler AuthenticationFailure;
 
         /// <summary>
-        /// Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'. 
-        /// If receiving messages with metadata, 'MessageReceivedWithMetadata' must be set and 'StreamReceivedWithMetadata' cannot be used.
-        /// This callback is called when a message is received from the server.
-        /// The entire message payload is passed to your application in a byte array.
+        /// Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'.  
+        /// This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload. 
         /// </summary>
-        public Func<byte[], Task> MessageReceived
+        public event EventHandler<MessageReceivedFromServerEventArgs> MessageReceived
         {
-            get
-            {
-                return _MessageReceived;
+            add
+            { 
+                if (_StreamReceived != null
+                    && _StreamReceived.GetInvocationList().Length > 0) 
+                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _MessageReceived += value;
             }
-            set
+            remove
             {
-                if (_StreamReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
-                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceived' when 'StreamReceivedWithMetadata' has been set.");
-                _MessageReceived = value;
+                _MessageReceived -= value;
+            }
+        }
+         
+        /// <summary>
+        /// Use of 'StreamReceived' is exclusive and cannot be used with 'MessageReceived'.  
+        /// This callback is called when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
+        /// </summary>
+        public event EventHandler<StreamReceivedFromServerEventArgs> StreamReceived
+        {
+            add
+            {
+                if (_MessageReceived != null 
+                    && _MessageReceived.GetInvocationList().Length > 0) 
+                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                _StreamReceived += value;
+            }
+            remove
+            {
+                _StreamReceived -= value;
             }
         }
 
         /// <summary>
-        /// Use of 'MessageReceivedWithMetadata' is exclusive and cannot be used with 'StreamReceivedWithMetadata'.
-        /// This callback is called when a message is received from the server with attached metadata.
-        /// The metadata is contained in the supplied Dictionary, and the entire message payload is passed into the supplied byte array.
+        /// Event fired when the client successfully connects to the server.
         /// </summary>
-        public Func<Dictionary<object, object>, byte[], Task> MessageReceivedWithMetadata
-        {
-            get
-            {
-                return _MessageReceivedWithMetadata;
-            }
-            set
-            {
-                if (_StreamReceived != null) throw new InvalidOperationException("'MessageReceivedWithMetadata' cannot be used when 'StreamReceived' has been set.");
-                if (_StreamReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'MessageReceivedWithMetadata' when 'StreamReceivedWithMetadata' has been set.");
-                _MessageReceivedWithMetadata = value;
-            }
-        }
+        public event EventHandler ServerConnected;
 
         /// <summary>
-        /// Use of 'StreamReceived' is exclusive and cannot be used with 'StreamReceived'. 
-        /// If receiving messages with metadata, 'StreamReceivedWithMetadata' must be set and 'MessageReceivedWithMetadata' cannot be used.
-        /// This callback is called when a stream is received from the server.
-        /// The stream and its length are passed to your application. 
+        /// Event fired when the client disconnects from the server.
         /// </summary>
-        public Func<long, Stream, Task> StreamReceived
-        {
-            get
-            {
-                return _StreamReceived;
-            }
-            set
-            {
-                if (_MessageReceived != null) throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
-                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceived' when 'MessageReceivedWithMetadata' has been set.");
-                _StreamReceived = value;
-            }
-        }
-
-        /// <summary>
-        /// Use of 'StreamReceivedWithMetadata' is exclusive and cannot be used with 'MessageReceivedWithMetadata'.
-        /// This callback is called when a stream is received from the server with attached metadata.
-        /// The metadata is contained in the supplied Dictionary, and the stream and its length are passed into your application.
-        /// </summary>
-        public Func<Dictionary<object, object>, long, Stream, Task> StreamReceivedWithMetadata
-        {
-            get
-            {
-                return _StreamReceivedWithMetadata;
-            }
-            set
-            {
-                if (_MessageReceived != null) throw new InvalidOperationException("'StreamReceivedWithMetadata' cannot be used when 'MessageReceived' has been set.");
-                if (_MessageReceivedWithMetadata != null) throw new InvalidOperationException("You may not use 'StreamReceivedWithMetadata' when 'MessageReceivedWithMetadata' has been set.");
-                _StreamReceivedWithMetadata = value;
-            }
-        }
-
-        /// <summary>
-        /// Function called when the client successfully connects to the server.
-        /// </summary>
-        public Func<Task> ServerConnected = null;
-
-        /// <summary>
-        /// Function called when the client disconnects from the server.
-        /// </summary>
-        public Func<Task> ServerDisconnected = null;
+        public event EventHandler ServerDisconnected;
 
         /// <summary>
         /// Enable acceptance of SSL certificates from the server that cannot be validated.
@@ -233,10 +193,8 @@ namespace WatsonTcp
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
 
-        private Func<byte[], Task> _MessageReceived = null;
-        private Func<Dictionary<object, object>, byte[], Task> _MessageReceivedWithMetadata = null;
-        private Func<long, Stream, Task> _StreamReceived = null;
-        private Func<Dictionary<object, object>, long, Stream, Task> _StreamReceivedWithMetadata = null;
+        private event EventHandler<MessageReceivedFromServerEventArgs> _MessageReceived;
+        private event EventHandler<StreamReceivedFromServerEventArgs> _StreamReceived;
 
         private Statistics _Stats = new Statistics();
 
@@ -440,7 +398,7 @@ namespace WatsonTcp
 
             if (ServerConnected != null)
             {
-                Task serverConnected = Task.Run(() => ServerConnected());
+                ServerConnected?.Invoke(this, EventArgs.Empty);
             }
 
             Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
@@ -567,11 +525,7 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
-            if (ServerConnected != null)
-            {
-                Task serverConnected = Task.Run(() => ServerConnected());
-            }
-
+            ServerConnected?.Invoke(this, EventArgs.Empty);
             return DataReceiver();
         }
 
@@ -583,8 +537,7 @@ namespace WatsonTcp
         {
             if (String.IsNullOrEmpty(presharedKey)) throw new ArgumentNullException(nameof(presharedKey));
             if (presharedKey.Length != 16) throw new ArgumentException("Preshared key length must be 16 bytes.");
-
-            presharedKey = presharedKey.PadRight(16, ' ');
+             
             WatsonMessage msg = new WatsonMessage();
             msg.Status = MessageStatus.AuthRequested;
             msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
@@ -832,11 +785,13 @@ namespace WatsonTcp
                         msg = new WatsonMessage(_TcpStream, Debug); 
                     }
 
-                    if (_MessageReceived != null)
+                    if (_MessageReceived != null
+                        && _MessageReceived.GetInvocationList().Length > 0)
                     {
                         buildSuccess = await msg.Build();
                     }
-                    else if (_StreamReceived != null)
+                    else if (_StreamReceived != null
+                        && _StreamReceived.GetInvocationList().Length > 0)
                     {
                         buildSuccess = await msg.BuildStream();
                     }
@@ -870,13 +825,13 @@ namespace WatsonTcp
                     else if (msg.Status == MessageStatus.AuthSuccess)
                     {
                         Logger?.Invoke("[WatsonTcpClient] Authentication successful");
-                        AuthenticationSucceeded?.Invoke();
+                        AuthenticationSucceeded?.Invoke(this, EventArgs.Empty);
                         continue;
                     }
                     else if (msg.Status == MessageStatus.AuthFailure)
                     {
                         Logger?.Invoke("[WatsonTcpClient] Authentication failed");
-                        AuthenticationFailure?.Invoke();
+                        AuthenticationFailure?.Invoke(this, EventArgs.Empty);
                         continue;
                     }
 
@@ -894,41 +849,23 @@ namespace WatsonTcp
                         continue;
                     }
 
-                    if (msg.Metadata.Count > 0)
+                    if (_MessageReceived != null
+                        && _MessageReceived.GetInvocationList().Length > 0)
                     {
-                        if (_MessageReceivedWithMetadata != null)
-                        {
-                            // does not need to be awaited, because the stream has been fully read
-                            Task unawaited = Task.Run(() => _MessageReceivedWithMetadata(msg.Metadata, msg.Data));
-                        }
-                        else if (_StreamReceivedWithMetadata != null)
-                        {
-                            // must be awaited, because the content has not yet been fully read
-                            await _StreamReceivedWithMetadata(msg.Metadata, msg.ContentLength, msg.DataStream);
-                        }
-                        else
-                        {
-                            break;
-                        } 
+                        MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msg.Data);
+                        _MessageReceived?.Invoke(this, args);
+                    }
+                    else if (_StreamReceived != null
+                        && _StreamReceived.GetInvocationList().Length > 0)
+                    {
+                        StreamReceivedFromServerEventArgs args = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, msg.DataStream);
+                        _StreamReceived?.Invoke(this, args);
                     }
                     else
                     {
-                        if (_MessageReceived != null)
-                        {
-                            // does not need to be awaited, because the stream has been fully read
-                            Task unawaited = Task.Run(() => _MessageReceived(msg.Data));
-                        }
-                        else if (_StreamReceived != null)
-                        {
-                            // must be awaited, because the content has not yet been fully read
-                            await _StreamReceived(msg.ContentLength, msg.DataStream);
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        break;
                     }
-
+                     
                     _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
                     _Stats.ReceivedBytes += msg.ContentLength;
                 } 
@@ -949,7 +886,7 @@ namespace WatsonTcp
 
             Logger?.Invoke("[WatsonTcpClient] Data receiver terminated");
             Connected = false;
-            ServerDisconnected?.Invoke();
+            ServerDisconnected?.Invoke(this, EventArgs.Empty);
             Dispose();
         }
 

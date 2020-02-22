@@ -17,17 +17,17 @@ namespace TestLargeMessages
         static void Main(string[] args)
         {
             server = new WatsonTcpServer("127.0.0.1", 9000);
-            server.ClientConnected = ServerClientConnected;
-            server.ClientDisconnected = ServerClientDisconnected;
-            server.MessageReceived = ServerMessageReceived;
+            server.ClientConnected += ServerClientConnected;
+            server.ClientDisconnected += ServerClientDisconnected;
+            server.MessageReceived += ServerMessageReceived;
             // server.StreamReceived = ServerStreamReceived;
             // server.Debug = true;
             server.Start();
 
             client = new WatsonTcpClient("127.0.0.1", 9000);
-            client.ServerConnected = ServerConnected;
-            client.ServerDisconnected = ServerDisconnected;
-            client.MessageReceived = MessageReceived;
+            client.ServerConnected += ServerConnected;
+            client.ServerDisconnected += ServerDisconnected;
+            client.MessageReceived += MessageReceived;
             // client.StreamReceived = StreamReceived;
             // client.Debug = true;
             client.Start();
@@ -75,65 +75,49 @@ namespace TestLargeMessages
         }
 
         #region Server-Callbacks
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task ServerClientConnected(string ipPort)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
         {
-            Console.WriteLine("Server detected connection from client: " + ipPort);
+            Console.WriteLine("Server detected connection from client: " + args.IpPort);
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task ServerClientDisconnected(string ipPort, DisconnectReason reason)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args) 
         {
-            Console.WriteLine("Server detected disconnection from client: " + ipPort + " [" + reason.ToString() + "]");
+            Console.WriteLine("Server detected disconnection from client: " + args.IpPort + " [" + args.Reason.ToString() + "]");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task ServerMessageReceived(string ipPort, byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void ServerMessageReceived(object sender, MessageReceivedFromClientEventArgs args) 
         {
-            Console.WriteLine("Server received " + data.Length + " bytes from " + ipPort + ": MD5 " + Md5(data));
+            Console.WriteLine("Server received " + args.Data.Length + " bytes from " + args.IpPort + ": MD5 " + Md5(args.Data));
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task ServerStreamReceived(string ipPort, long contentLength, Stream stream)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void ServerStreamReceived(object sender, StreamReceivedFromClientEventArgs args)
         {
-            Console.Write("Server received " + contentLength + " bytes from " + ipPort + ": MD5 " + Md5(stream)); 
+            Console.Write("Server received " + args.ContentLength + " bytes from " + args.IpPort + ": MD5 " + Md5(args.DataStream)); 
         }
 
         #endregion
 
         #region Client-Callbacks
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task ServerConnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void ServerConnected(object sender, EventArgs args) 
         {
             Console.WriteLine("Client detected successful connection to server");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task ServerDisconnected()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void ServerDisconnected(object sender, EventArgs args) 
         {
             Console.WriteLine("Client detected disconnection from server");
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task MessageReceived(byte[] data)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args) 
         {
-            Console.WriteLine("Client received " + data.Length + " bytes from server: MD5 " + Md5(data));
+            Console.WriteLine("Client received " + args.Data.Length + " bytes from server: MD5 " + Md5(args.Data));
         }
-
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        static async Task StreamReceived(long contentLength, Stream stream)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+         
+        static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args) 
         {
-            Console.Write("Client received " + contentLength + " bytes from server: MD5 " + Md5(stream));
+            Console.Write("Client received " + args.ContentLength + " bytes from server: MD5 " + Md5(args.DataStream));
         }
 
         #endregion
