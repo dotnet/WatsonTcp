@@ -290,6 +290,12 @@
             The stream containing the message data.
             </summary>
         </member>
+        <member name="P:WatsonTcp.StreamReceivedFromClientEventArgs.Data">
+            <summary>
+            The data from DataStream.
+            Using Data will fully read the contents of DataStream.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.StreamReceivedFromServerEventArgs">
             <summary>
             Event arguments for when a stream is received from the server.
@@ -308,6 +314,12 @@
         <member name="P:WatsonTcp.StreamReceivedFromServerEventArgs.DataStream">
             <summary>
             The stream containing the message data.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.StreamReceivedFromServerEventArgs.Data">
+            <summary>
+            The data from DataStream.
+            Using Data will fully read the contents of DataStream.
             </summary>
         </member>
         <member name="T:WatsonTcp.WatsonTcpClient">

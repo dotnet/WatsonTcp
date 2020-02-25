@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v3.0.2
+
+- ```.Data``` property in both ```StreamReceivedFromClientEventArgs``` and ```StreamReceivedFromServerEventArgs```.
+
+## Previous Versions
+
 v3.0.1
 
 - Bugfix in pre-shared key authentication
-
-## Previous Versions
 
 v3.0.0
 
