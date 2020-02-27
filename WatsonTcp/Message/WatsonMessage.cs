@@ -67,9 +67,9 @@ namespace WatsonTcp.Message
         }
 
         /// <summary>
-        /// Length of metadata attached to the message.  HeaderFields[2], 4 bytes (Int32).
+        /// Length of metadata attached to the message.  HeaderFields[2], 8 bytes (Int64).
         /// </summary>
-        internal int MetadataLength = 0;
+        internal long MetadataLength = 0;
 
         /// <summary>
         /// Bytes associated with metadata.
@@ -426,7 +426,7 @@ namespace WatsonTcp.Message
 
                         case 2: // metadata
                             Log("Metadata: [present, " + MetadataLength + " bytes]");
-                            ret = AppendBytes(ret, IntegerToBytes(MetadataLength));
+                            ret = AppendBytes(ret, LongToBytes(MetadataLength));
                             break;
 
                         default:
@@ -697,13 +697,34 @@ namespace WatsonTcp.Message
 
         private byte[] IntegerToBytes(int i)
         {
-            if (i < 0 || i > 9999) throw new ArgumentException("Integer must be between 0 and 9999.");
+            if (i < 0 || i > 9999) throw new ArgumentException("Value must be between 0 and 9999.");
 
             byte[] ret = new byte[4];
             InitByteArray(ret);
 
             string stringVal = i.ToString("0000");
 
+            ret[3] = (byte)(Convert.ToInt32(stringVal[3]));
+            ret[2] = (byte)(Convert.ToInt32(stringVal[2]));
+            ret[1] = (byte)(Convert.ToInt32(stringVal[1]));
+            ret[0] = (byte)(Convert.ToInt32(stringVal[0]));
+
+            return ret;
+        }
+
+        private byte[] LongToBytes(long i)
+        {
+            if (i < 0 || i > 99999999) throw new ArgumentException("Value must be between 0 and 99,999,999.");
+
+            byte[] ret = new byte[8];
+            InitByteArray(ret);
+
+            string stringVal = i.ToString("00000000");
+
+            ret[7] = (byte)(Convert.ToInt32(stringVal[7]));
+            ret[6] = (byte)(Convert.ToInt32(stringVal[6]));
+            ret[5] = (byte)(Convert.ToInt32(stringVal[5]));
+            ret[4] = (byte)(Convert.ToInt32(stringVal[4]));
             ret[3] = (byte)(Convert.ToInt32(stringVal[3]));
             ret[2] = (byte)(Convert.ToInt32(stringVal[2]));
             ret[1] = (byte)(Convert.ToInt32(stringVal[1]));
@@ -835,7 +856,7 @@ namespace WatsonTcp.Message
 
                 case 2:
                     Log("Returning field MetadataLength");
-                    return new MessageField(2, "MetadataLength", FieldType.Int32, 4);
+                    return new MessageField(2, "MetadataLength", FieldType.Int64, 8);
 
                 default:
                     throw new KeyNotFoundException("Unable to retrieve field with bit number: " + bitNumber);
@@ -860,7 +881,7 @@ namespace WatsonTcp.Message
                     return;
 
                 case 2:
-                    MetadataLength = (int)val;
+                    MetadataLength = (long)val;
                     Log("MetadataLength set: " + MetadataLength);
                     return;
 

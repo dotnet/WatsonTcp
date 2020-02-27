@@ -116,7 +116,7 @@
         </member>
         <member name="F:WatsonTcp.Message.WatsonMessage.MetadataLength">
             <summary>
-            Length of metadata attached to the message.  HeaderFields[2], 4 bytes (Int32).
+            Length of metadata attached to the message.  HeaderFields[2], 8 bytes (Int64).
             </summary>
         </member>
         <member name="F:WatsonTcp.Message.WatsonMessage.MetadataBytes">
