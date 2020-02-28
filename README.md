@@ -9,9 +9,9 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-## New in v3.0.2
+## New in v3.0.3
 
-- ```.Data``` property in both ```StreamReceivedFromClientEventArgs``` and ```StreamReceivedFromServerEventArgs```.
+- Now supports serialized metadata sizes (i.e. calculated after serialization of your dictionary) of up to 99,999,999 bytes
 
 ## Test Applications
 

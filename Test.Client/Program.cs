@@ -81,6 +81,12 @@ namespace TestClient
                         if (!client.Send(metadata, Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
+                    case "send md large":
+                        metadata = new Dictionary<object, object>();
+                        for (int i = 0; i < 100000; i++) metadata.Add(i, i);
+                        if (!client.Send(metadata, "Hello!")) Console.WriteLine("Failed");
+                        break;
+
                     case "sendasync":
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();

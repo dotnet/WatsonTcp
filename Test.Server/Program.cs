@@ -144,6 +144,15 @@ namespace TestServer
                         Console.WriteLine(success);
                         break;
 
+                    case "send md large":
+                        Console.Write("IP:Port: ");
+                        ipPort = Console.ReadLine();
+                        if (String.IsNullOrEmpty(ipPort)) break;
+                        metadata = new Dictionary<object, object>();
+                        for (int i = 0; i < 100000; i++) metadata.Add(i, i);
+                        if (!server.Send(ipPort, metadata, "Hello!")) Console.WriteLine("Failed");
+                        break;
+
                     case "sendasync":
                         Console.Write("IP:Port: ");
                         ipPort = Console.ReadLine();

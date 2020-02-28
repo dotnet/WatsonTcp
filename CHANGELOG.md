@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v3.0.3
+
+- Now supports serialized metadata sizes (i.e. calculated after serialization of your dictionary) of up to 99,999,999 bytes
+
+## Previous Versions
+
 v3.0.2
 
 - ```.Data``` property in both ```StreamReceivedFromClientEventArgs``` and ```StreamReceivedFromServerEventArgs```.
-
-## Previous Versions
 
 v3.0.1
 
