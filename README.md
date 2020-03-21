@@ -9,9 +9,12 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-## New in v3.0.3
+## New in v3.1.0
 
-- Now supports serialized metadata sizes (i.e. calculated after serialization of your dictionary) of up to 99,999,999 bytes
+- Added support for synchronous messaging, i.e. send and wait for a response (see ```SendAndWait``` methods) with timeouts.  See the updated examples below or refer to the ```Test.Client``` and ```Test.Server``` project for examples
+- Consolidated Logger for client, server, and messages
+- ```Debug``` is now ```DebugMessages```
+- Minor internal refactor
 
 ## Test Applications
 
@@ -71,45 +74,33 @@ static void Main(string[] args)
     server.ClientConnected += ClientConnected;
     server.ClientDisconnected += ClientDisconnected;
     server.MessageReceived += MessageReceived; 
+    server.SyncRequestReceived = SyncRequestReceived;
     server.Start();
 
-    bool runForever = true;
-    while (runForever)
+    // list clients
+    IEnumerable<string> clients = server.ListClients();
+
+    // send a message
+    server.Send("[IP:port]", "Hello, client!");
+
+    // send a message with metadata
+    Dictionary<object, object> md = new Dictionary<object, object>();
+    md.Add("foo", "bar");
+    server.Send("[IP:port]", md, "Hello, client!  Here's some metadata!");
+
+    // send async!
+    await server.SendAsync("[IP:port", "Hello, client!  I'm async!");
+
+    // send and wait for a response
+    try
     {
-        Console.Write("Command [q cls list send]: ");
-        string userInput = Console.ReadLine();
-        if (String.IsNullOrEmpty(userInput)) continue;
-
-        List<string> clients;
-        string ipPort;
-
-        switch (userInput)
-        {
-            case "q":
-                runForever = false;
-                break;
-            case "cls":
-                Console.Clear();
-                break;
-            case "list":
-                clients = server.ListClients();
-                if (clients != null && clients.Count > 0)
-                {
-                    Console.WriteLine("Clients");
-                    foreach (string curr in clients) Console.WriteLine("  " + curr); 
-                }
-                else Console.WriteLine("None"); 
-                break;
-            case "send":
-                Console.Write("IP:Port: ");
-                ipPort = Console.ReadLine();
-                Console.Write("Data: ");
-                userInput = Console.ReadLine();
-                if (String.IsNullOrEmpty(userInput)) break;
-                server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
-                break;
-        }
+        SyncResponse resp = server.SendAndWait("[IP:port", 5000, "Hey, say hello back within 5 seconds!");
+        Console.WriteLine("My friend says: " + Encoding.UTF8.GetString(resp.Data));
     }
+    catch (TimeoutException)
+    {
+        Console.WriteLine("Too slow...");
+    } 
 }
 
 static void ClientConnected(object sender, ClientConnectedEventArgs args)
@@ -126,6 +117,11 @@ static void MessageReceived(object sender, MessageReceivedFromClientEventArgs ar
 {
     Console.WriteLine("Message received from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
 }
+
+static SyncResponse SyncRequestReceived(SyncRequest req)
+{
+    return new SyncResponse("Hello back at you!");
+}
 ```
 
 ### Client
@@ -141,37 +137,33 @@ static void Main(string[] args)
     client.ServerConnected += ServerConnected;
     client.ServerDisconnected += ServerDisconnected;
     client.MessageReceived += MessageReceived; 
+    client.SyncRequestReceived = SyncRequestReceived;
     client.Start();
 
-    bool runForever = true;
-    while (runForever)
-    {
-        Console.Write("Command [q cls send auth]: ");
-        string userInput = Console.ReadLine();
-        if (String.IsNullOrEmpty(userInput)) continue;
+    // check connectivity
+    Console.WriteLine("Am I connected?  " + client.Connected);
 
-        switch (userInput)
-        {
-            case "q":
-                runForever = false;
-                break;
-            case "cls":
-                Console.Clear();
-                break;
-            case "send":
-                Console.Write("Data: ");
-                userInput = Console.ReadLine();
-                if (String.IsNullOrEmpty(userInput)) break;
-                client.Send(Encoding.UTF8.GetBytes(userInput));
-                break;
-            case "auth":
-                Console.Write("Preshared key: ");
-                userInput = Console.ReadLine();
-                if (String.IsNullOrEmpty(userInput)) break;
-                client.Authenticate(userInput);
-                break;
-        }
+    // send a message
+    client.Send("Hello!");
+
+    // send a message with metadata
+    Dictionary<object, object> md = new Dictionary<object, object>();
+    md.Add("foo", "bar");
+    client.Send(md, "Hello, client!  Here's some metadata!");
+
+    // send async!
+    await client.SendAsync("Hello, client!  I'm async!");
+
+    // send and wait for a response
+    try
+    {
+        SyncResponse resp = client.SendAndWait(5000, "Hey, say hello back within 5 seconds!");
+        Console.WriteLine("My friend says: " + Encoding.UTF8.GetString(resp.Data));
     }
+    catch (TimeoutException)
+    {
+        Console.WriteLine("Too slow...");
+    }  
 }
 
 static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
@@ -187,6 +179,11 @@ static void ServerConnected(object sender, EventArgs args)
 static void ServerDisconnected(object sender, EventArgs args)
 {
     Console.WriteLine("Server disconnected");
+}
+
+static SyncResponse SyncRequestReceived(SyncRequest req)
+{
+    return new SyncResponse("Hello back at you!");
 }
 ```
 

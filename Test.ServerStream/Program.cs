@@ -78,7 +78,7 @@ namespace TestServerStream
                         Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  psk            set preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + server.Debug + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + server.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -170,8 +170,8 @@ namespace TestServerStream
                         break;
 
                     case "debug":
-                        server.Debug = !server.Debug;
-                        Console.WriteLine("Debug set to: " + server.Debug);
+                        server.DebugMessages = !server.DebugMessages;
+                        Console.WriteLine("Debug set to: " + server.DebugMessages);
                         break;
 
                     default:

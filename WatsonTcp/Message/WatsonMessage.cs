@@ -25,14 +25,10 @@ namespace WatsonTcp.Message
         /// Length of the data.
         /// </summary>
         internal long ContentLength { get; set; }
-
+         
         /// <summary>
-        /// Bit array indicating which fields in the header are set.
-        /// </summary>
-        internal BitArray HeaderFields = new BitArray(64);
-
-        /// <summary>
-        /// Preshared key for connection authentication.  HeaderFields[0], 16 bytes.
+        /// Preshared key for connection authentication.  
+        /// _HeaderFields[0], 16 bytes.
         /// </summary>
         internal byte[] PresharedKey
         {
@@ -42,16 +38,25 @@ namespace WatsonTcp.Message
             }
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(PresharedKey));
-                if (value != null && value.Length != 16) throw new ArgumentException("PresharedKey must be 16 bytes.");
-                _PresharedKey = new byte[16];
-                Buffer.BlockCopy(value, 0, _PresharedKey, 0, 16);
-                HeaderFields[0] = true;
+                if (value == null)
+                {
+                    _PresharedKey = null;
+                    _HeaderFields[0] = false;
+                }
+                else
+                {
+                    if (value.Length != 16) throw new ArgumentException("PresharedKey must be 16 bytes.");
+
+                    _PresharedKey = new byte[16];
+                    Buffer.BlockCopy(value, 0, _PresharedKey, 0, 16);
+                    _HeaderFields[0] = true;
+                }
             }
         }
 
         /// <summary>
-        /// Status of the message.  HeaderFields[1], 4 bytes (Int32).
+        /// Status of the message.  
+        /// _HeaderFields[1], 4 bytes (Int32).
         /// </summary>
         internal MessageStatus Status
         {
@@ -62,24 +67,148 @@ namespace WatsonTcp.Message
             set
             {
                 _Status = value;
-                HeaderFields[1] = true;
+                _HeaderFields[1] = true;
+            }
+        }
+         
+        /// <summary>
+        /// Bytes associated with metadata.  
+        /// _HeaderFields[2], 8 bytes (Int64).
+        /// </summary>
+        internal byte[] MetadataBytes
+        {
+            get
+            {
+                return _MetadataBytes;
             }
         }
 
         /// <summary>
-        /// Length of metadata attached to the message.  HeaderFields[2], 8 bytes (Int64).
+        /// Metadata dictionary.  
+        /// _HeaderFields[2], 8 bytes (Int64).
         /// </summary>
-        internal long MetadataLength = 0;
+        internal Dictionary<object, object> Metadata
+        {
+            get
+            {
+                return _Metadata;
+            }
+            set
+            {
+                if (value == null || value.Count < 1)
+                {
+                    _Metadata = new Dictionary<object, object>();
+                    _MetadataBytes = null;
+                    _MetadataLength = 0;
+                    _HeaderFields[2] = false;
+                }
+                else
+                {
+                    _Metadata = value;
+                    _MetadataBytes = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(value, false));
+                    _MetadataLength = _MetadataBytes.Length;
+                    _HeaderFields[2] = true;
+                }
+            }
+        }
 
         /// <summary>
-        /// Bytes associated with metadata.
+        /// Indicates if the message is a synchronous request.
+        /// _HeaderFields[3], 4 bytes (Int32).
         /// </summary>
-        internal byte[] MetadataBytes = null;
+        internal bool SyncRequest
+        {
+            get
+            {
+                return _SyncRequest;
+            }
+            set
+            {
+                _SyncRequest = value;
+                if (value)
+                {
+                    _HeaderFields[3] = true;
+                }
+                else
+                {
+                    _HeaderFields[3] = false;
+                }
+            }
+        }
 
         /// <summary>
-        /// Metadata dictionary.
+        /// Indicates if the message is a synchronous response.
+        /// _HeaderFields[4], 4 bytes (Int32).
         /// </summary>
-        internal Dictionary<object, object> Metadata = new Dictionary<object, object>();
+        internal bool SyncResponse
+        {
+            get
+            {
+                return _SyncResponse;
+            }
+            set
+            {
+                _SyncResponse = value;
+                if (value)
+                {
+                    _HeaderFields[4] = true;
+                }
+                else
+                {
+                    _HeaderFields[4] = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Indicates an expiration time in UTC; only applicable to synchronous requests.
+        /// _HeaderFields[5], 32 bytes (DateTime as string).
+        /// </summary>
+        internal DateTime? ExpirationUtc
+        {
+            get
+            {
+                return _ExpirationUtc;
+            }
+            set
+            {
+                if (value != null)
+                {
+                    _HeaderFields[5] = true;
+                }
+                else
+                {
+                    _HeaderFields[5] = false;
+                }
+
+                _ExpirationUtc = value;
+            }
+        }
+
+        /// <summary>
+        /// Indicates the conversation GUID of the message.
+        /// _HeaderFields[6], 36 bytes (byte[36]).
+        /// </summary>
+        internal string ConversationGuid
+        {
+            get
+            {
+                return _ConversationGuid;
+            }
+            set
+            {
+                if (!String.IsNullOrEmpty(value))
+                {
+                    _HeaderFields[6] = true;
+                }
+                else
+                {
+                    _HeaderFields[6] = false;
+                }
+
+                _ConversationGuid = value;
+            }
+        }
 
         /// <summary>
         /// Message data.
@@ -111,14 +240,25 @@ namespace WatsonTcp.Message
 
         #region Private-Members
 
-        private bool _Debug = false;
-
+        private Action<string> _Logger = null;
+        private string _Header = "[WatsonMessage] ";
+        //                                         1         2         3
         //                                123456789012345678901234567890
-        private string _DateTimeFormat = "MMddyyyyTHHmmssffffffz"; // 22 bytes
+        private string _DateTimeFormat = "yyyy-MM-dd HH:mm:ss.ffffffz"; // 32 bytes
 
         private int _ReadStreamBuffer = 65536;
         private byte[] _PresharedKey;
+
+        private BitArray _HeaderFields = new BitArray(64);
         private MessageStatus _Status;
+        private Dictionary<object, object> _Metadata = new Dictionary<object, object>();
+        private byte[] _MetadataBytes = null;
+        private long _MetadataLength = 0;
+
+        private bool _SyncRequest = false;
+        private bool _SyncResponse = false;
+        private DateTime? _ExpirationUtc = null;
+        private string _ConversationGuid = null;
 
         #endregion Private-Members
 
@@ -128,9 +268,7 @@ namespace WatsonTcp.Message
         /// Do not use.
         /// </summary>
         internal WatsonMessage()
-        {
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
+        { 
             Status = MessageStatus.Normal;
         }
 
@@ -139,26 +277,27 @@ namespace WatsonTcp.Message
         /// </summary>
         /// <param name="metadata">Metadata to attach to the message.</param>
         /// <param name="data">The data to send.</param>
-        /// <param name="debug">Enable or disable debugging.</param>
-        internal WatsonMessage(Dictionary<object, object> metadata, byte[] data, bool debug)
+        /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
+        /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
+        /// <param name="expirationUtc">The time at which the message should expire (only valid for synchronous message requests).</param>
+        /// <param name="convGuid">Conversation GUID.</param>
+        /// <param name="logger">Logger method.</param>
+        internal WatsonMessage(Dictionary<object, object> metadata, byte[] data, bool syncRequest, bool syncResponse, DateTime? expirationUtc, string convGuid, Action<string> logger)
         {
             if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
-
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields); 
+             
             Status = MessageStatus.Normal; 
             ContentLength = data.Length;
+            Metadata = metadata;
+            SyncRequest = syncRequest;
+            SyncResponse = syncResponse;
+            ExpirationUtc = expirationUtc;
+            ConversationGuid = convGuid;
             Data = new byte[data.Length];
             Buffer.BlockCopy(data, 0, Data, 0, data.Length);
-            DataStream = null; 
-            _Debug = debug;
+            DataStream = null;
 
-            if (metadata != null && metadata.Count > 0)
-            {
-                Metadata = metadata;
-                MetadataBytes = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(Metadata, false));
-                MetadataLength = MetadataBytes.Length;
-            }
+            _Logger = logger; 
         }
 
         /// <summary>
@@ -167,8 +306,12 @@ namespace WatsonTcp.Message
         /// <param name="metadata">Metadata to attach to the message.</param>
         /// <param name="contentLength">The number of bytes included in the stream.</param>
         /// <param name="stream">The stream containing the data.</param>
-        /// <param name="debug">Enable or disable debugging.</param>
-        internal WatsonMessage(Dictionary<object, object> metadata, long contentLength, Stream stream, bool debug)
+        /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
+        /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
+        /// <param name="expirationUtc">The time at which the message should expire (only valid for synchronous message requests).</param>
+        /// <param name="convGuid">Conversation GUID.</param>
+        /// <param name="logger">Logger method.</param>
+        internal WatsonMessage(Dictionary<object, object> metadata, long contentLength, Stream stream, bool syncRequest, bool syncResponse, DateTime? expirationUtc, string convGuid, Action<string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (contentLength > 0)
@@ -177,58 +320,51 @@ namespace WatsonTcp.Message
                 {
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
-            }
+            } 
 
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields); 
             Status = MessageStatus.Normal; 
             ContentLength = contentLength;
+            Metadata = metadata;
+            SyncRequest = syncRequest;
+            SyncResponse = syncResponse;
+            ExpirationUtc = expirationUtc;
+            ConversationGuid = convGuid;
             Data = null;
-            DataStream = stream; 
-            _Debug = debug;
+            DataStream = stream;
 
-            if (metadata != null && metadata.Count > 0)
-            {
-                Metadata = metadata;
-                MetadataBytes = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(Metadata, false));
-                MetadataLength = MetadataBytes.Length;
-            }
+            _Logger = logger; 
         }
 
         /// <summary>
         /// Read from a stream and construct a message.  Call Build() to populate.
         /// </summary>
         /// <param name="stream">NetworkStream.</param>
-        /// <param name="debug">Enable or disable console debugging.</param>
-        internal WatsonMessage(NetworkStream stream, bool debug)
+        /// <param name="logger">Logger method.</param>
+        internal WatsonMessage(NetworkStream stream, Action<string> logger)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (!stream.CanRead) throw new ArgumentException("Cannot read from stream.");
-
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-            Status = MessageStatus.Normal;
-
+             
+            Status = MessageStatus.Normal; 
             DataStream = stream;
-            _Debug = debug;
+
+            _Logger = logger; 
         }
 
         /// <summary>
         /// Read from an SSL-based stream and construct a message.  Call Build() to populate.
         /// </summary>
         /// <param name="stream">SslStream.</param>
-        /// <param name="debug">Enable or disable console debugging.</param>
-        internal WatsonMessage(SslStream stream, bool debug)
+        /// <param name="logger">Logger method.</param>
+        internal WatsonMessage(SslStream stream, Action<string> logger)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (!stream.CanRead) throw new ArgumentException("Cannot read from stream.");
 
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
             Status = MessageStatus.Normal;
-
             DataStream = stream;
-            _Debug = debug;
+
+            _Logger = logger; 
         }
 
         #endregion Constructors-and-Factories
@@ -261,7 +397,7 @@ namespace WatsonTcp.Message
                     Int64.TryParse(msgLengthString, out length);
                     Length = length;
 
-                    Log("Message payload length: " + Length + " bytes");
+                    _Logger?.Invoke(_Header + "Build message length: " + Length + " bytes");
                 }
 
                 #endregion Read-Message-Length
@@ -270,13 +406,13 @@ namespace WatsonTcp.Message
 
                 byte[] headerFields = await ReadFromNetwork(8, "HeaderFields");
                 headerFields = ReverseByteArray(headerFields);
-                HeaderFields = new BitArray(headerFields);
+                _HeaderFields = new BitArray(headerFields);
 
                 long payloadLength = Length - 8;
 
-                for (int i = 0; i < HeaderFields.Length; i++)
+                for (int i = 0; i < _HeaderFields.Length; i++)
                 {
-                    if (HeaderFields[i])
+                    if (_HeaderFields[i])
                     {
                         MessageField field = GetMessageField(i);
                         object val = await ReadField(field.Type, field.Length, field.Name);
@@ -285,11 +421,10 @@ namespace WatsonTcp.Message
                     }
                 }
 
-                if (MetadataLength > 0)
+                if (_MetadataLength > 0)
                 {
-                    MetadataBytes = await ReadFromNetwork(MetadataLength, "MetadataBytes");
-                    // payloadLength -= MetadataLength;
-                    Metadata = SerializationHelper.DeserializeJson<Dictionary<object, object>>(Encoding.UTF8.GetString(MetadataBytes));
+                    _MetadataBytes = await ReadFromNetwork(_MetadataLength, "MetadataBytes");
+                    _Metadata = SerializationHelper.DeserializeJson<Dictionary<object, object>>(Encoding.UTF8.GetString(MetadataBytes));
                 }
 
                 ContentLength = payloadLength;
@@ -301,12 +436,10 @@ namespace WatsonTcp.Message
             } 
             catch (Exception e)
             {
-                Log(Environment.NewLine +
-                    "Message build exception:" +
+                _Logger?.Invoke(_Header + "Build exception: " + 
                     Environment.NewLine +
                     e.ToString() +
-                    Environment.NewLine);
-
+                    Environment.NewLine); 
                 return false;
             } 
         }
@@ -338,36 +471,34 @@ namespace WatsonTcp.Message
                     Int64.TryParse(msgLengthString, out length);
                     Length = length;
 
-                    Log("Message payload length: " + Length + " bytes");
+                    _Logger?.Invoke(_Header + "BuildStream payload length: " + Length + " bytes");
                 }
 
                 #endregion Read-Message-Length
 
                 #region Process-Header-Fields
-
+                 
                 byte[] headerFields = await ReadFromNetwork(8, "HeaderFields");
                 headerFields = ReverseByteArray(headerFields);
-                HeaderFields = new BitArray(headerFields);
+                _HeaderFields = new BitArray(headerFields);
 
                 long payloadLength = Length - 8;
 
-                for (int i = 0; i < HeaderFields.Length; i++)
+                for (int i = 0; i < _HeaderFields.Length; i++)
                 {
-                    if (HeaderFields[i])
+                    if (_HeaderFields[i])
                     {
-                        MessageField field = GetMessageField(i);
-                        Log("Reading header field " + i + " " + field.Name + " " + field.Type.ToString() + " " + field.Length + " bytes");
+                        MessageField field = GetMessageField(i); 
                         object val = await ReadField(field.Type, field.Length, field.Name);
                         SetMessageValue(field, val);
                         payloadLength -= field.Length;
                     }
                 }
 
-                if (MetadataLength > 0)
+                if (_MetadataLength > 0)
                 {
-                    MetadataBytes = await ReadFromNetwork(MetadataLength, "MetadataBytes");
-                    // payloadLength -= MetadataLength;
-                    Metadata = SerializationHelper.DeserializeJson<Dictionary<object, object>>(Encoding.UTF8.GetString(MetadataBytes));
+                    _MetadataBytes = await ReadFromNetwork(_MetadataLength, "MetadataBytes");
+                    _Metadata = SerializationHelper.DeserializeJson<Dictionary<object, object>>(Encoding.UTF8.GetString(MetadataBytes));
                 }
 
                 ContentLength = payloadLength;
@@ -379,12 +510,10 @@ namespace WatsonTcp.Message
             }
             catch (Exception e)
             {
-                Log(Environment.NewLine +
-                    "Message build from stream exception:" +
+                _Logger?.Invoke(_Header + "BuildStream exception: " +
                     Environment.NewLine +
                     e.ToString() +
                     Environment.NewLine);
-
                 return false;
             }
         }
@@ -395,10 +524,10 @@ namespace WatsonTcp.Message
         /// <returns>Byte array.</returns>
         internal byte[] ToHeaderBytes(long contentLength)
         {
-            SetHeaderFieldBitmap();
+            _HeaderFields[1] = true; // status is always set
 
             byte[] headerFieldsBytes = new byte[8];
-            headerFieldsBytes = BitArrayToBytes(HeaderFields);
+            headerFieldsBytes = BitArrayToBytes(_HeaderFields);
             headerFieldsBytes = ReverseByteArray(headerFieldsBytes);
 
             byte[] ret = new byte[headerFieldsBytes.Length];
@@ -406,31 +535,50 @@ namespace WatsonTcp.Message
 
             #region Header-Fields
 
-            for (int i = 0; i < HeaderFields.Length; i++)
+            for (int i = 0; i < _HeaderFields.Length; i++)
             {
-                if (HeaderFields[i])
+                if (_HeaderFields[i])
                 {
-                    Log("Header field " + i + " is set");
                     MessageField field = GetMessageField(i);
                     switch (i)
                     {
-                        case 0: // preshared key
-                            Log("PresharedKey: " + Encoding.UTF8.GetString(PresharedKey));
-                            ret = AppendBytes(ret, PresharedKey);
+                        case 0: // PresharedKey
+                            _Logger?.Invoke(_Header + "ToHeaderBytes PresharedKey: " + Encoding.UTF8.GetString(_PresharedKey)); 
+                            ret = AppendBytes(ret, _PresharedKey);
                             break;
 
-                        case 1: // status
-                            Log("Status: " + Status.ToString() + " " + (int)Status);
-                            ret = AppendBytes(ret, IntegerToBytes((int)Status));
+                        case 1: // Status
+                            _Logger?.Invoke(_Header + "ToHeaderBytes Status: " + _Status.ToString() + " " + (int)Status);
+                            ret = AppendBytes(ret, IntegerToBytes((int)_Status));
                             break;
 
-                        case 2: // metadata
-                            Log("Metadata: [present, " + MetadataLength + " bytes]");
-                            ret = AppendBytes(ret, LongToBytes(MetadataLength));
+                        case 2: // Metadata
+                            _Logger?.Invoke(_Header + "ToHeaderBytes Metadata: [present, " + _MetadataLength + " bytes]");
+                            ret = AppendBytes(ret, LongToBytes(_MetadataLength));
                             break;
+
+                        case 3: // SyncRequest
+                            _Logger?.Invoke(_Header + "ToHeaderBytes SyncRequest: " + _SyncRequest.ToString());
+                            ret = AppendBytes(ret, IntegerToBytes(_SyncRequest ? 1 : 0));
+                            break;
+
+                        case 4: // SyncResponse
+                            _Logger?.Invoke(_Header + "ToHeaderBytes SyncResponse: " + _SyncResponse.ToString());
+                            ret = AppendBytes(ret, IntegerToBytes(_SyncResponse ? 1 : 0));
+                            break;
+
+                        case 5: // ExpirationUtc
+                            _Logger?.Invoke(_Header + "ToHeaderBytes ExpirationUtc: " + _ExpirationUtc.Value.ToString(_DateTimeFormat));
+                            ret = AppendBytes(ret, Encoding.UTF8.GetBytes(_ExpirationUtc.Value.ToString(_DateTimeFormat).PadRight(32)));
+                            break;
+
+                        case 6: // ConversationGuid
+                            _Logger?.Invoke(_Header + "ToHeaderBytes ConversationGuid: " + _ConversationGuid.ToString());
+                            ret = AppendBytes(ret, Encoding.UTF8.GetBytes(_ConversationGuid));
+                            break; 
 
                         default:
-                            throw new ArgumentException("Unknown bit number.");
+                            throw new ArgumentException("Unknown bit number " + i + ".");
                     }
                 }
             }
@@ -440,7 +588,7 @@ namespace WatsonTcp.Message
             #region Prepend-Message-Length
 
             long finalLen = ret.Length + contentLength;
-            Log("Content length: " + finalLen + " (" + ret.Length + " + " + contentLength + ")");
+            _Logger?.Invoke(_Header + "ToHeaderBytes length: " + finalLen + " bytes (" + ret.Length + " header bytes + " + contentLength + " data bytes)");
 
             byte[] lengthHeader = Encoding.UTF8.GetBytes(finalLen.ToString() + ":");
             byte[] final = new byte[(lengthHeader.Length + ret.Length)];
@@ -448,8 +596,8 @@ namespace WatsonTcp.Message
             Buffer.BlockCopy(ret, 0, final, lengthHeader.Length, ret.Length);
 
             #endregion Prepend-Message-Length
-
-            Log("ToHeaderBytes returning: " + Encoding.UTF8.GetString(final));
+            
+            _Logger?.Invoke(_Header + "ToHeaderBytes returning: " + Encoding.UTF8.GetString(final));
             return final;
         }
 
@@ -460,19 +608,28 @@ namespace WatsonTcp.Message
         public override string ToString()
         {
             string ret = "---" + Environment.NewLine;
-            ret += "  Header fields : " + FieldToString(FieldType.Bits, HeaderFields) + Environment.NewLine;
-            ret += "  Preshared key : " + FieldToString(FieldType.ByteArray, PresharedKey) + Environment.NewLine;
-            ret += "  Status        : " + FieldToString(FieldType.Int32, (int)Status) + Environment.NewLine;
+            ret += "  Header fields     : " + FieldToString(FieldType.Bits, _HeaderFields) + Environment.NewLine;
+            ret += "  Preshared key     : " + FieldToString(FieldType.ByteArray, PresharedKey) + Environment.NewLine;
+            ret += "  Status            : " + FieldToString(FieldType.Int32, (int)Status) + Environment.NewLine;
+            ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
+            ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
+            ret += "  ExpirationUtc     : " + (ExpirationUtc != null ? ExpirationUtc.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
+            ret += "  Conversation GUID : " + ConversationGuid + Environment.NewLine;
+
+            if (Metadata != null)
+            {
+                ret += "  Metadata          : " + Metadata.Count + " entries, " + _MetadataLength + " bytes" + Environment.NewLine;
+            }
 
             if (Data != null)
             {
-                ret += "  Data          : " + Data.Length + " bytes" + Environment.NewLine;
+                ret += "  Data              : " + Data.Length + " bytes" + Environment.NewLine;
                 if (Data.Length > 0) 
                     ret += Encoding.UTF8.GetString(Data); 
             }
 
             if (DataStream != null)
-                ret += "  DataStream    : present, " + ContentLength + " bytes" + Environment.NewLine;
+                ret += "  DataStream        : present, " + ContentLength + " bytes" + Environment.NewLine;
 
             return ret;
         }
@@ -480,30 +637,14 @@ namespace WatsonTcp.Message
         #endregion Public-Methods
 
         #region Private-Methods
-
-        private void SetHeaderFieldBitmap()
-        {
-            HeaderFields = new BitArray(64);
-            InitBitArray(HeaderFields);
-
-            // HeaderFields[0]: preshared key
-            if (PresharedKey != null && PresharedKey.Length > 0) HeaderFields[0] = true;
-
-            // HeaderFields[1]: status
-            HeaderFields[1] = true;  // messages will always have a status
-
-            // HeaderFields[2]: metadata
-            if (Metadata != null && Metadata.Count > 0) HeaderFields[2] = true;
-        }
-
+         
         private async Task<object> ReadField(FieldType fieldType, int maxLength, string name)
         {
-            string logMessage = "ReadField " + fieldType.ToString() + " " + maxLength + " " + name;
+            string logMessage = "ReadField " + fieldType.ToString() + " " + maxLength + " bytes, field " + name;
 
             try
             {
-                byte[] data = null;
-                int headerLength = 0;
+                byte[] data = null; 
 
                 object ret = null;
 
@@ -526,20 +667,12 @@ namespace WatsonTcp.Message
                     data = await ReadFromNetwork(maxLength, name + " String (" + maxLength + ")");
                     logMessage += " " + ByteArrayToHex(data);
                     ret = Encoding.UTF8.GetString(data);
-                    logMessage += ": " + headerLength + " " + ret;
-                }
-                else if (fieldType == FieldType.DateTime)
-                {
-                    data = await ReadFromNetwork(_DateTimeFormat.Length, name + " DateTime");
-                    logMessage += " " + ByteArrayToHex(data);
-                    ret = DateTime.ParseExact(Encoding.UTF8.GetString(data), _DateTimeFormat, CultureInfo.InvariantCulture);
-                    logMessage += ": " + headerLength + " " + ret.ToString();
-                }
+                    logMessage += ": " + ret;
+                } 
                 else if (fieldType == FieldType.ByteArray)
                 {
                     ret = await ReadFromNetwork(maxLength, name + " ByteArray (" + maxLength + ")");
-                    logMessage += " " + ByteArrayToHex((byte[])ret);
-                    logMessage += ": " + headerLength + " " + ByteArrayToHex((byte[])ret);
+                    logMessage += ": " + ByteArrayToHex((byte[])ret);
                 }
                 else
                 {
@@ -550,7 +683,7 @@ namespace WatsonTcp.Message
             }
             finally
             {
-                Log(logMessage);
+                _Logger?.Invoke(_Header + logMessage);
             }
         }
 
@@ -589,12 +722,7 @@ namespace WatsonTcp.Message
                 {
                     return Encoding.UTF8.GetBytes(dataStr);
                 }
-            }
-            else if (fieldType == FieldType.DateTime)
-            {
-                string dateTime = Convert.ToDateTime(data).ToString(_DateTimeFormat);
-                return Encoding.UTF8.GetBytes(dateTime);
-            }
+            } 
             else if (fieldType == FieldType.ByteArray)
             {
                 if (((byte[])data).Length != maxLength) throw new ArgumentException("Data length does not match length supplied.");
@@ -625,11 +753,7 @@ namespace WatsonTcp.Message
             else if (fieldType == FieldType.String)
             {
                 return "[s]" + data.ToString();
-            }
-            else if (fieldType == FieldType.DateTime)
-            {
-                return "[d]" + Convert.ToDateTime(data).ToString(_DateTimeFormat);
-            }
+            } 
             else if (fieldType == FieldType.ByteArray)
             {
                 return "[b]" + ByteArrayToHex((byte[])data);
@@ -658,41 +782,27 @@ namespace WatsonTcp.Message
         }
 
         private async Task<byte[]> ReadFromNetwork(long count, string field)
-        {
-            Log("ReadFromNetwork " + count + " " + field);
-            string logMessage = null;
-
-            try
-            {
-                if (count <= 0) return null;
-                int bytesRead = 0;
-                byte[] readBuffer = new byte[count];
+        {  
+            if (count <= 0) return null;
+            int bytesRead = 0;
+            byte[] readBuffer = new byte[count];
                  
-                if (DataStream != null)
-                { 
-                    while (bytesRead < count)
-                    {
-                        int read = await DataStream.ReadAsync(readBuffer, bytesRead, readBuffer.Length - bytesRead);
-                        if (read == 0) throw new SocketException();
-                        bytesRead += read;
-                    }
-                }
-                else
+            if (DataStream != null)
+            { 
+                while (bytesRead < count)
                 {
-                    throw new IOException("No suitable input stream found.");
+                    int read = await DataStream.ReadAsync(readBuffer, bytesRead, readBuffer.Length - bytesRead);
+                    if (read == 0) throw new SocketException();
+                    bytesRead += read;
                 }
-                 
-                if (_Debug)
-                {
-                    logMessage = ByteArrayToHex(readBuffer);
-                }
-
-                return readBuffer;
             }
-            finally
+            else
             {
-                Log("- Result: " + field + " " + count + ": " + logMessage);
+                throw new IOException("No suitable input stream found.");
             }
+
+            _Logger?.Invoke(_Header + "ReadFromNetwork " + count + " bytes, field " + field + ": " + ByteArrayToHex(readBuffer)); 
+            return readBuffer; 
         }
 
         private byte[] IntegerToBytes(int i)
@@ -776,16 +886,7 @@ namespace WatsonTcp.Message
                 data[i] = 0x00;
             }
         }
-
-        private void InitBitArray(BitArray data)
-        {
-            if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
-            for (int i = 0; i < data.Length; i++)
-            {
-                data[i] = false;
-            }
-        }
-
+         
         private byte[] AppendBytes(byte[] head, byte[] tail)
         {
             byte[] arrayCombined = new byte[head.Length + tail.Length];
@@ -841,25 +942,41 @@ namespace WatsonTcp.Message
             bits.CopyTo(ret, 0);
             return ret;
         }
-
-        private MessageField GetMessageField(int bitNumber)
+          
+        private MessageField GetMessageField(int i)
         {
-            switch (bitNumber)
+            switch (i)
             {
                 case 0:
-                    Log("Returning field PresharedKey");
+                    _Logger?.Invoke(_Header + "GetMessageField returning field PresharedKey for bit number " + i);
                     return new MessageField(0, "PresharedKey", FieldType.ByteArray, 16);
 
                 case 1:
-                    Log("Returning field Status");
+                    _Logger?.Invoke(_Header + "GetMessageField returning field Status for bit number " + i);
                     return new MessageField(1, "Status", FieldType.Int32, 4);
 
                 case 2:
-                    Log("Returning field MetadataLength");
+                    _Logger?.Invoke(_Header + "GetMessageField returning field MetadataLength for bit number " + i);
                     return new MessageField(2, "MetadataLength", FieldType.Int64, 8);
 
+                case 3:
+                    _Logger?.Invoke(_Header + "GetMessageField returning field SyncRequest for bit number " + i);
+                    return new MessageField(3, "SyncRequest", FieldType.Int32, 4);
+
+                case 4:
+                    _Logger?.Invoke(_Header + "GetMessageField returning field SyncResponse for bit number " + i);
+                    return new MessageField(4, "SyncResponse", FieldType.Int32, 4);
+
+                case 5:
+                    _Logger?.Invoke(_Header + "GetMessageField returning field ExpirationUtc for bit number " + i);
+                    return new MessageField(5, "ExpirationUtc", FieldType.String, 32);
+
+                case 6:
+                    _Logger?.Invoke(_Header + "GetMessageField returning field ConversationGuid for bit number " + i);
+                    return new MessageField(6, "ConversationGuid", FieldType.String, 36);
+
                 default:
-                    throw new KeyNotFoundException("Unable to retrieve field with bit number: " + bitNumber);
+                    throw new ArgumentException("Unknown bit number " + i + ".");
             }
         }
 
@@ -867,34 +984,46 @@ namespace WatsonTcp.Message
         {
             if (field == null) throw new ArgumentNullException(nameof(field));
             if (val == null) throw new ArgumentNullException(nameof(val));
-
+             
             switch (field.BitNumber)
             {
                 case 0:
-                    PresharedKey = (byte[])val;
-                    Log("PresharedKey set: " + Encoding.UTF8.GetString(PresharedKey));
+                    _PresharedKey = (byte[])val;
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " PresharedKey: " + Encoding.UTF8.GetString(PresharedKey));
                     return;
 
                 case 1:
-                    Status = (MessageStatus)((int)val);
-                    Log("Status set: " + Status.ToString());
+                    _Status = (MessageStatus)((int)val);
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " Status: " + _Status.ToString());
                     return;
 
                 case 2:
-                    MetadataLength = (long)val;
-                    Log("MetadataLength set: " + MetadataLength);
+                    _MetadataLength = (long)val;
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " MetadataLength: " + _MetadataLength);
+                    return;
+
+                case 3:
+                    _SyncRequest = Convert.ToBoolean(val);
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " SyncRequest: " + _SyncRequest);
+                    return;
+
+                case 4:
+                    _SyncResponse = Convert.ToBoolean(val);
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " SyncResponse: " + _SyncResponse);
+                    return;
+
+                case 5: 
+                    _ExpirationUtc = DateTime.ParseExact(val.ToString().Trim(), _DateTimeFormat, CultureInfo.InvariantCulture);
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " ExpirationUtc: " + _ExpirationUtc.Value.ToString());
+                    return;
+
+                case 6:
+                    _ConversationGuid = val.ToString();
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " ConversationGuid: " + _ConversationGuid);
                     return;
 
                 default:
                     throw new ArgumentException("Unknown bit number: " + field.BitNumber + ", length " + field.Length + " " + field.Name + ".");
-            }
-        }
-
-        private void Log(string msg)
-        {
-            if (_Debug)
-            {
-                Console.WriteLine(msg);
             }
         }
          

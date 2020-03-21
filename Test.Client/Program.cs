@@ -13,7 +13,7 @@ namespace TestClient
         private static bool useSsl = false;
         private static string certFile = "";
         private static string certPass = "";
-        private static bool debug = false;
+        private static bool debugMessages = false;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
         private static WatsonTcpClient client = null;
@@ -24,18 +24,13 @@ namespace TestClient
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<object, object> metadata;
+            Dictionary<object, object> metadata; 
             bool success;
 
             while (runForever)
             {
-                Console.Write("Command [? for help]: ");
-                string userInput = Console.ReadLine();
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    continue;
-                }
-
+                string userInput = InputString("Command [? for help]:", null, false);
+                
                 switch (userInput)
                 {
                     case "?":
@@ -47,6 +42,7 @@ namespace TestClient
                         Console.WriteLine("  send md        send message with metadata to server");
                         Console.WriteLine("  sendasync      send message to server asynchronously");
                         Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
+                        Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  status         show if client connected");
                         Console.WriteLine("  dispose        dispose of the connection");
                         Console.WriteLine("  connect        connect to the server if not connected");
@@ -55,7 +51,7 @@ namespace TestClient
                         Console.WriteLine("  auth           authenticate using the preshared key");
                         Console.WriteLine("  stats          display client statistics");
                         Console.WriteLine("  stats reset    reset statistics other than start time and uptime");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + client.Debug + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + client.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -67,17 +63,13 @@ namespace TestClient
                         break;
 
                     case "send":
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        userInput = InputString("Data:", null, false);
                         if (!client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
                     case "send md":
+                        userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
                         if (!client.Send(metadata, Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
@@ -88,20 +80,20 @@ namespace TestClient
                         break;
 
                     case "sendasync":
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        userInput = InputString("Data:", null, false);
                         success = client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync md":
+                        userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
                         success = client.SendAsync(metadata, Encoding.UTF8.GetBytes(userInput)).Result;
                         if (!success) Console.WriteLine("Failed");
+                        break;
+
+                    case "sendandwait":
+                        SendAndWait();
                         break;
 
                     case "status":
@@ -156,8 +148,8 @@ namespace TestClient
                         break;
 
                     case "debug":
-                        client.Debug = !client.Debug;
-                        Console.WriteLine("Debug set to: " + client.Debug);
+                        client.DebugMessages = !client.DebugMessages;
+                        Console.WriteLine("Debug set to: " + client.DebugMessages);
                         break;
 
                     default:
@@ -209,8 +201,9 @@ namespace TestClient
             client.AuthenticationSucceeded += AuthenticationSucceeded;
             client.ServerConnected += ServerConnected;
             client.ServerDisconnected += ServerDisconnected;
-            client.MessageReceived += MessageReceived; 
-            client.Debug = debug;
+            client.MessageReceived += MessageReceived;
+            client.SyncRequestReceived = SyncRequestReceived;
+            client.DebugMessages = debugMessages;
             client.Logger = Logger;
             // client.Start();
             Task startClient = client.StartAsync();
@@ -379,7 +372,28 @@ namespace TestClient
                 }
             } 
         }
-           
+
+        private static SyncResponse SyncRequestReceived(SyncRequest req)
+        {
+            Console.WriteLine("Message received from " + req.IpPort + ": " + Encoding.UTF8.GetString(req.Data));
+            if (req.Metadata != null && req.Metadata.Count > 0)
+            {
+                Console.WriteLine("Metadata:");
+                foreach (KeyValuePair<object, object> curr in req.Metadata)
+                {
+                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                }
+            }
+
+            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
+            retMetadata.Add("foo", "bar");
+            retMetadata.Add("bar", "baz");
+
+            // Uncomment to test timeout
+            // Task.Delay(10000).Wait();
+            return new SyncResponse(retMetadata, "Here is your response!");
+        }
+
         private static void ServerConnected(object sender, EventArgs args) 
         {
             Console.WriteLine("Server connected");
@@ -388,6 +402,31 @@ namespace TestClient
         private static void ServerDisconnected(object sender, EventArgs args)
         {
             Console.WriteLine("Server disconnected");
+        }
+
+        private static void SendAndWait()
+        {
+            string userInput = InputString("Data:", null, false);
+            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+
+            try
+            {
+                SyncResponse resp = client.SendAndWait(timeoutMs, userInput);
+                if (resp.Metadata != null && resp.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
         }
 
         private static void Logger(string msg)

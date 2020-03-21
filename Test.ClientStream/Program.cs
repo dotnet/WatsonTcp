@@ -60,7 +60,7 @@ namespace TestClientStream
                         Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
                         Console.WriteLine("  psk            set the preshared key");
                         Console.WriteLine("  auth           authenticate using the preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + client.Debug + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + client.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -162,8 +162,8 @@ namespace TestClientStream
                         break;
 
                     case "debug":
-                        client.Debug = !client.Debug;
-                        Console.WriteLine("Debug set to: " + client.Debug);
+                        client.DebugMessages = !client.DebugMessages;
+                        Console.WriteLine("Debug set to: " + client.DebugMessages);
                         break;
 
                     default:

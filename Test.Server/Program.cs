@@ -15,7 +15,7 @@ namespace TestServer
         private static WatsonTcpServer server = null;
         private static string certFile = "";
         private static string certPass = "";
-        private static bool debug = false;
+        private static bool debugMessages = false;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
 
@@ -46,10 +46,11 @@ namespace TestServer
                 server.ClientConnected += ClientConnected;
                 server.ClientDisconnected += ClientDisconnected;
                 server.MessageReceived += MessageReceived;
+                server.SyncRequestReceived = SyncRequestReceived;
                 // server.PresharedKey = "0000000000000000";
                 // server.IdleClientTimeoutSeconds = 10;
                 server.Logger = Logger;
-                server.Debug = debug;
+                server.DebugMessages = debugMessages;
             }
             catch (Exception e)
             {
@@ -61,18 +62,15 @@ namespace TestServer
             Task serverStart = server.StartAsync();
 
             bool runForever = true;
+            List<string> clients;
+            string ipPort;
+            Dictionary<object, object> metadata;
+            bool success = false;
+
             while (runForever)
             {
-                Console.Write("Command [? for help]: ");
-                string userInput = Console.ReadLine();
-
-                List<string> clients;
-                string ipPort;
-                Dictionary<object, object> metadata;
-                bool success = false;
-
-                if (String.IsNullOrEmpty(userInput)) continue;
-
+                string userInput = InputString("Command [? for help]:", null, false);
+                 
                 switch (userInput)
                 {
                     case "?":
@@ -86,11 +84,12 @@ namespace TestServer
                         Console.WriteLine("  send md        send message with metadata to client");
                         Console.WriteLine("  sendasync      send message to a client asynchronously");
                         Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
+                        Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  psk            set preshared key");
                         Console.WriteLine("  stats          display server statistics");
                         Console.WriteLine("  stats reset    reset statistics other than start time and uptime");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + server.Debug + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + server.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -122,63 +121,48 @@ namespace TestServer
                         break;
 
                     case "send":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
+                        ipPort = InputString("IP:port:", null, false);
+                        userInput = InputString("Data:", null, false);
+                        success = server.Send(ipPort, userInput);
                         Console.WriteLine(success);
                         break;
 
                     case "send md":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
+                        ipPort = InputString("IP:port:", null, false);
+                        userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.Send(ipPort, metadata, Encoding.UTF8.GetBytes(userInput));
+                        success = server.Send(ipPort, metadata, userInput);
                         Console.WriteLine(success);
                         break;
 
                     case "send md large":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
+                        ipPort = InputString("IP:port:", null, false);
                         metadata = new Dictionary<object, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i, i);
                         if (!server.Send(ipPort, metadata, "Hello!")) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
+                        ipPort = InputString("IP:port:", null, false);
+                        userInput = InputString("Data:", null, false); 
                         success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput)).Result;
                         Console.WriteLine(success);
                         break;
 
                     case "sendasync md":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
-                        if (String.IsNullOrEmpty(ipPort)) break;
+                        ipPort = InputString("IP:port:", null, false);
+                        userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
                         success = server.SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(userInput)).Result;
                         Console.WriteLine(success);
                         break;
 
+                    case "sendandwait":
+                        SendAndWait();
+                        break;
+
                     case "remove":
-                        Console.Write("IP:Port: ");
-                        ipPort = Console.ReadLine();
+                        ipPort = InputString("IP:port:", null, false);
                         server.DisconnectClient(ipPort);
                         break;
 
@@ -195,8 +179,8 @@ namespace TestServer
                         break;
 
                     case "debug":
-                        server.Debug = !server.Debug;
-                        Console.WriteLine("Debug set to: " + server.Debug);
+                        server.DebugMessages = !server.DebugMessages;
+                        Console.WriteLine("Debug set to: " + server.DebugMessages);
                         break;
                          
                     default:
@@ -357,6 +341,53 @@ namespace TestServer
             }
         }
          
+        private static SyncResponse SyncRequestReceived(SyncRequest req)
+        {
+            Console.WriteLine("Message received from " + req.IpPort + ": " + Encoding.UTF8.GetString(req.Data));
+            if (req.Metadata != null && req.Metadata.Count > 0)
+            {
+                Console.WriteLine("Metadata:");
+                foreach (KeyValuePair<object, object> curr in req.Metadata)
+                {
+                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                }
+            }
+
+            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
+            retMetadata.Add("foo", "bar");
+            retMetadata.Add("bar", "baz");
+            
+            // Uncomment to test timeout
+            // Task.Delay(10000).Wait();
+            return new SyncResponse(retMetadata, "Here is your response!");
+        }
+
+        private static void SendAndWait()
+        {
+            string ipPort = InputString("IP:port:", null, false);
+            string userInput = InputString("Data:", null, false);
+            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+
+            try
+            {
+                SyncResponse resp = server.SendAndWait(ipPort, timeoutMs, userInput);
+                if (resp.Metadata != null && resp.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
+        }
+
         private static void Logger(string msg)
         {
             Console.WriteLine(msg);

@@ -49,7 +49,7 @@ namespace Test.MaxConnections
                 server.MessageReceived += MessageReceived;
                 // server.IdleClientTimeoutSeconds = 10;
                 server.Logger = Logger;
-                server.Debug = debug;
+                server.DebugMessages = debug;
             }
             catch (Exception e)
             {
@@ -92,7 +92,7 @@ namespace Test.MaxConnections
                         Console.WriteLine("  stats reset    reset statistics other than start time and uptime");
                         Console.WriteLine("  conn           show connection count");
                         Console.WriteLine("  max            set max connections (currently " + server.MaxConnections + ")");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + server.Debug + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + server.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -196,8 +196,8 @@ namespace Test.MaxConnections
                         break;
 
                     case "debug":
-                        server.Debug = !server.Debug;
-                        Console.WriteLine("Debug set to: " + server.Debug);
+                        server.DebugMessages = !server.DebugMessages;
+                        Console.WriteLine("Debug set to: " + server.DebugMessages);
                         break;
 
                     default:
