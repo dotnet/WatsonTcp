@@ -43,6 +43,7 @@ namespace TestClient
                         Console.WriteLine("  sendasync      send message to server asynchronously");
                         Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
                         Console.WriteLine("  sendandwait    send message and wait for a response");
+                        Console.WriteLine("  sendempty      send empty message with metadata");
                         Console.WriteLine("  status         show if client connected");
                         Console.WriteLine("  dispose        dispose of the connection");
                         Console.WriteLine("  connect        connect to the server if not connected");
@@ -94,6 +95,12 @@ namespace TestClient
 
                     case "sendandwait":
                         SendAndWait();
+                        break;
+
+                    case "sendempty":
+                        metadata = InputDictionary();
+                        success = client.Send(metadata);
+                        if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "status":
@@ -361,7 +368,9 @@ namespace TestClient
          
         private static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
         {
-            Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(args.Data));
+            Console.Write("Message from server: ");
+            if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
+            else Console.WriteLine("[null]");
 
             if (args.Metadata != null && args.Metadata.Count > 0)
             {
@@ -375,7 +384,10 @@ namespace TestClient
 
         private static SyncResponse SyncRequestReceived(SyncRequest req)
         {
-            Console.WriteLine("Message received from " + req.IpPort + ": " + Encoding.UTF8.GetString(req.Data));
+            Console.Write("Message received from " + req.IpPort + ": ");
+            if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
+            else Console.WriteLine("[null]");
+
             if (req.Metadata != null && req.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");

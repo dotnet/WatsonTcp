@@ -600,6 +600,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(byte[] data)
         {
+            if (data == null) data = new byte[0];
             return Send(null, data);
         }
 
@@ -611,6 +612,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(Dictionary<object, object> metadata, byte[] data)
         {
+            if (data == null) data = new byte[0];
             WatsonMessage msg = new WatsonMessage(metadata, data, false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(msg, data);
         }
@@ -623,6 +625,8 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             return Send(null, contentLength, stream);
         }
 
@@ -635,8 +639,21 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(msg, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send metadata to the server with no data.
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(Dictionary<object, object> metadata)
+        {
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
+            return SendInternal(msg, 0, new MemoryStream(new byte[0]));
         }
 
         /// <summary>
@@ -669,6 +686,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(byte[] data)
         {
+            if (data == null) data = new byte[0];
             return await SendAsync(null, data);
         }
 
@@ -680,6 +698,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(Dictionary<object, object> metadata, byte[] data)
         {
+            if (data == null) data = new byte[0];
             WatsonMessage msg = new WatsonMessage(metadata, data, false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(msg, data);
         }
@@ -692,6 +711,8 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             return await SendAsync(null, contentLength, stream);
         }
 
@@ -704,8 +725,21 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(msg, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send metadata to the server with no data, asynchronously
+        /// </summary>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(Dictionary<object, object> metadata)
+        {
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
+            return await SendInternalAsync(msg, 0, new MemoryStream(new byte[0]));
         }
 
         /// <summary>
@@ -729,6 +763,7 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(int timeoutMs, byte[] data)
         {
+            if (data == null) data = new byte[0];
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             return SendAndWait(null, timeoutMs, data);
         }
@@ -742,6 +777,8 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(int timeoutMs, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             return SendAndWait(null, timeoutMs, contentLength, stream);
         }
@@ -770,6 +807,7 @@ namespace WatsonTcp
         public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs, byte[] data)
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
+            if (data == null) data = new byte[0];
             DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
             WatsonMessage msg = new WatsonMessage(metadata, data, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, data);
@@ -785,10 +823,26 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send metadata and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
+        /// </summary>
+        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
+        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param> 
+        /// <returns>SyncResponse.</returns>
+        public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs)
+        {
+            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
+            DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
+            return SendAndWaitInternal(msg, timeoutMs, 0, new MemoryStream(new byte[0]));
         }
 
         #endregion Public-Methods

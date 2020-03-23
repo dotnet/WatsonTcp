@@ -438,6 +438,7 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (data == null) data = new byte[0];
             WatsonMessage msg = new WatsonMessage(null, data, false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(client, msg, data);
         }
@@ -458,6 +459,7 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (data == null) data = new byte[0];
             WatsonMessage msg = new WatsonMessage(metadata, data, false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(client, msg, data);
         }
@@ -471,6 +473,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
@@ -478,6 +481,7 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(client, msg, contentLength, stream);
         }
@@ -492,6 +496,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
@@ -499,8 +504,28 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(client, msg, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send metadata to the specified client with no data.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public bool Send(string ipPort, Dictionary<object, object> metadata)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
+                return false;
+            }
+
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
+            return SendInternal(client, msg, 0, new MemoryStream(new byte[0]));
         }
 
         /// <summary>
@@ -545,6 +570,7 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (data == null) data = new byte[0];
             WatsonMessage msg = new WatsonMessage(null, data, false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(client, msg, data);
         }
@@ -565,6 +591,7 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (data == null) data = new byte[0];
             WatsonMessage msg = new WatsonMessage(metadata, data, false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(client, msg, data);
         }
@@ -578,6 +605,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
@@ -585,6 +613,7 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(client, msg, contentLength, stream);
         }
@@ -599,6 +628,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
@@ -606,8 +636,28 @@ namespace WatsonTcp
                 return false;
             }
 
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(client, msg, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send metadata to the specified client with no data, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <returns>Boolean indicating if the message was sent successfully.</returns>
+        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
+                return false;
+            }
+
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
+            return await SendInternalAsync(client, msg, 0, new MemoryStream(new byte[0]));
         }
 
         /// <summary>
@@ -636,6 +686,7 @@ namespace WatsonTcp
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
+            if (data == null) data = new byte[0];
             return SendAndWait(ipPort, null, timeoutMs, data);
         }
 
@@ -649,8 +700,10 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(string ipPort, int timeoutMs, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
+            if (stream == null) stream = new MemoryStream(new byte[0]);
             return SendAndWait(ipPort, null, timeoutMs, contentLength, stream);
         }
 
@@ -687,6 +740,7 @@ namespace WatsonTcp
                 Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
                 throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
             }
+            if (data == null) data = new byte[0];
             DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
             WatsonMessage msg = new WatsonMessage(metadata, data, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(client, msg, timeoutMs, data);
@@ -703,6 +757,29 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(string ipPort, Dictionary<object, object> metadata, int timeoutMs, long contentLength, Stream stream)
         {
+            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
+            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
+            {
+                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
+                throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
+            }
+            if (stream == null) stream = new MemoryStream(new byte[0]);
+            DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
+            return SendAndWaitInternal(client, msg, timeoutMs, contentLength, stream);
+        }
+
+        /// <summary>
+        /// Send metadata and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
+        /// </summary>
+        /// <param name="ipPort">The IP:port of the client.</param>
+        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
+        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param> 
+        /// <returns>SyncResponse.</returns>
+        public SyncResponse SendAndWait(string ipPort, Dictionary<object, object> metadata, int timeoutMs)
+        {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
@@ -711,8 +788,8 @@ namespace WatsonTcp
                 throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
             }
             DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
-            return SendAndWaitInternal(client, msg, timeoutMs, contentLength, stream);
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
+            return SendAndWaitInternal(client, msg, timeoutMs, 0, new MemoryStream(new byte[0]));
         }
 
         /// <summary>

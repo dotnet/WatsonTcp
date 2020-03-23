@@ -85,6 +85,7 @@ namespace TestServer
                         Console.WriteLine("  sendasync      send message to a client asynchronously");
                         Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
                         Console.WriteLine("  sendandwait    send message and wait for a response");
+                        Console.WriteLine("  sendempty      send empty message with metadata");
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  psk            set preshared key");
                         Console.WriteLine("  stats          display server statistics");
@@ -159,6 +160,13 @@ namespace TestServer
 
                     case "sendandwait":
                         SendAndWait();
+                        break;
+
+                    case "sendempty":
+                        ipPort = InputString("IP:port:", null, false);
+                        metadata = InputDictionary();
+                        success = server.Send(ipPort, metadata);
+                        Console.WriteLine(success);
                         break;
 
                     case "remove":
@@ -329,8 +337,11 @@ namespace TestServer
         }
          
         private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
-        { 
-            Console.WriteLine("Message received from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
+        {
+            Console.Write("Message received from " + args.IpPort + ": ");
+            if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
+            else Console.WriteLine("[null]");
+
             if (args.Metadata != null && args.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
@@ -343,7 +354,10 @@ namespace TestServer
          
         private static SyncResponse SyncRequestReceived(SyncRequest req)
         {
-            Console.WriteLine("Message received from " + req.IpPort + ": " + Encoding.UTF8.GetString(req.Data));
+            Console.Write("Message received from " + req.IpPort + ": ");
+            if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
+            else Console.WriteLine("[null]");
+
             if (req.Metadata != null && req.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");

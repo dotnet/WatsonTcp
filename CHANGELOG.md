@@ -2,14 +2,19 @@
 
 ## Current Version
 
+v3.1.1
+
+- APIs to support sending async or sync (send-and-wait) messages with a metadata dictionary and no data
+- Better handling of null input when sending data
+
+## Previous Versions
+
 v3.1.0
 
 - Added support for synchronous messaging, i.e. send and wait for a response (see ```SendAndWait``` methods) with timeouts.  See the updated examples below or refer to the ```Test.Client``` and ```Test.Server``` project for examples
 - Consolidated Logger for client, server, and messages
 - ```Debug``` is now ```DebugMessages```
 - Minor internal refactor
-
-## Previous Versions
 
 v3.0.3
 
