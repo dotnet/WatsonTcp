@@ -808,7 +808,7 @@ namespace WatsonTcp
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (data == null) data = new byte[0];
-            DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
+            DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
             WatsonMessage msg = new WatsonMessage(metadata, data, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, data);
         }
@@ -826,7 +826,7 @@ namespace WatsonTcp
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
+            DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, contentLength, stream);
         }
@@ -840,7 +840,7 @@ namespace WatsonTcp
         public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs)
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            DateTime expiration = DateTime.Now.ToUniversalTime().AddMilliseconds(timeoutMs);
+            DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
             WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, 0, new MemoryStream(new byte[0]));
         }
@@ -1015,15 +1015,22 @@ namespace WatsonTcp
                     }
 
                     if (msg.SyncRequest)
-                    { 
+                    {
+                        /*
+                        Console.WriteLine("");
+                        Console.WriteLine("DateTime.Now   : " + DateTime.Now.ToString());
+                        Console.WriteLine("Expiration     : " + msg.Expiration.Value.ToString());
+                        Console.WriteLine("");
+                        */
+
                         if (SyncRequestReceived != null)
-                        {
-                            if (DateTime.Now.ToUniversalTime() < msg.ExpirationUtc.Value)
+                        { 
+                            if (DateTime.Now < msg.Expiration.Value)
                             {
                                 SyncRequest syncReq = new SyncRequest(
                                     _ServerIp + ":" + _ServerPort,
                                     msg.ConversationGuid,
-                                    msg.ExpirationUtc.Value,
+                                    msg.Expiration.Value,
                                     msg.Metadata,
                                     msg.Data);
 
@@ -1035,7 +1042,7 @@ namespace WatsonTcp
                                         syncResp.Data,
                                         false,
                                         true,
-                                        msg.ExpirationUtc.Value,
+                                        msg.Expiration.Value,
                                         msg.ConversationGuid,
                                         (DebugMessages ? Logger : null));
 
@@ -1050,11 +1057,18 @@ namespace WatsonTcp
                     }
                     else if (msg.SyncResponse)
                     {
-                        if (DateTime.Now.ToUniversalTime() < msg.ExpirationUtc.Value)
+                        /*
+                        Console.WriteLine("");
+                        Console.WriteLine("DateTime.Now   : " + DateTime.Now.ToString());
+                        Console.WriteLine("Expiration     : " + msg.Expiration.Value.ToString());
+                        Console.WriteLine("");
+                        */
+
+                        if (DateTime.Now < msg.Expiration.Value)
                         {
                             lock (_SyncResponseLock)
                             {
-                                _SyncResponses.Add(msg.ConversationGuid, new SyncResponse(msg.Metadata, msg.Data));
+                                _SyncResponses.Add(msg.ConversationGuid, new SyncResponse(msg.Expiration.Value, msg.Metadata, msg.Data));
                             }
                         }
                         else
@@ -1609,7 +1623,7 @@ namespace WatsonTcp
                 }
             }
 
-            SyncResponse ret = GetSyncResponse(msg.ConversationGuid, msg.ExpirationUtc.Value); 
+            SyncResponse ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
             return ret;
         }
          
@@ -1623,9 +1637,13 @@ namespace WatsonTcp
 
                 lock (_SyncResponseLock)
                 { 
-                    if (_SyncResponses.Any(s => s.Value.ExpirationUtc < DateTime.Now.ToUniversalTime()))
+                    if (_SyncResponses.Any(s => 
+                        s.Value.ExpirationUtc < DateTime.Now
+                        ))
                     {
-                        Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s => s.Value.ExpirationUtc < DateTime.Now.ToUniversalTime()).ToDictionary(dict => dict.Key, dict => dict.Value);
+                        Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s => 
+                            s.Value.ExpirationUtc < DateTime.Now
+                            ).ToDictionary(dict => dict.Key, dict => dict.Value);
 
                         foreach (KeyValuePair<string, SyncResponse> curr in expired)
                         {
@@ -1653,7 +1671,7 @@ namespace WatsonTcp
                     }
                 }
 
-                if (DateTime.Now.ToUniversalTime() >= expirationUtc) break;
+                if (DateTime.Now >= expirationUtc) break;
                 Task.Delay(50).Wait();
             }
 

@@ -35,24 +35,25 @@ namespace TestClient
                 {
                     case "?":
                         Console.WriteLine("Available commands:");
-                        Console.WriteLine("  ?              help (this menu)");
-                        Console.WriteLine("  q              quit");
-                        Console.WriteLine("  cls            clear screen");
-                        Console.WriteLine("  send           send message to server");
-                        Console.WriteLine("  send md        send message with metadata to server");
-                        Console.WriteLine("  sendasync      send message to server asynchronously");
-                        Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
-                        Console.WriteLine("  sendandwait    send message and wait for a response");
-                        Console.WriteLine("  sendempty      send empty message with metadata");
-                        Console.WriteLine("  status         show if client connected");
-                        Console.WriteLine("  dispose        dispose of the connection");
-                        Console.WriteLine("  connect        connect to the server if not connected");
-                        Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
-                        Console.WriteLine("  psk            set the preshared key");
-                        Console.WriteLine("  auth           authenticate using the preshared key");
-                        Console.WriteLine("  stats          display client statistics");
-                        Console.WriteLine("  stats reset    reset statistics other than start time and uptime");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + client.DebugMessages + ")");
+                        Console.WriteLine("  ?                   help (this menu)");
+                        Console.WriteLine("  q                   quit");
+                        Console.WriteLine("  cls                 clear screen");
+                        Console.WriteLine("  send                send message to server");
+                        Console.WriteLine("  send md             send message with metadata to server");
+                        Console.WriteLine("  sendasync           send message to server asynchronously");
+                        Console.WriteLine("  sendasync md        send message with metadata to server asynchronously");
+                        Console.WriteLine("  sendandwait         send message and wait for a response");
+                        Console.WriteLine("  sendempty           send empty message with metadata");
+                        Console.WriteLine("  sendandwait empty   send empty message with metadata and wait for a response");
+                        Console.WriteLine("  status              show if client connected");
+                        Console.WriteLine("  dispose             dispose of the connection");
+                        Console.WriteLine("  connect             connect to the server if not connected");
+                        Console.WriteLine("  reconnect           disconnect if connected, then reconnect");
+                        Console.WriteLine("  psk                 set the preshared key");
+                        Console.WriteLine("  auth                authenticate using the preshared key");
+                        Console.WriteLine("  stats               display client statistics");
+                        Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
+                        Console.WriteLine("  debug               enable/disable debug (currently " + client.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -101,6 +102,10 @@ namespace TestClient
                         metadata = InputDictionary();
                         success = client.Send(metadata);
                         if (!success) Console.WriteLine("Failed");
+                        break;
+
+                    case "sendandwait empty":
+                        SendAndWaitEmpty();
                         break;
 
                     case "status":
@@ -403,7 +408,7 @@ namespace TestClient
 
             // Uncomment to test timeout
             // Task.Delay(10000).Wait();
-            return new SyncResponse(retMetadata, "Here is your response!");
+            return new SyncResponse(req, retMetadata, "Here is your response!");
         }
 
         private static void ServerConnected(object sender, EventArgs args) 
@@ -424,6 +429,33 @@ namespace TestClient
             try
             {
                 SyncResponse resp = client.SendAndWait(timeoutMs, userInput);
+                if (resp.Metadata != null && resp.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
+        }
+
+        private static void SendAndWaitEmpty()
+        { 
+            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+
+            Dictionary<object, object> dict = new Dictionary<object, object>();
+            dict.Add("foo", "bar");
+
+            try
+            {
+                SyncResponse resp = client.SendAndWait(dict, timeoutMs);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

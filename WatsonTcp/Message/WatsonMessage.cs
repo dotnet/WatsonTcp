@@ -164,11 +164,11 @@ namespace WatsonTcp.Message
         /// Indicates an expiration time in UTC; only applicable to synchronous requests.
         /// _HeaderFields[5], 32 bytes (DateTime as string).
         /// </summary>
-        internal DateTime? ExpirationUtc
+        internal DateTime? Expiration
         {
             get
             {
-                return _ExpirationUtc;
+                return _Expiration;
             }
             set
             {
@@ -181,7 +181,7 @@ namespace WatsonTcp.Message
                     _HeaderFields[5] = false;
                 }
 
-                _ExpirationUtc = value;
+                _Expiration = value;
             }
         }
 
@@ -243,8 +243,8 @@ namespace WatsonTcp.Message
         private Action<string> _Logger = null;
         private string _Header = "[WatsonMessage] ";
         //                                         1         2         3
-        //                                123456789012345678901234567890
-        private string _DateTimeFormat = "yyyy-MM-dd HH:mm:ss.ffffffZ"; // 32 bytes
+        //                                12345678901234567890123456789012
+        private string _DateTimeFormat = "yyyy-MM-dd HH:mm:ss.fffzzz"; // 32 bytes
 
         private int _ReadStreamBuffer = 65536;
         private byte[] _PresharedKey;
@@ -257,7 +257,7 @@ namespace WatsonTcp.Message
 
         private bool _SyncRequest = false;
         private bool _SyncResponse = false;
-        private DateTime? _ExpirationUtc = null;
+        private DateTime? _Expiration = null;
         private string _ConversationGuid = null;
 
         #endregion Private-Members
@@ -279,10 +279,10 @@ namespace WatsonTcp.Message
         /// <param name="data">The data to send.</param>
         /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
-        /// <param name="expirationUtc">The time at which the message should expire (only valid for synchronous message requests).</param>
+        /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(Dictionary<object, object> metadata, byte[] data, bool syncRequest, bool syncResponse, DateTime? expirationUtc, string convGuid, Action<string> logger)
+        internal WatsonMessage(Dictionary<object, object> metadata, byte[] data, bool syncRequest, bool syncResponse, DateTime? expiration, string convGuid, Action<string> logger)
         {
             if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
              
@@ -291,7 +291,7 @@ namespace WatsonTcp.Message
             Metadata = metadata;
             SyncRequest = syncRequest;
             SyncResponse = syncResponse;
-            ExpirationUtc = expirationUtc;
+            Expiration = expiration;
             ConversationGuid = convGuid;
             Data = new byte[data.Length];
             Buffer.BlockCopy(data, 0, Data, 0, data.Length);
@@ -308,10 +308,10 @@ namespace WatsonTcp.Message
         /// <param name="stream">The stream containing the data.</param>
         /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
-        /// <param name="expirationUtc">The time at which the message should expire (only valid for synchronous message requests).</param>
+        /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(Dictionary<object, object> metadata, long contentLength, Stream stream, bool syncRequest, bool syncResponse, DateTime? expirationUtc, string convGuid, Action<string> logger)
+        internal WatsonMessage(Dictionary<object, object> metadata, long contentLength, Stream stream, bool syncRequest, bool syncResponse, DateTime? expiration, string convGuid, Action<string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (contentLength > 0)
@@ -327,7 +327,7 @@ namespace WatsonTcp.Message
             Metadata = metadata;
             SyncRequest = syncRequest;
             SyncResponse = syncResponse;
-            ExpirationUtc = expirationUtc;
+            Expiration = expiration;
             ConversationGuid = convGuid;
             Data = null;
             DataStream = stream;
@@ -568,8 +568,8 @@ namespace WatsonTcp.Message
                             break;
 
                         case 5: // ExpirationUtc
-                            _Logger?.Invoke(_Header + "ToHeaderBytes ExpirationUtc: " + _ExpirationUtc.Value.ToString(_DateTimeFormat));
-                            ret = AppendBytes(ret, Encoding.UTF8.GetBytes(_ExpirationUtc.Value.ToString(_DateTimeFormat).PadRight(32)));
+                            _Logger?.Invoke(_Header + "ToHeaderBytes ExpirationUtc: " + _Expiration.Value.ToString(_DateTimeFormat));
+                            ret = AppendBytes(ret, Encoding.UTF8.GetBytes(_Expiration.Value.ToString(_DateTimeFormat).PadRight(32)));
                             break;
 
                         case 6: // ConversationGuid
@@ -613,7 +613,7 @@ namespace WatsonTcp.Message
             ret += "  Status            : " + FieldToString(FieldType.Int32, (int)Status) + Environment.NewLine;
             ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
             ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
-            ret += "  ExpirationUtc     : " + (ExpirationUtc != null ? ExpirationUtc.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
+            ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
             ret += "  Conversation GUID : " + ConversationGuid + Environment.NewLine;
 
             if (Metadata != null)
@@ -1013,8 +1013,8 @@ namespace WatsonTcp.Message
                     return;
 
                 case 5: 
-                    _ExpirationUtc = DateTime.ParseExact(val.ToString().Trim(), _DateTimeFormat, CultureInfo.InvariantCulture);
-                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " ExpirationUtc: " + _ExpirationUtc.Value.ToString());
+                    _Expiration = DateTime.ParseExact(val.ToString().Trim(), _DateTimeFormat, CultureInfo.InvariantCulture);
+                    _Logger?.Invoke(_Header + "SetMessageValue field " + field.BitNumber + " ExpirationUtc: " + _Expiration.Value.ToString());
                     return;
 
                 case 6:

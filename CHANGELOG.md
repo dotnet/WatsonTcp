@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v3.1.3
+
+- Fix synchronous messaging expiration bug
+
+## Previous Versions
+
 v3.1.2
 
 - Fix DateTime string format
-
-## Previous Versions
 
 v3.1.1
 
