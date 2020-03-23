@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>3.1.1</Version>
+    <Version>3.1.2</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -13,8 +13,7 @@
     <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageReleaseNotes>- APIs to support sending async or sync (send-and-wait) messages with a metadata dictionary and no data
-- Better handling of null input when sending data</PackageReleaseNotes>
+    <PackageReleaseNotes>- Change DateTime string format</PackageReleaseNotes>
     <PackageIconUrl>https://raw.githubusercontent.com/jchristn/watsontcp/master/assets/watson.ico</PackageIconUrl>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>

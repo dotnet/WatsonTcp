@@ -244,7 +244,7 @@ namespace WatsonTcp.Message
         private string _Header = "[WatsonMessage] ";
         //                                         1         2         3
         //                                123456789012345678901234567890
-        private string _DateTimeFormat = "yyyy-MM-dd HH:mm:ss.ffffffz"; // 32 bytes
+        private string _DateTimeFormat = "yyyy-MM-dd HH:mm:ss.ffffffZ"; // 32 bytes
 
         private int _ReadStreamBuffer = 65536;
         private byte[] _PresharedKey;

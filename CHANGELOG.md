@@ -2,12 +2,16 @@
 
 ## Current Version
 
+v3.1.2
+
+- Fix DateTime string format
+
+## Previous Versions
+
 v3.1.1
 
 - APIs to support sending async or sync (send-and-wait) messages with a metadata dictionary and no data
 - Better handling of null input when sending data
-
-## Previous Versions
 
 v3.1.0
 
