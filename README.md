@@ -55,8 +55,11 @@ The following examples show a simple client and server example using WatsonTcp w
 
 **IMPORTANT**
 * If you specify ```127.0.0.1``` as the listener IP address in WatsonTcpServer, it will only be able to accept connections from within the local host.  
-* To accept connections from other machines, specify a specific IP address, or, use ```null``` for the listener IP address.
-* If you use ```null``` for the IP address, or any variant representing any IP address such as ```0.0.0.0```, ```+```, or ```*```, you may have to run WatsonTcpServer with administrative privileges (this is required by the operating system).
+* To accept connections from other machines:
+  * Use a specific interface IP address, or
+  * Use ```null```, ```*```, ```+```, or ```0.0.0.0``` for the listener IP address (requires admin privileges to listen on any IP address)
+* Make sure you create a permit rule on your firewall to allow inbound connections on that port
+* If you use a port number under 1024, admin privileges will be required
 
 ### Server
 
