@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v3.1.4
+
+- Better handling for cases where no message/stream event handler is set
+
+## Previous Versions
+
 v3.1.3
 
 - Fix synchronous messaging expiration bug
-
-## Previous Versions
 
 v3.1.2
 

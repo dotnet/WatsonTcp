@@ -313,6 +313,11 @@ namespace WatsonTcp
             WaitHandle waitHandle = null;
             bool connectSuccess = false;
 
+            if (_StreamReceived == null && _MessageReceived == null)
+            {
+                throw new InvalidOperationException("Either 'MessageReceived' or 'StreamReceived' must first be set.");
+            }
+
             if (_Mode == Mode.Tcp)
             {
                 #region TCP
@@ -438,6 +443,11 @@ namespace WatsonTcp
             IAsyncResult asyncResult = null;
             WaitHandle waitHandle = null;
             bool connectSuccess = false;
+
+            if (_StreamReceived == null && _MessageReceived == null)
+            {
+                throw new InvalidOperationException("Either 'MessageReceived' or 'StreamReceived' must first be set.");
+            }
 
             if (_Mode == Mode.Tcp)
             {
@@ -857,7 +867,7 @@ namespace WatsonTcp
         {
             if (disposing)
             {
-                Logger?.Invoke("[WatsonTcpClient] Disposing");
+                Logger?.Invoke("[WatsonTcpClient] Disposing"); 
 
                 if (Connected)
                 {
@@ -962,6 +972,7 @@ namespace WatsonTcp
                     }
                     else
                     {
+                        Logger?.Invoke("[WatsonTcpClient] Event handler not set for either MessageReceived or StreamReceived");
                         break;
                     }
 
@@ -1092,6 +1103,7 @@ namespace WatsonTcp
                         }
                         else
                         {
+                            Logger?.Invoke("[WatsonTcpClient] Event handler not set for either MessageReceived or StreamReceived");
                             break;
                         }
                     }
@@ -1099,6 +1111,10 @@ namespace WatsonTcp
                     _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
                     _Stats.ReceivedBytes += msg.ContentLength;
                 } 
+                catch (OperationCanceledException)
+                {
+                    Logger?.Invoke("[WatsonTcpClient] Cancellation requested");
+                }
                 catch (Exception e)
                 {
                     Logger?.Invoke(

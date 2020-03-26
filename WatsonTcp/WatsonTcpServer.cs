@@ -1231,6 +1231,7 @@ namespace WatsonTcp
                     }
                     else
                     {
+                        Logger?.Invoke("[WatsonTcpServer] Event handler not set for either MessageReceived or StreamReceived");
                         break;
                     }
 
@@ -1390,6 +1391,7 @@ namespace WatsonTcp
                         }
                         else
                         {
+                            Logger?.Invoke("[WatsonTcpServer] Event handler not set for either MessageReceived or StreamReceived");
                             break;
                         }
                     }
@@ -1397,7 +1399,11 @@ namespace WatsonTcp
                     _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
                     _Stats.ReceivedBytes += msg.ContentLength;
                     UpdateClientLastSeen(client.IpPort);
-                }  
+                }
+                catch (OperationCanceledException)
+                {
+                    Logger?.Invoke("[WatsonTcpServer] Cancellation requested");
+                }
                 catch (Exception e)
                 {
                     Logger?.Invoke("[WatsonTcpServer] Data receiver exception for " + client.IpPort + ":" +
