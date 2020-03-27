@@ -15,7 +15,7 @@ namespace Test.WinFormServer
     {
         private string _ClientIpPort = null;
         private WatsonTcpServer _Server = null;
-        delegate void logDelegate(string msg);
+        delegate void _LogDelegate(string msg);
         
         public ServerForm()
         {
@@ -66,9 +66,9 @@ namespace Test.WinFormServer
 
         private void Logger(string msg)
         {
-            //If this is called by another thread we have to use Invoke           
+            // If this is called by another thread we have to use Invoke           
             if (this.InvokeRequired)
-                this.Invoke(new logDelegate(Logger), new object[] { msg });
+                this.Invoke(new _LogDelegate(Logger), new object[] { msg });
             else
                 label1.Text += Environment.NewLine + msg;
         }
