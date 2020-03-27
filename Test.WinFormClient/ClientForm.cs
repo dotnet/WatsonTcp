@@ -15,6 +15,8 @@ namespace Test.WinFormClient
     {
         private WatsonTcpClient _Client = null;
 
+        delegate void logDelegate(string msg);
+        
         public ClientForm()
         {
             InitializeComponent();
@@ -35,28 +37,33 @@ namespace Test.WinFormClient
          
         private void OnAuthenticationFailure(object sender, EventArgs e)
         {
-            label1.Text += Environment.NewLine + "Authentication failure.";
+            Logger("Authentication failure.");
         }
 
         private void OnServerDisconnected(object sender, EventArgs e)
         {
-            label1.Text += Environment.NewLine + "Server disconnected.";
+            Logger("Server disconnected.");
         }
 
         private void OnServerConnected(object sender, EventArgs e)
         {
-            label1.Text += Environment.NewLine + "Server connected.";
+            Logger("Server connected.");
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             _Client.Send("Hello world!");
-            label1.Text += Environment.NewLine + "Sent message 'Hello world!'";
+            Logger("Sent message 'Hello world!'");
         }
 
         private void Logger(string msg)
         {
-            label1.Text += Environment.NewLine + msg;
+            //If this is called by another thread we have to use Invoke           
+            if (this.InvokeRequired)
+                this.Invoke(new logDelegate(Logger), new object[] { msg });
+            else
+                label1.Text += Environment.NewLine + msg;
+                
         }
 
         private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -66,7 +73,7 @@ namespace Test.WinFormClient
 
         private void MessageReceived(object sender, MessageReceivedFromServerEventArgs e)
         {
-            label1.Text += Environment.NewLine + "Message received: " + Encoding.UTF8.GetString(e.Data);
+            Logger("Message received: " + Encoding.UTF8.GetString(e.Data));
         }
     }
 }
