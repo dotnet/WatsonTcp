@@ -15,6 +15,7 @@ namespace Test.WinFormServer
     {
         private string _ClientIpPort = null;
         private WatsonTcpServer _Server = null;
+        delegate void logDelegate(string msg);
         
         public ServerForm()
         {
@@ -30,24 +31,24 @@ namespace Test.WinFormServer
             _Server.Logger = Logger;
             _Server.Start();
 
-            label1.Text += Environment.NewLine + "Server started.";
+            Logger("Server started.");
         }
          
         private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
-            label1.Text += Environment.NewLine + "Client " + e.IpPort + " disconnected: " + e.Reason.ToString();
+            Logger("Client " + e.IpPort + " disconnected: " + e.Reason.ToString());
             _ClientIpPort = string.Empty;
         }
 
         private void OnClientConnected(object sender, ClientConnectedEventArgs e)
         {
-            label1.Text += Environment.NewLine + "Client " + e.IpPort + " connected";
+            Logger("Client " + e.IpPort + " connected");
             _ClientIpPort = e.IpPort;
         }
 
         private void OnMessageReceived(object sender, MessageReceivedFromClientEventArgs e)
         {
-            label1.Text += Environment.NewLine + "Client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data);
+            Logger("Client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -55,17 +56,21 @@ namespace Test.WinFormServer
             if (!String.IsNullOrEmpty(_ClientIpPort))
             {
                 _Server.Send(_ClientIpPort, "Hello world!");
-                label1.Text += Environment.NewLine + "Sent 'Hello world!' to client " + _ClientIpPort;
+                Logger("Sent 'Hello world!' to client " + _ClientIpPort);
             }
             else
             {
-                label1.Text += Environment.NewLine + "No client connected";
+                Logger("No client connected");
             }
         }
 
         private void Logger(string msg)
         {
-            label1.Text += Environment.NewLine + msg;
+            //If this is called by another thread we have to use Invoke           
+            if (this.InvokeRequired)
+                this.Invoke(new logDelegate(Logger), new object[] { msg });
+            else
+                label1.Text += Environment.NewLine + msg;
         }
     }
 }
