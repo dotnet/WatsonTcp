@@ -14,13 +14,13 @@ The first model described in Mr. Cleary's blog is *length prefixing*.  This is t
   - If ```b``` != ```:``` append to ```buffer```
 - While character read is not ```:```
 - Convert ```buffer``` contents to an integer ```len```
-- Read ```len``` bytes from the network
+- Read ```len``` bytes from the network as ```data```
 
 The second model is *delimeters*.  A delimeter is a set of characters understood by both sender and receiver to indicate the end of a message.  For example, the colon character ```:``` could act as a delimeter to instruct the receiver that it has reached the end of the message.  For instance, ```Hello, world!``` would be sent as ```Hello, world!:```.  The receiver would know to stop reading once the colon character ```:``` was reached.
 
 The delimeter model, on its own, introduces serious challenges from a development and integration perspective.
 
-- What is I want to send the delimeter character as part of a message?
+- What if I want to send the delimeter character as part of a message?
 - What if I read too many bytes and the delimeter is in the middle of what was read rather than at the end?  
 - I don't want to read one byte at a time and continually check the tail of the buffer for the delimeter
 
