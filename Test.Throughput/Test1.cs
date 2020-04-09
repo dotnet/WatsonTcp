@@ -62,13 +62,13 @@ namespace TestThroughput
                         {
                             if (client.Send(_MsgBytes))
                             {
-                                _MessagesSentSuccess++;
-                                _MessagesProcessing++;
-                                _BytesSent += _MessageSize;
+                                Interlocked.Increment(ref _MessagesSentSuccess);
+                                Interlocked.Increment(ref _MessagesProcessing);
+                                Interlocked.Add(ref _BytesSent, _MessageSize);
                             }
                             else
                             {
-                                _MessagesSentFailed++;
+                                Interlocked.Increment(ref _MessagesSentFailed);
                             }
                         }
 
@@ -114,8 +114,8 @@ namespace TestThroughput
             try
             {
                 Console.WriteLine("Processing message from client " + args.IpPort + " (" + args.Data.Length + " bytes)");
-                _BytesReceived += args.Data.Length;
-                _MessagesProcessing -= 1;
+                Interlocked.Add(ref _BytesReceived, args.Data.Length);
+                Interlocked.Decrement(ref _MessagesProcessing);
             }
             catch (Exception e)
             {

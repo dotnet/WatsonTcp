@@ -11,8 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using WatsonTcp.Message;
+using Newtonsoft.Json; 
 
 namespace WatsonTcp
 {
@@ -571,7 +570,7 @@ namespace WatsonTcp
         {
             if (String.IsNullOrEmpty(presharedKey)) throw new ArgumentNullException(nameof(presharedKey));
             if (presharedKey.Length != 16) throw new ArgumentException("Preshared key length must be 16 bytes.");
-             
+
             WatsonMessage msg = new WatsonMessage();
             msg.Status = MessageStatus.AuthRequested;
             msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
@@ -1178,8 +1177,7 @@ namespace WatsonTcp
                     return false;
                 }
                  
-                byte[] headerBytes = msg.ToHeaderBytes(contentLength);
-
+                byte[] headerBytes = msg.ToHeaderBytes(contentLength); 
                 int bytesRead = 0;
                 long bytesRemaining = contentLength;
                 byte[] buffer = new byte[_ReadStreamBufferSize];
@@ -1192,13 +1190,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            _TcpStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (contentLength > 0)
                         {
@@ -1219,13 +1211,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         _SslStream.Write(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            _SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (contentLength > 0)
                         {
@@ -1298,13 +1284,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            _TcpStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (msg.Data != null && msg.Data.Length > 0)
                         {
@@ -1317,13 +1297,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         _SslStream.Write(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            _SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (msg.Data != null && msg.Data.Length > 0)
                         {
@@ -1418,13 +1392,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         await _TcpStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            await _TcpStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (contentLength > 0)
                         {
@@ -1445,13 +1413,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         await _SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            await _SslStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (contentLength > 0)
                         {
@@ -1556,13 +1518,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            _TcpStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (contentLength > 0)
                         {
@@ -1583,13 +1539,7 @@ namespace WatsonTcp
                     {
                         // write headers
                         _SslStream.Write(headerBytes, 0, headerBytes.Length);
-
-                        // write metadata
-                        if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                        {
-                            _SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                        }
-
+                         
                         // write data
                         if (contentLength > 0)
                         {

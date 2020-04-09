@@ -53,7 +53,9 @@ namespace WatsonTcp
 
         internal ClientMetadata(TcpClient tcp)
         {
-            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
+            if (tcp == null) throw new ArgumentNullException(nameof(tcp));
+
+            _TcpClient = tcp;
             _NetworkStream = tcp.GetStream();
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 

@@ -2,11 +2,16 @@
 
 ## Current Version
 
+v4.0.0
+
+- Overhaul to internal framing, refer to ```FRAMING.md```
+- Fixes to ```Test.Throughput``` projects (incorrectly reporting statistics)
+
+## Previous Versions
+
 v3.1.4
 
 - Better handling for cases where no message/stream event handler is set
-
-## Previous Versions
 
 v3.1.3
 

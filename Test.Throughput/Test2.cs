@@ -54,7 +54,10 @@ namespace TestThroughput
 
                 for (int i = 0; i < _NumClients; i++)
                 {
-                    Task.Run(() => Test2ClientWorker());
+                    int clientNum = i;
+                    Console.WriteLine("Starting client " + clientNum);
+
+                    Task.Run(() => Test2ClientWorker(clientNum));
                     _RunningTasks++;
                 } 
 
@@ -64,6 +67,8 @@ namespace TestThroughput
                     Thread.Sleep(1000);
                 }
 
+                Console.WriteLine("All tasks complete");
+
                 _Stopwatch.Stop();
 
                 while (_MessagesProcessing > 0)
@@ -71,16 +76,23 @@ namespace TestThroughput
                     Console.WriteLine("Waiting on " + _MessagesProcessing + " to complete processing (1 second pause)");
                     Thread.Sleep(1000);
                 }
+
+                Console.WriteLine("All messages processed");
             }
 
             Console.WriteLine("");
             Console.WriteLine("Results:");
             Console.WriteLine("  Number of clients             : " + _NumClients);
             Console.WriteLine("  Number of messages per client : " + _NumMessages);
+            Console.WriteLine("");
+            Console.WriteLine("  Expected message count        : " + (_NumClients * _NumMessages));
             Console.WriteLine("  Messages sent successfully    : " + _MessagesSentSuccess);
             Console.WriteLine("  Messages failed               : " + _MessagesSentFailed);
+            Console.WriteLine("");
+            Console.WriteLine("  Expected bytes                : " + (_NumClients * _NumMessages * _MsgBytes.Length));
             Console.WriteLine("  Bytes sent successfully       : " + _BytesSent);
             Console.WriteLine("  Bytes received successfully   : " + _BytesReceived);
+            Console.WriteLine("");
 
             decimal secondsTotal = _Stopwatch.ElapsedMilliseconds / 1000;
             if (secondsTotal < 1) secondsTotal = 1;
@@ -90,17 +102,21 @@ namespace TestThroughput
             decimal mbPerSecond = kbPerSecond / 1024;
             Console.WriteLine("  Elapsed time (ms)             : " + _Stopwatch.ElapsedMilliseconds + "ms");
             Console.WriteLine("  Elapsed time (seconds)        : " + decimal.Round(secondsTotal, 2) + "s");
-            Console.WriteLine("  Messages per second           : " + decimal.Round(_MessagesSentSuccess / secondsTotal, 2) + "msg/s");
+            Console.WriteLine("");
+            Console.WriteLine("  Messages per second           : " + decimal.Round(_MessagesSentSuccess / secondsTotal, 2) + " msg/s");
             Console.WriteLine("  Bytes per second              : " + decimal.Round(bytesPerSecond, 2) + "B/s");
             Console.WriteLine("  Kilobytes per second          : " + decimal.Round(kbPerSecond, 2) + "kB/s");
             Console.WriteLine("  Megabytes per second          : " + decimal.Round(mbPerSecond, 2) + "MB/s");
             Console.WriteLine("");
         }
 
-        private void Test2ClientWorker()
-        {
+        private void Test2ClientWorker(int clientNum)
+        { 
             try
             {
+                long msgsSent = 0;
+                long bytesSent = 0;
+
                 using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
                 {
                     client.MessageReceived += Test2ClientMsgRcv;
@@ -110,18 +126,21 @@ namespace TestThroughput
                     {
                         if (client.Send(_MsgBytes))
                         {
-                            _MessagesSentSuccess++;
-                            _MessagesProcessing++;
-                            _BytesSent += _MsgBytes.Length;
+                            msgsSent++;
+                            bytesSent += _MsgBytes.Length;
+                            Interlocked.Increment(ref _MessagesSentSuccess);
+                            Interlocked.Increment(ref _MessagesProcessing);
+                            Interlocked.Add(ref _BytesSent, _MsgBytes.Length);
                         }
                         else
                         {
-                            _MessagesSentFailed++;
+                            Interlocked.Increment(ref _MessagesSentFailed);
                         }
                     }
                 }
 
-                _RunningTasks--;
+                Interlocked.Decrement(ref _RunningTasks);
+                Console.WriteLine("Client " + clientNum + " finished, sent " + msgsSent + " messages, " + bytesSent + " bytes");
             }
             catch (Exception e)
             {
@@ -133,8 +152,8 @@ namespace TestThroughput
         {
             try
             {
-                _BytesReceived += args.Data.Length;
-                _MessagesProcessing--;
+                Interlocked.Decrement(ref _MessagesProcessing);
+                Interlocked.Add(ref _BytesReceived, args.Data.Length);
             }
             catch (Exception e)
             {

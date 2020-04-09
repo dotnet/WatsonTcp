@@ -10,9 +10,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-
-using WatsonTcp.Message;
+using System.Threading.Tasks; 
 
 namespace WatsonTcp
 {
@@ -835,7 +833,7 @@ namespace WatsonTcp
                     data = Encoding.UTF8.GetBytes("Removed from server.");
                     _ClientsKicked.TryAdd(ipPort, DateTime.Now); 
                 }
-                 
+
                 WatsonMessage removeMsg = new WatsonMessage();
                 removeMsg.Status = MessageStatus.Removed;
                 removeMsg.Data = null;
@@ -1489,13 +1487,7 @@ namespace WatsonTcp
                 {
                     // write headers
                     client.NetworkStream.Write(headerBytes, 0, headerBytes.Length);
-
-                    // write metadata
-                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                    {
-                        client.NetworkStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                    }
-
+                     
                     // write data
                     if (contentLength > 0)
                     {
@@ -1516,13 +1508,7 @@ namespace WatsonTcp
                 {
                     // write headers
                     client.SslStream.Write(headerBytes, 0, headerBytes.Length);
-
-                    // write metadata
-                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                    {
-                        client.SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                    }
-
+                     
                     // write data
                     if (contentLength > 0)
                     {
@@ -1603,13 +1589,7 @@ namespace WatsonTcp
                 {
                     // write headers
                     await client.NetworkStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-
-                    // write metadata
-                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                    {
-                        await client.NetworkStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                    }
-
+                     
                     // write data
                     if (contentLength > 0)
                     {
@@ -1630,13 +1610,7 @@ namespace WatsonTcp
                 {
                     // write headers
                     await client.SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-
-                    // write metadata
-                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                    {
-                        await client.SslStream.WriteAsync(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                    }
-
+                     
                     // write data
                     if (contentLength > 0)
                     {
@@ -1714,13 +1688,7 @@ namespace WatsonTcp
                 {
                     // write headers
                     client.NetworkStream.Write(headerBytes, 0, headerBytes.Length);
-
-                    // write metadata
-                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                    {
-                        client.NetworkStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                    }
-
+                     
                     // write data
                     if (contentLength > 0)
                     {
@@ -1741,13 +1709,7 @@ namespace WatsonTcp
                 {
                     // write headers
                     client.SslStream.Write(headerBytes, 0, headerBytes.Length);
-
-                    // write metadata
-                    if (msg.MetadataBytes != null && msg.MetadataBytes.Length > 0)
-                    {
-                        client.SslStream.Write(msg.MetadataBytes, 0, msg.MetadataBytes.Length);
-                    }
-
+                     
                     // write data
                     if (contentLength > 0)
                     {

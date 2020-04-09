@@ -1,6 +1,6 @@
 ![alt tag](https://github.com/jchristn/watsontcp/blob/master/assets/watson.ico)
 
-# Watson TCP
+# WatsonTcp
 
 [![][nuget-img]][nuget]
 
@@ -9,9 +9,10 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-## New in v3.1.4
+## New in v4.0.0
 
-- Better handling for cases where no message/stream event handler is set
+- Overhaul to internal framing, refer to ```FRAMING.md```
+- Fixes to ```Test.Throughput``` projects (incorrectly reporting statistics)
 
 ## Test Applications
 

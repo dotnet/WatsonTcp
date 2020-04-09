@@ -15,7 +15,7 @@ namespace TestServer
         private static WatsonTcpServer server = null;
         private static string certFile = "";
         private static string certPass = "";
-        private static bool debugMessages = false;
+        private static bool debugMessages = true;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
 
