@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.0.2
+
+- Bugfix (thank you @ozrecsec!) for ClientDisconnected firing too early
+
+## Previous Versions
+
 v4.0.1
 
 - Bugfixes (thank you @ozrecsec!) for DateTime serialization
-
-## Previous Versions
 
 v4.0.0
 
