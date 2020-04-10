@@ -2,12 +2,16 @@
 
 ## Current Version
 
+v4.0.1
+
+- Bugfixes (thank you @ozrecsec!) for DateTime serialization
+
+## Previous Versions
+
 v4.0.0
 
 - Overhaul to internal framing, refer to ```FRAMING.md```
 - Fixes to ```Test.Throughput``` projects (incorrectly reporting statistics)
-
-## Previous Versions
 
 v3.1.4
 

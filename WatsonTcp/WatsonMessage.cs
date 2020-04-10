@@ -286,6 +286,16 @@ namespace WatsonTcp
 
                 return true;
             } 
+            catch (IOException ioe)
+            {
+                _Logger?.Invoke(_Header + "Build IOexception, disconnect assumed: " + ioe.Message);
+                return false;
+            }
+            catch (SocketException se)
+            {
+                _Logger?.Invoke(_Header + "Build SocketException, disconnect assumed: " + se.Message);
+                return false;
+            }
             catch (Exception e)
             {
                 _Logger?.Invoke(_Header + "Build exception: " + 
@@ -316,6 +326,16 @@ namespace WatsonTcp
                 #endregion
                  
                 return true;
+            }
+            catch (IOException ioe)
+            {
+                _Logger?.Invoke(_Header + "BuildStream IOexception, disconnect assumed: " + ioe.Message);
+                return false;
+            }
+            catch (SocketException se)
+            {
+                _Logger?.Invoke(_Header + "BuildStream SocketException, disconnect assumed: " + se.Message);
+                return false;
             }
             catch (Exception e)
             {
