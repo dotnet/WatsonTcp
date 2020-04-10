@@ -1378,14 +1378,14 @@ namespace WatsonTcp
                         if (_MessageReceived != null
                             && _MessageReceived.GetInvocationList().Length > 0)
                         {
-                            MessageReceivedFromClientEventArgs args = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.Data);
-                            _MessageReceived?.Invoke(this, args);
+                            MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.Data);
+                            _MessageReceived?.Invoke(this, mr);
                         }
                         else if (_StreamReceived != null
                             && _StreamReceived.GetInvocationList().Length > 0)
                         {
-                            StreamReceivedFromClientEventArgs args = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
-                            _StreamReceived?.Invoke(this, args);
+                            StreamReceivedFromClientEventArgs sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
+                            _StreamReceived?.Invoke(this, sr);
                         }
                         else
                         {
@@ -1414,20 +1414,20 @@ namespace WatsonTcp
 
             Logger?.Invoke("[WatsonTcpServer] Data receiver terminated for " + client.IpPort);
 
-            ClientDisconnectedEventArgs clientdisconnecteddventargs = null;
+            ClientDisconnectedEventArgs cd = null;
             if (ClientDisconnected != null)
             { 
                 if (_ClientsKicked.ContainsKey(client.IpPort))
                 {
-                    clientdisconnecteddventargs = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Kicked);
+                    cd = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Kicked);
                 }
                 else if (_ClientsTimedout.ContainsKey(client.IpPort))
                 {
-                    clientdisconnecteddventargs = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Timeout);
+                    cd = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Timeout);
                 }
                 else
                 {
-                    clientdisconnecteddventargs = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Normal);
+                    cd = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Normal);
                 }
             }
 
@@ -1439,9 +1439,9 @@ namespace WatsonTcp
             _UnauthenticatedClients.TryRemove(client.IpPort, out removedTs);
             _Connections--;
 
-            if (clientdisconnecteddventargs != null)
+            if (cd != null)
             {
-                ClientDisconnected?.Invoke(this, clientdisconnecteddventargs);
+                ClientDisconnected?.Invoke(this, cd);
             }
             
             Logger?.Invoke("[WatsonTcpServer] Disposing data receiver for " + client.IpPort);
