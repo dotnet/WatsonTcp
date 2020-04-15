@@ -9,9 +9,12 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-## New in v4.0.2
+## New in v4.1.0
 
-- Bugfix (thank you @ozrecsec!) for ClientDisconnected firing too early
+- Compression of message data using either GZip or Deflate (thanks @developervariety!); refer to *Compression* section below
+- Message data is now a property that fully reads the underlying stream
+- Internal code refactoring to better follow DRY principles (SendHeaders, SendDataStream, etc)
+- Reduce log verbosity on disconnect
 
 ## Test Applications
 
@@ -54,8 +57,9 @@ Special thanks to the following people for their support and contributions to th
 - @crushedice
 - @marek-petak
 - @ozrecsec
+- @developervariety
 
-If you'd like to contribute, please jump right into the source code and create a pull request. 
+If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
 ## Examples
 
@@ -246,6 +250,32 @@ client.Start();
 static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args)
 {
     // read args.ContentLength bytes from args.DataStream and process
+}
+```
+
+## Compression
+
+Data compression was added in v4.1.0 to reduce bandwidth consumption for data send between client and server (thank you @developervariety for the suggestion).  Compression is applied only to the data and not to the headers or user-supplied metadata, because we wanted to keep framing simple to support external integration with Watson.  Please refer to *FRAMING.md* for details.
+
+Compression is enabled as a property on either client or server, and this will instruct the instance to send message data using the specified compression method.  Compressed messages are automatically decompressed on the receiving side without any configuration required.  
+
+The ```Compression``` property can be set to one of: ```Gzip```, ```Deflate```, ```None```.
+
+```
+using WatsonTcp;
+
+using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 8000))
+{
+    using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 8000))
+    {
+        server.MessageReceived += ServerMessageReceived;
+        server.Compression = CompressionType.Gzip;      // all message data sent from server now Gzip compressed
+        server.Start();
+
+        client.MessageReceived += ClientMessageReceived;
+        client.Compression = CompressionType.None;      // client will not compress data it sends
+        client.Start();
+    }
 }
 ```
 

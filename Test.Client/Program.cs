@@ -13,7 +13,7 @@ namespace TestClient
         private static bool useSsl = false;
         private static string certFile = "";
         private static string certPass = "";
-        private static bool debugMessages = false;
+        private static bool debugMessages = true;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
         private static WatsonTcpClient client = null;
@@ -53,6 +53,7 @@ namespace TestClient
                         Console.WriteLine("  auth                authenticate using the preshared key");
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
+                        Console.WriteLine("  comp                set the compression type, currently: " + client.Compression.ToString());
                         Console.WriteLine("  debug               enable/disable debug (currently " + client.DebugMessages + ")");
                         break;
 
@@ -157,6 +158,10 @@ namespace TestClient
 
                     case "stats reset":
                         client.Stats.Reset();
+                        break;
+
+                    case "comp":
+                        client.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Default|Gzip]:", "None", false)));
                         break;
 
                     case "debug":

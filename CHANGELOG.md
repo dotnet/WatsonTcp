@@ -2,11 +2,18 @@
 
 ## Current Version
 
+v4.1.0
+
+- Compression of message data using either GZip or Deflate (thanks @developervariety!)
+- Message data is now a property that fully reads the underlying stream
+- Internal code refactoring to better follow DRY principles (SendHeaders, SendDataStream, etc)
+- Reduce log verbosity on disconnect
+
+## Previous Versions
+
 v4.0.2
 
 - Bugfix (thank you @ozrecsec!) for ClientDisconnected firing too early
-
-## Previous Versions
 
 v4.0.1
 

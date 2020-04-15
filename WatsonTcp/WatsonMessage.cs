@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -102,16 +103,69 @@ namespace WatsonTcp
         public string ConversationGuid = null;
 
         /// <summary>
-        /// Message data.
+        /// The type of compression used in the message.
+        /// </summary>
+        public CompressionType Compression = CompressionType.None;
+
+        /// <summary>
+        /// Message data from the stream.  Using 'Data' will fully read 'DataStream'.
         /// </summary>
         [JsonIgnore]
-        public byte[] Data { get; set; }
+        public byte[] Data
+        {
+            get
+            {
+                if (_Data != null)
+                { 
+                    return _Data;
+                }
+                 
+                if (ContentLength > 0 && _DataStream != null)
+                { 
+                    _Data = ReadStreamFully(_DataStream);
+
+                    if (_DataStream is GZipStream || _DataStream is DeflateStream)
+                    {
+                        // 
+                        // It is necessary to close the compression stream; when it was opened
+                        // it was instructed to leave the underlying stream open
+                        //
+
+                        _DataStream.Close();
+                    }
+                }
+                 
+                return _Data;
+            }
+        }
 
         /// <summary>
         /// Stream containing the message data.
         /// </summary>
         [JsonIgnore]
-        public Stream DataStream { get; set; }
+        public Stream DataStream
+        {
+            get
+            {
+                return _DataStream;
+            }
+        }
+
+        /// <summary>
+        /// Message headers in byte-array form ready to send.
+        /// </summary>
+        [JsonIgnore]
+        public byte[] HeaderBytes
+        {
+            get
+            {
+                string jsonStr = SerializationHelper.SerializeJson(this, false);
+                byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonStr);
+                byte[] end = AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
+                byte[] final = AppendBytes(jsonBytes, end);
+                return final;
+            }
+        }
 
         #endregion
 
@@ -133,7 +187,7 @@ namespace WatsonTcp
             }
         }
          
-        #endregion Internal-Members
+        #endregion
 
         #region Private-Members
 
@@ -145,9 +199,11 @@ namespace WatsonTcp
 
         private int _ReadStreamBuffer = 65536; 
         private byte[] _PresharedKey; 
-        private Dictionary<object, object> _Metadata = new Dictionary<object, object>();  
+        private Dictionary<object, object> _Metadata = new Dictionary<object, object>();
+        private byte[] _Data = null;
+        private Stream _DataStream = null;
 
-        #endregion Private-Members
+        #endregion
 
         #region Constructors-and-Factories
 
@@ -158,35 +214,7 @@ namespace WatsonTcp
         { 
             Status = MessageStatus.Normal;
         }
-
-        /// <summary>
-        /// Construct a new message to send.
-        /// </summary>
-        /// <param name="metadata">Metadata to attach to the message.</param>
-        /// <param name="data">The data to send.</param>
-        /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
-        /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
-        /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
-        /// <param name="convGuid">Conversation GUID.</param>
-        /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(Dictionary<object, object> metadata, byte[] data, bool syncRequest, bool syncResponse, DateTime? expiration, string convGuid, Action<string> logger)
-        {
-            if (data == null || data.Length < 1) throw new ArgumentNullException(nameof(data));
-             
-            Status = MessageStatus.Normal; 
-            ContentLength = data.Length;
-            Metadata = metadata;
-            SyncRequest = syncRequest;
-            SyncResponse = syncResponse;
-            Expiration = expiration;
-            ConversationGuid = convGuid;
-            Data = new byte[data.Length];
-            Buffer.BlockCopy(data, 0, Data, 0, data.Length);
-            DataStream = null;
-
-            _Logger = logger; 
-        }
-
+         
         /// <summary>
         /// Construct a new message to send.
         /// </summary>
@@ -196,9 +224,19 @@ namespace WatsonTcp
         /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
         /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
+        /// <param name="compression">The type of compression to use.</param>
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(Dictionary<object, object> metadata, long contentLength, Stream stream, bool syncRequest, bool syncResponse, DateTime? expiration, string convGuid, Action<string> logger)
+        internal WatsonMessage(
+            Dictionary<object, object> metadata, 
+            long contentLength, 
+            Stream stream, 
+            bool syncRequest, 
+            bool syncResponse, 
+            DateTime? expiration, 
+            string convGuid, 
+            CompressionType compression, 
+            Action<string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (contentLength > 0)
@@ -216,153 +254,129 @@ namespace WatsonTcp
             SyncResponse = syncResponse;
             Expiration = expiration;
             ConversationGuid = convGuid;
-            Data = null;
-            DataStream = stream;
-
+            Compression = compression; 
+            
+            _DataStream = stream;
             _Logger = logger; 
         }
 
         /// <summary>
         /// Read from a stream and construct a message.  Call Build() to populate.
         /// </summary>
-        /// <param name="stream">NetworkStream.</param>
+        /// <param name="stream">Stream.</param>
         /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(NetworkStream stream, Action<string> logger)
+        internal WatsonMessage(Stream stream, Action<string> logger)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (!stream.CanRead) throw new ArgumentException("Cannot read from stream.");
              
             Status = MessageStatus.Normal; 
-            DataStream = stream;
-
+            
+            _DataStream = stream;
             _Logger = logger; 
         }
-
-        /// <summary>
-        /// Read from an SSL-based stream and construct a message.  Call Build() to populate.
-        /// </summary>
-        /// <param name="stream">SslStream.</param>
-        /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(SslStream stream, Action<string> logger)
-        {
-            if (stream == null) throw new ArgumentNullException(nameof(stream));
-            if (!stream.CanRead) throw new ArgumentException("Cannot read from stream.");
-
-            Status = MessageStatus.Normal;
-            DataStream = stream;
-
-            _Logger = logger; 
-        }
-
-        #endregion Constructors-and-Factories
-
+         
+        #endregion
+        
         #region Internal-Methods
-
+         
         /// <summary>
         /// Build the Message object from data that awaits in a NetworkStream or SslStream.
-        /// Returns the payload data in the 'Data' field.
         /// </summary>
         /// <returns>True if successful.</returns>
-        internal async Task<bool> Build()
+        internal async Task<bool> BuildFromStream()
         {
             try
             {
                 #region Read-Headers
 
-                bool success = await ReadHeaders();
-                if (!success)
-                { 
-                    _Logger?.Invoke(_Header + "BuildStream timeout reading headers");
-                    return false;
+                byte[] buffer = new byte[0];
+                byte[] end = AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
+
+                while (true)
+                {
+                    byte[] data = await ReadFromStreamAsync(_DataStream, 1);
+                    if (data != null && data.Length == 1)
+                    {
+                        buffer = AppendBytes(buffer, data);
+                        if (buffer.Length >= 4)
+                        {
+                            byte[] endCheck = buffer.Skip(buffer.Length - 4).Take(4).ToArray();
+                            if (endCheck.SequenceEqual(end))
+                            {
+                                _Logger?.Invoke(_Header + "ReadHeaders found header demarcation");
+                                break;
+                            }
+                        }
+                    }
                 }
+
+                WatsonMessage msg = SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(buffer));
+                ContentLength = msg.ContentLength;
+                PresharedKey = msg.PresharedKey;
+                Status = msg.Status;
+                Metadata = msg.Metadata;
+                SyncRequest = msg.SyncRequest;
+                SyncResponse = msg.SyncResponse;
+                Expiration = msg.Expiration;
+                ConversationGuid = msg.ConversationGuid;
+                Compression = msg.Compression;
+
+                _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(buffer).Trim()); 
 
                 #endregion
 
-                #region Read-Payload
+                #region Setup-Stream
 
-                Data = await ReadFromNetwork(ContentLength, "Payload");
-
-                #endregion Read-Payload
-
-                return true;
-            } 
-            catch (IOException ioe)
-            {
-                _Logger?.Invoke(_Header + "Build IOexception, disconnect assumed: " + ioe.Message);
-                return false;
-            }
-            catch (SocketException se)
-            {
-                _Logger?.Invoke(_Header + "Build SocketException, disconnect assumed: " + se.Message);
-                return false;
-            }
-            catch (Exception e)
-            {
-                _Logger?.Invoke(_Header + "Build exception: " + 
-                    Environment.NewLine +
-                    e.ToString() +
-                    Environment.NewLine); 
-                return false;
-            } 
-        }
-
-        /// <summary>
-        /// Build the Message object from data that awaits in a NetworkStream or SslStream.
-        /// </summary>
-        /// <returns>True if successful.</returns>
-        internal async Task<bool> BuildStream()
-        {
-            try
-            {
-                #region Read-Headers
-
-                bool success = await ReadHeaders();
-                if (!success)
-                {
-                    _Logger?.Invoke(_Header + "BuildStream timeout reading headers");
-                    return false;
+                if (Compression == CompressionType.None)
+                { 
+                    // do nothing
+                }
+                else
+                { 
+                    if (Compression == CompressionType.Deflate)
+                    {
+                        _DataStream = new DeflateStream(_DataStream, CompressionMode.Decompress, true);
+                    }
+                    else if (Compression == CompressionType.Gzip)
+                    {
+                        _DataStream = new GZipStream(_DataStream, CompressionMode.Decompress, true);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
+                    }
                 }
 
                 #endregion
                  
                 return true;
             }
-            catch (IOException ioe)
+            catch (IOException)
             {
-                _Logger?.Invoke(_Header + "BuildStream IOexception, disconnect assumed: " + ioe.Message);
+                _Logger?.Invoke(_Header + "BuildStream IOexception, disconnect assumed");
                 return false;
             }
-            catch (SocketException se)
+            catch (SocketException)
             {
-                _Logger?.Invoke(_Header + "BuildStream SocketException, disconnect assumed: " + se.Message);
+                _Logger?.Invoke(_Header + "BuildStream SocketException, disconnect assumed");
+                return false;
+            }
+            catch (ObjectDisposedException)
+            {
+                _Logger?.Invoke(_Header + "BuildStream ObjectDisposedException, disconnect assumed");
                 return false;
             }
             catch (Exception e)
             {
                 _Logger?.Invoke(_Header + "BuildStream exception: " +
                     Environment.NewLine +
-                    e.ToString() +
+                    SerializationHelper.SerializeJson(e, true) +
                     Environment.NewLine);
                 return false;
             }
         }
-
-        /// <summary>
-        /// Creates a byte array useful for transmission, without packaging the data.
-        /// </summary>
-        /// <returns>Byte array.</returns>
-        internal byte[] ToHeaderBytes(long contentLength)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            ContentLength = contentLength;
-
-            string jsonStr = SerializationHelper.SerializeJson(this, false);
-            byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonStr);
-            byte[] end = AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
-            byte[] final = AppendBytes(jsonBytes, end);
-            return final; 
-        }
-
+         
         /// <summary>
         /// Human-readable string version of the object.
         /// </summary>
@@ -398,70 +412,65 @@ namespace WatsonTcp
         #endregion Public-Methods
 
         #region Private-Methods
-        
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        private async Task<bool> ReadHeaders()
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        { 
-            byte[] buffer = new byte[0];
-            byte[] end = AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
 
-            while (true)
+        private byte[] ReadStreamFully(Stream input)
+        { 
+            byte[] buffer = new byte[65536];
+            using (MemoryStream ms = new MemoryStream())
             {
-                byte[] data = await ReadFromNetwork(1, "Headers");
-                if (data != null && data.Length == 1)
+                int read = 0;
+                while (true)
                 {
-                    buffer = AppendBytes(buffer, data);
-                    if (buffer.Length >= 4)
+                    read = input.Read(buffer, 0, buffer.Length); 
+                    if (read > 0)
                     {
-                        byte[] endCheck = buffer.Skip(buffer.Length - 4).Take(4).ToArray();
-                        if (endCheck.SequenceEqual(end))
-                        {
-                            _Logger?.Invoke(_Header + "ReadHeaders found header demarcation");
-                            break;
-                        }
+                        ms.Write(buffer, 0, read); 
+                        if (read < buffer.Length) break;
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
+                 
+                return ms.ToArray();
             }
-
-            WatsonMessage deserialized = SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(buffer));
-            ContentLength = deserialized.ContentLength;
-            PresharedKey = deserialized.PresharedKey;
-            Status = deserialized.Status;
-            Metadata = deserialized.Metadata;
-            SyncRequest = deserialized.SyncRequest;
-            SyncResponse = deserialized.SyncResponse;
-            Expiration = deserialized.Expiration;
-            ConversationGuid = deserialized.ConversationGuid;
-
-            _Logger?.Invoke(_Header + "ReadHeaders header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(buffer)); 
-            return true; 
         }
 
-        private async Task<byte[]> ReadFromNetwork(long count, string field)
-        {  
+        private byte[] ReadFromStream(Stream stream, long count)
+        {
+            if (count <= 0) return null;
+            byte[] buffer = new byte[count];
+
+            int bytesRead = 0;
+            MemoryStream ms = new MemoryStream();
+
+            while (bytesRead < count)
+            {
+                int read = stream.Read(buffer, bytesRead, buffer.Length - bytesRead);
+                if (read == 0) throw new SocketException();
+                bytesRead += read;
+            }
+
+            return buffer;
+        }
+
+        private async Task<byte[]> ReadFromStreamAsync(Stream stream, long count)
+        {
             if (count <= 0) return null;
             int bytesRead = 0;
             byte[] readBuffer = new byte[count];
-                 
-            if (DataStream != null)
-            { 
-                while (bytesRead < count)
-                {
-                    int read = await DataStream.ReadAsync(readBuffer, bytesRead, readBuffer.Length - bytesRead);
-                    if (read == 0) throw new SocketException();
-                    bytesRead += read;
-                }
-            }
-            else
+             
+            while (bytesRead < count)
             {
-                throw new IOException("No suitable input stream found.");
+                int read = await stream.ReadAsync(readBuffer, bytesRead, readBuffer.Length - bytesRead);
+                if (read == 0) throw new SocketException();
+                bytesRead += read;
             }
-
-            // _Logger?.Invoke(_Header + "ReadFromNetwork " + count + " bytes, field " + field + ": " + ByteArrayToHex(readBuffer)); 
-            return readBuffer; 
+             
+            return readBuffer;
         }
-         
+
         private byte[] AppendBytes(byte[] head, byte[] tail)
         {
             byte[] arrayCombined = new byte[head.Length + tail.Length];
@@ -476,7 +485,7 @@ namespace WatsonTcp
             foreach (byte b in data) hex.AppendFormat("{0:x2}", b);
             return hex.ToString();
         }
-         
-        #endregion Private-Methods
+
+        #endregion
     }
 }

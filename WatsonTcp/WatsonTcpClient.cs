@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -170,6 +171,11 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Type of compression to apply on sent messages.
+        /// </summary>
+        public CompressionType Compression = CompressionType.None;
+
+        /// <summary>
         /// Method to invoke when sending a log message.
         /// </summary>
         public Action<string> Logger = null;
@@ -185,19 +191,20 @@ namespace WatsonTcp
             }
         }
 
-        #endregion Public-Members
+        #endregion
 
         #region Private-Members
 
         private int _ReadStreamBufferSize = 65536;
         private int _ConnectTimeoutSeconds = 5;
-        private Mode _Mode;
-        private string _SourceIp;
-        private int _SourcePort;
-        private string _ServerIp;
-        private int _ServerPort;
+        private Mode _Mode = Mode.Tcp;
+        private string _SourceIp = null;
+        private int _SourcePort = 0;
+        private string _ServerIp = null;
+        private int _ServerPort = 0;
         private bool _MutuallyAuthenticate = false;
         private TcpClient _Client = null;
+        private Stream _DataStream = null;
         private NetworkStream _TcpStream = null;
         private SslStream _SslStream = null;
 
@@ -219,7 +226,7 @@ namespace WatsonTcp
 
         private Statistics _Stats = new Statistics();
 
-        #endregion Private-Members
+        #endregion
 
         #region Constructors-and-Factories
 
@@ -288,7 +295,7 @@ namespace WatsonTcp
             Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
         }
 
-        #endregion Constructors-and-Factories
+        #endregion
 
         #region Public-Methods
 
@@ -341,6 +348,7 @@ namespace WatsonTcp
                     _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
                     _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
                     _TcpStream = _Client.GetStream();
+                    _DataStream = _TcpStream;
                     _SslStream = null;
 
                     Connected = true;
@@ -408,6 +416,7 @@ namespace WatsonTcp
                         throw new AuthenticationException("Mutual authentication failed");
                     }
 
+                    _DataStream = _SslStream;
                     Connected = true;
                 }
                 catch (Exception)
@@ -472,6 +481,7 @@ namespace WatsonTcp
                     _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
                     _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
                     _TcpStream = _Client.GetStream();
+                    _DataStream = _TcpStream;
                     _SslStream = null;
 
                     Connected = true;
@@ -539,6 +549,7 @@ namespace WatsonTcp
                         throw new AuthenticationException("Mutual authentication failed");
                     }
 
+                    _DataStream = _SslStream;
                     Connected = true;
                 }
                 catch (Exception)
@@ -573,10 +584,8 @@ namespace WatsonTcp
 
             WatsonMessage msg = new WatsonMessage();
             msg.Status = MessageStatus.AuthRequested;
-            msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
-            msg.Data = null;
-            msg.ContentLength = 0;
-            SendInternal(msg);
+            msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey); 
+            SendInternal(msg, 0, null);
         }
 
         /// <summary>
@@ -622,8 +631,8 @@ namespace WatsonTcp
         public bool Send(Dictionary<object, object> metadata, byte[] data)
         {
             if (data == null) data = new byte[0];
-            WatsonMessage msg = new WatsonMessage(metadata, data, false, false, null, null, (DebugMessages ? Logger : null));
-            return SendInternal(msg, data);
+            BytesToStream(data, out long contentLength, out Stream stream);
+            return Send(metadata, contentLength, stream);
         }
 
         /// <summary>
@@ -649,8 +658,8 @@ namespace WatsonTcp
         public bool Send(Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
+            if (stream == null) stream = new MemoryStream(new byte[0]); 
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
             return SendInternal(msg, contentLength, stream);
         }
 
@@ -661,7 +670,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(Dictionary<object, object> metadata)
         {
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, (DebugMessages ? Logger : null));
             return SendInternal(msg, 0, new MemoryStream(new byte[0]));
         }
 
@@ -708,8 +717,8 @@ namespace WatsonTcp
         public async Task<bool> SendAsync(Dictionary<object, object> metadata, byte[] data)
         {
             if (data == null) data = new byte[0];
-            WatsonMessage msg = new WatsonMessage(metadata, data, false, false, null, null, (DebugMessages ? Logger : null));
-            return await SendInternalAsync(msg, data);
+            BytesToStream(data, out long contentLength, out Stream stream);
+            return await SendAsync(metadata, contentLength, stream);
         }
 
         /// <summary>
@@ -736,7 +745,7 @@ namespace WatsonTcp
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
             return await SendInternalAsync(msg, contentLength, stream);
         }
 
@@ -747,7 +756,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(Dictionary<object, object> metadata)
         {
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, (DebugMessages ? Logger : null));
             return await SendInternalAsync(msg, 0, new MemoryStream(new byte[0]));
         }
 
@@ -818,8 +827,8 @@ namespace WatsonTcp
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (data == null) data = new byte[0];
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, data, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
-            return SendAndWaitInternal(msg, timeoutMs, data);
+            BytesToStream(data, out long contentLength, out Stream stream);
+            return SendAndWait(metadata, timeoutMs, contentLength, stream);
         }
 
         /// <summary>
@@ -836,7 +845,7 @@ namespace WatsonTcp
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]);
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), Compression, (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, contentLength, stream);
         }
 
@@ -850,11 +859,11 @@ namespace WatsonTcp
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), Compression, (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, 0, new MemoryStream(new byte[0]));
         }
 
-        #endregion Public-Methods
+        #endregion
 
         #region Private-Methods
 
@@ -871,10 +880,8 @@ namespace WatsonTcp
                 if (Connected)
                 {
                     WatsonMessage msg = new WatsonMessage();
-                    msg.Status = MessageStatus.Disconnecting;
-                    msg.Data = null;
-                    msg.ContentLength = 0;
-                    SendInternal(msg);
+                    msg.Status = MessageStatus.Disconnecting; 
+                    SendInternal(msg, 0, null);
                 }
 
                 if (_TokenSource != null)
@@ -916,7 +923,8 @@ namespace WatsonTcp
                     _Client.Dispose();
                     _Client = null;
                 }
-
+                
+                _DataStream = null; 
                 Connected = false;
                 Logger?.Invoke("[WatsonTcpClient] Dispose complete");
             }
@@ -946,35 +954,9 @@ namespace WatsonTcp
                         break;
                     }
 
-                    WatsonMessage msg = null;
+                    WatsonMessage msg = new WatsonMessage(_DataStream, (DebugMessages ? Logger : null)); 
                     readLocked = await _ReadLock.WaitAsync(1);
-                    bool buildSuccess = false;
-
-                    if (_SslStream != null)
-                    {
-                        msg = new WatsonMessage(_SslStream, (DebugMessages ? Logger : null)); 
-                    }
-                    else
-                    {
-                        msg = new WatsonMessage(_TcpStream, (DebugMessages ? Logger : null)); 
-                    }
-
-                    if (_MessageReceived != null
-                        && _MessageReceived.GetInvocationList().Length > 0)
-                    {
-                        buildSuccess = await msg.Build();
-                    }
-                    else if (_StreamReceived != null
-                        && _StreamReceived.GetInvocationList().Length > 0)
-                    {
-                        buildSuccess = await msg.BuildStream();
-                    }
-                    else
-                    {
-                        Logger?.Invoke("[WatsonTcpClient] Event handler not set for either MessageReceived or StreamReceived");
-                        break;
-                    }
-
+                    bool buildSuccess = await msg.BuildFromStream();
                     if (!buildSuccess)
                     {
                         Logger?.Invoke("[WatsonTcpClient] Message build failed due to disconnect");
@@ -1025,14 +1007,7 @@ namespace WatsonTcp
                     }
 
                     if (msg.SyncRequest)
-                    {
-                        /*
-                        Console.WriteLine("");
-                        Console.WriteLine("DateTime.Now   : " + DateTime.Now.ToString());
-                        Console.WriteLine("Expiration     : " + msg.Expiration.Value.ToString());
-                        Console.WriteLine("");
-                        */
-
+                    { 
                         if (SyncRequestReceived != null)
                         { 
                             if (DateTime.Now < msg.Expiration.Value)
@@ -1047,16 +1022,18 @@ namespace WatsonTcp
                                 SyncResponse syncResp = SyncRequestReceived(syncReq);
                                 if (syncResp != null)
                                 {
-                                    WatsonMessage respMsg = new WatsonMessage(
+                                    BytesToStream(syncResp.Data, out long contentLength, out Stream stream);
+                                    WatsonMessage respMsg = new WatsonMessage( 
                                         syncResp.Metadata,
-                                        syncResp.Data,
+                                        contentLength,
+                                        stream,
                                         false,
                                         true,
                                         msg.Expiration.Value,
-                                        msg.ConversationGuid,
-                                        (DebugMessages ? Logger : null));
-
-                                    SendInternal(respMsg);
+                                        msg.ConversationGuid, 
+                                        Compression,
+                                        (DebugMessages ? Logger : null)); 
+                                    SendInternal(respMsg, contentLength, stream);
                                 }
                             }
                             else
@@ -1066,14 +1043,7 @@ namespace WatsonTcp
                         } 
                     }
                     else if (msg.SyncResponse)
-                    {
-                        /*
-                        Console.WriteLine("");
-                        Console.WriteLine("DateTime.Now   : " + DateTime.Now.ToString());
-                        Console.WriteLine("Expiration     : " + msg.Expiration.Value.ToString());
-                        Console.WriteLine("");
-                        */
-
+                    { 
                         if (DateTime.Now < msg.Expiration.Value)
                         {
                             lock (_SyncResponseLock)
@@ -1135,22 +1105,32 @@ namespace WatsonTcp
             Dispose();
         }
 
-        private bool SendInternal(WatsonMessage msg, byte[] data)
+        private void BytesToStream(byte[] data, out long contentLength, out Stream stream)
         {
-            long dataLen = 0;
-            MemoryStream ms = new MemoryStream();
+            contentLength = 0;
+            stream = new MemoryStream(new byte[0]);
+
             if (data != null && data.Length > 0)
             {
-                dataLen = data.Length;
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
+                contentLength = data.Length;
+                stream = new MemoryStream();
+                stream.Write(data, 0, data.Length);
+                stream.Seek(0, SeekOrigin.Begin); 
             }
-            else
-            {
-                ms = new MemoryStream(new byte[0]);
-            }
+        }
 
-            return SendInternal(msg, dataLen, ms);
+        private byte[] ReadStreamFully(Stream input)
+        {
+            byte[] buffer = new byte[65536];
+            using (MemoryStream ms = new MemoryStream())
+            {
+                int read = 0;
+                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                }
+                return ms.ToArray();
+            }
         }
 
         private bool SendInternal(WatsonMessage msg, long contentLength, Stream stream)
@@ -1165,7 +1145,7 @@ namespace WatsonTcp
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
             }
-
+             
             bool disconnectDetected = false;
 
             try
@@ -1176,58 +1156,13 @@ namespace WatsonTcp
                     disconnectDetected = true;
                     return false;
                 }
-                 
-                byte[] headerBytes = msg.ToHeaderBytes(contentLength); 
-                int bytesRead = 0;
-                long bytesRemaining = contentLength;
-                byte[] buffer = new byte[_ReadStreamBufferSize];
-
-                _WriteLock.Wait(1);
+                  
+                _WriteLock.Wait();
 
                 try
-                {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        // write headers
-                        _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    _TcpStream.Write(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        _TcpStream.Flush();
-                    }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        // write headers
-                        _SslStream.Write(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    _SslStream.Write(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        _SslStream.Flush();
-                    } 
+                { 
+                    SendHeaders(msg); 
+                    SendDataStream(contentLength, stream); 
                 }
                 finally
                 {
@@ -1257,102 +1192,6 @@ namespace WatsonTcp
                     Dispose();
                 }
             }
-        }
-
-        private bool SendInternal(WatsonMessage msg)
-        {
-            bool disconnectDetected = false;
-            long dataLen = 0;
-            if (msg.Data != null) dataLen = msg.Data.Length;
-
-            try
-            { 
-                if (_Client == null
-                    || !_Client.Connected)
-                {
-                    disconnectDetected = true;
-                    return false;
-                }
-                 
-                byte[] headerBytes = msg.ToHeaderBytes(dataLen);
-                 
-                _WriteLock.Wait(1);
-                 
-                try
-                {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        // write headers
-                        _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (msg.Data != null && msg.Data.Length > 0)
-                        {
-                            _TcpStream.Write(msg.Data, 0, msg.Data.Length);
-                        }
-
-                        _TcpStream.Flush();
-                    }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        // write headers
-                        _SslStream.Write(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (msg.Data != null && msg.Data.Length > 0)
-                        {
-                            _SslStream.Write(msg.Data, 0, msg.Data.Length);
-                        }
-
-                        _SslStream.Flush();
-                    }
-                } 
-                finally
-                {
-                    _WriteLock.Release();
-                }
-                 
-                _Stats.SentMessages += 1; 
-                _Stats.SentBytes += dataLen; 
-                return true;
-            }
-            catch (Exception e)
-            { 
-                Logger?.Invoke(
-                    "[WatsonTcpClient] Message write exception: " +
-                    Environment.NewLine +
-                    e.ToString() +
-                    Environment.NewLine);
-
-                disconnectDetected = true;
-                return false;
-            }
-            finally
-            {
-                if (disconnectDetected)
-                {
-                    Connected = false;
-                    Dispose();
-                }
-            }
-        }
-         
-        private async Task<bool> SendInternalAsync(WatsonMessage msg, byte[] data)
-        {
-            long dataLen = 0;
-            MemoryStream ms = new MemoryStream();
-            if (data != null)
-            {
-                dataLen = data.Length;
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
-            else
-            {
-                ms = new MemoryStream(new byte[0]);
-            }
-
-            return await SendInternalAsync(msg, dataLen, ms);
         }
 
         private async Task<bool> SendInternalAsync(WatsonMessage msg, long contentLength, Stream stream)
@@ -1377,63 +1216,13 @@ namespace WatsonTcp
                     disconnectDetected = true;
                     return false;
                 }
-                
-                byte[] headerBytes = msg.ToHeaderBytes(contentLength);
-
-                int bytesRead = 0;
-                long bytesRemaining = contentLength;
-                byte[] buffer = new byte[_ReadStreamBufferSize];
-
+                 
                 await _WriteLock.WaitAsync();
 
                 try
-                {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        // write headers
-                        await _TcpStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    await _TcpStream.WriteAsync(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        await _TcpStream.FlushAsync();
-                    }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        // write headers
-                        await _SslStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    await _SslStream.WriteAsync(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        await _SslStream.FlushAsync();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
+                { 
+                    await SendHeadersAsync(msg); 
+                    await SendDataStreamAsync(contentLength, stream); 
                 }
                 finally
                 {
@@ -1464,25 +1253,7 @@ namespace WatsonTcp
                 }
             }
         }
-
-        private SyncResponse SendAndWaitInternal(WatsonMessage msg, int timeoutMs, byte[] data)
-        {
-            long dataLen = 0;
-            MemoryStream ms = new MemoryStream();
-            if (data != null)
-            {
-                dataLen = data.Length;
-                ms.Write(data, 0, data.Length);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
-            else
-            {
-                ms = new MemoryStream(new byte[0]);
-            }
-
-            return SendAndWaitInternal(msg, timeoutMs, dataLen, ms);
-        }
-
+         
         private SyncResponse SendAndWaitInternal(WatsonMessage msg, int timeoutMs, long contentLength, Stream stream)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg)); 
@@ -1504,62 +1275,13 @@ namespace WatsonTcp
             }
              
             try
-            {
-                byte[] headerBytes = msg.ToHeaderBytes(contentLength); 
-                int bytesRead = 0;
-                long bytesRemaining = contentLength;
-                byte[] buffer = new byte[_ReadStreamBufferSize];
-
+            { 
                 _WriteLock.Wait();
 
                 try
                 {
-                    if (_Mode == Mode.Tcp)
-                    {
-                        // write headers
-                        _TcpStream.Write(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    _TcpStream.Write(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        _TcpStream.Flush();
-                    }
-                    else if (_Mode == Mode.Ssl)
-                    {
-                        // write headers
-                        _SslStream.Write(headerBytes, 0, headerBytes.Length);
-                         
-                        // write data
-                        if (contentLength > 0)
-                        {
-                            while (bytesRemaining > 0)
-                            {
-                                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                                if (bytesRead > 0)
-                                {
-                                    _SslStream.Write(buffer, 0, bytesRead);
-                                    bytesRemaining -= bytesRead;
-                                }
-                            }
-                        }
-
-                        _SslStream.Flush();
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-                    }
+                    SendHeaders(msg);
+                    SendDataStream(contentLength, stream); 
                 }
                 finally
                 {
@@ -1592,7 +1314,135 @@ namespace WatsonTcp
             SyncResponse ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
             return ret;
         }
+
+        private void SendHeaders(WatsonMessage msg)
+        {
+            byte[] headerBytes = msg.HeaderBytes;
+            _DataStream.Write(headerBytes, 0, headerBytes.Length);
+        }
+
+        private async Task SendHeadersAsync(WatsonMessage msg)
+        {
+            byte[] headerBytes = msg.HeaderBytes;
+            await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length);
+        }
          
+        private void SendDataStream(long contentLength, Stream stream)
+        {
+            if (contentLength <= 0) return;
+             
+            long bytesRemaining = contentLength;
+            int bytesRead = 0;
+            byte[] buffer = new byte[_ReadStreamBufferSize];
+             
+            if (Compression == CompressionType.None)
+            {
+                while (bytesRemaining > 0)
+                { 
+                    bytesRead = stream.Read(buffer, 0, buffer.Length);  
+                    if (bytesRead > 0)
+                    {
+                        _DataStream.Write(buffer, 0, bytesRead);
+                        bytesRemaining -= bytesRead;
+                    } 
+                }
+            }
+            else if (Compression == CompressionType.Gzip)
+            {
+                using (GZipStream gzs = new GZipStream(_DataStream, CompressionMode.Compress, true))
+                {
+                    while (bytesRemaining > 0)
+                    {
+                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
+                        {
+                            gzs.Write(buffer, 0, bytesRead);
+                            bytesRemaining -= bytesRead;
+                        }
+                    }
+                }
+            }
+            else if (Compression == CompressionType.Deflate)
+            {
+                using (DeflateStream ds = new DeflateStream(_DataStream, CompressionMode.Compress, true))
+                {
+                    while (bytesRemaining > 0)
+                    {
+                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
+                        {
+                            ds.Write(buffer, 0, bytesRead);
+                            bytesRemaining -= bytesRead;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
+            }
+             
+            _DataStream.Flush(); 
+        }
+
+        private async Task SendDataStreamAsync(long contentLength, Stream stream)
+        {
+            if (contentLength <= 0) return;
+
+            long bytesRemaining = contentLength;
+            int bytesRead = 0;
+            byte[] buffer = new byte[_ReadStreamBufferSize];
+
+            if (Compression == CompressionType.None)
+            {
+                while (bytesRemaining > 0)
+                {
+                    bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    if (bytesRead > 0)
+                    {
+                        await _DataStream.WriteAsync(buffer, 0, bytesRead);
+                        bytesRemaining -= bytesRead;
+                    }
+                }
+            }
+            else if (Compression == CompressionType.Gzip)
+            {
+                using (GZipStream gzs = new GZipStream(_DataStream, CompressionMode.Compress, true))
+                {
+                    while (bytesRemaining > 0)
+                    {
+                        bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
+                        {
+                            await gzs.WriteAsync(buffer, 0, bytesRead);
+                            bytesRemaining -= bytesRead;
+                        }
+                    }
+                }
+            }
+            else if (Compression == CompressionType.Deflate)
+            {
+                using (DeflateStream ds = new DeflateStream(_DataStream, CompressionMode.Compress, true))
+                {
+                    while (bytesRemaining > 0)
+                    {
+                        bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
+                        {
+                            await ds.WriteAsync(buffer, 0, bytesRead);
+                            bytesRemaining -= bytesRead;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
+            }
+
+            await _DataStream.FlushAsync();
+        }
+
         private async Task MonitorForExpiredSyncResponses()
         {
             while (!_TokenSource.IsCancellationRequested)
@@ -1645,6 +1495,6 @@ namespace WatsonTcp
             else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
         }
 
-        #endregion Private-Methods
+        #endregion
     }
 }

@@ -18,6 +18,7 @@ namespace TestServer
         private static bool debugMessages = true;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
+        private static string lastIpPort = null;
 
         private static void Main(string[] args)
         {
@@ -91,6 +92,7 @@ namespace TestServer
                         Console.WriteLine("  psk                 set preshared key");
                         Console.WriteLine("  stats               display server statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
+                        Console.WriteLine("  comp                set the compression type, currently: " + server.Compression.ToString());
                         Console.WriteLine("  debug               enable/disable debug (currently " + server.DebugMessages + ")");
                         break;
 
@@ -123,40 +125,39 @@ namespace TestServer
                         break;
 
                     case "send":
-                        ipPort = InputString("IP:port:", null, false);
+                        ipPort = InputString("IP:port:", lastIpPort, false);
                         userInput = InputString("Data:", null, false);
-                        success = server.Send(ipPort, userInput);
-                        Console.WriteLine(success);
+                        if (!server.Send(ipPort, userInput)) Console.WriteLine("Failed");
                         break;
 
                     case "send md":
-                        ipPort = InputString("IP:port:", null, false);
+                        ipPort = InputString("IP:port:", lastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        success = server.Send(ipPort, metadata, userInput);
+                        if (!server.Send(ipPort, metadata, userInput)) Console.WriteLine("Failed");
                         Console.WriteLine(success);
                         break;
 
                     case "send md large":
-                        ipPort = InputString("IP:port:", null, false);
+                        ipPort = InputString("IP:port:", lastIpPort, false);
                         metadata = new Dictionary<object, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i, i);
                         if (!server.Send(ipPort, metadata, "Hello!")) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
-                        ipPort = InputString("IP:port:", null, false);
+                        ipPort = InputString("IP:port:", lastIpPort, false);
                         userInput = InputString("Data:", null, false); 
                         success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput)).Result;
-                        Console.WriteLine(success);
+                        if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync md":
-                        ipPort = InputString("IP:port:", null, false);
+                        ipPort = InputString("IP:port:", lastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
                         success = server.SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(userInput)).Result;
-                        Console.WriteLine(success);
+                        if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait":
@@ -164,10 +165,9 @@ namespace TestServer
                         break;
 
                     case "sendempty":
-                        ipPort = InputString("IP:port:", null, false);
+                        ipPort = InputString("IP:port:", lastIpPort, false);
                         metadata = InputDictionary();
-                        success = server.Send(ipPort, metadata);
-                        Console.WriteLine(success);
+                        if (!server.Send(ipPort, metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait empty":
@@ -175,7 +175,7 @@ namespace TestServer
                         break;
 
                     case "remove":
-                        ipPort = InputString("IP:port:", null, false);
+                        ipPort = InputString("IP:port:", lastIpPort, false);
                         server.DisconnectClient(ipPort);
                         break;
 
@@ -189,6 +189,10 @@ namespace TestServer
 
                     case "stats reset":
                         server.Stats.Reset();
+                        break;
+
+                    case "comp":
+                        server.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Default|Gzip]:", "None", false)));
                         break;
 
                     case "debug":
@@ -331,8 +335,9 @@ namespace TestServer
             }
         }
          
-        private static void ClientConnected(object sender, ClientConnectedEventArgs args) 
+        private static void ClientConnected(object sender, ClientConnectedEventArgs args)
         {
+            lastIpPort = args.IpPort;
             Console.WriteLine("Client connected: " + args.IpPort);
         }
          
@@ -343,6 +348,7 @@ namespace TestServer
          
         private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
         {
+            lastIpPort = args.IpPort;
             Console.Write("Message received from " + args.IpPort + ": ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
@@ -383,7 +389,7 @@ namespace TestServer
 
         private static void SendAndWait()
         {
-            string ipPort = InputString("IP:port:", null, false);
+            string ipPort = InputString("IP:port:", lastIpPort, false);
             string userInput = InputString("Data:", null, false);
             int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
 
@@ -409,7 +415,7 @@ namespace TestServer
 
         private static void SendAndWaitEmpty()
         {
-            string ipPort = InputString("IP:port:", null, false); 
+            string ipPort = InputString("IP:port:", lastIpPort, false); 
             int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
 
             Dictionary<object, object> dict = new Dictionary<object, object>();
