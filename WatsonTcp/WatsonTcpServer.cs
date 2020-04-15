@@ -805,6 +805,23 @@ namespace WatsonTcp
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             return (_Clients.TryGetValue(ipPort, out ClientMetadata client));
         }
+        
+        /// <summary>
+        /// Determine whether or not the specified client is connected to the server.
+        /// </summary>
+        /// <returns>Boolean indicating if the client is connected to the server.</returns>
+        public void UpdateClientMetadata(string ipPort, object metadata)
+        {
+            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (!_Clients.ContainsKey(ipPort))
+            {
+                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
+            }
+            else
+            {
+                _Clients.First(x => x.Key == ipPort).Value.Metadata = metadata;
+            }
+        }
 
         /// <summary>
         /// List the IP:port of each connected client.

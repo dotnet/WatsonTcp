@@ -63,6 +63,15 @@ namespace WatsonTcp
                 return _IpPort; 
             }
         }
+        
+        internal object Metadata
+        {
+            get 
+            { 
+                return _Metadata; 
+            }
+            set => _Metadata = value;
+        }
 
         internal SemaphoreSlim ReadLock = new SemaphoreSlim(1);
         internal SemaphoreSlim WriteLock = new SemaphoreSlim(1);
@@ -74,6 +83,7 @@ namespace WatsonTcp
         private SslStream _SslStream = null;
         private Stream _DataStream = null;
         private string _IpPort = null;
+        private object _Metadata = null;
          
         internal ClientMetadata(TcpClient tcp)
         {
