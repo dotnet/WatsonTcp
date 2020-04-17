@@ -1318,12 +1318,14 @@ namespace WatsonTcp
         private void SendHeaders(WatsonMessage msg)
         {
             byte[] headerBytes = msg.HeaderBytes;
-            _DataStream.Write(headerBytes, 0, headerBytes.Length);
+            _DataStream.Flush();
+            _DataStream.Write(headerBytes, 0, headerBytes.Length); 
         }
 
         private async Task SendHeadersAsync(WatsonMessage msg)
         {
             byte[] headerBytes = msg.HeaderBytes;
+            await _DataStream.FlushAsync();
             await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length);
         }
          
@@ -1360,6 +1362,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    gzs.Flush();
                 }
             }
             else if (Compression == CompressionType.Deflate)
@@ -1375,6 +1379,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    ds.Flush();
                 }
             }
             else
@@ -1403,7 +1409,7 @@ namespace WatsonTcp
                         await _DataStream.WriteAsync(buffer, 0, bytesRead);
                         bytesRemaining -= bytesRead;
                     }
-                }
+                } 
             }
             else if (Compression == CompressionType.Gzip)
             {
@@ -1418,6 +1424,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    await gzs.FlushAsync(); 
                 }
             }
             else if (Compression == CompressionType.Deflate)
@@ -1433,6 +1441,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    await ds.FlushAsync();
                 }
             }
             else

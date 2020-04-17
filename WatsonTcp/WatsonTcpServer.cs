@@ -1586,7 +1586,7 @@ namespace WatsonTcp
                         client.DataStream.Write(buffer, 0, bytesRead);
                         bytesRemaining -= bytesRead;
                     }
-                }
+                } 
             }
             else if (Compression == CompressionType.Gzip)
             {
@@ -1601,6 +1601,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    gzs.Flush(); 
                 }
             }
             else if (Compression == CompressionType.Deflate)
@@ -1616,6 +1618,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    ds.Flush(); 
                 }
             }
             else
@@ -1659,6 +1663,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    await gzs.FlushAsync();
                 }
             }
             else if (Compression == CompressionType.Deflate)
@@ -1674,6 +1680,8 @@ namespace WatsonTcp
                             bytesRemaining -= bytesRead;
                         }
                     }
+
+                    await ds.FlushAsync();
                 }
             }
             else

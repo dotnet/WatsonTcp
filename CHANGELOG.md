@@ -2,14 +2,19 @@
 
 ## Current Version
 
+v4.1.1
+
+- Bugfix for disconnect scenarios causing the next message headers to be read as part of the prior message
+- **Known issue**: compression with SSL enabled causes deserialization exceptions; not recommended for use
+
+## Previous Versions
+
 v4.1.0
 
 - Compression of message data using either GZip or Deflate (thanks @developervariety!)
 - Message data is now a property that fully reads the underlying stream
 - Internal code refactoring to better follow DRY principles (SendHeaders, SendDataStream, etc)
 - Reduce log verbosity on disconnect
-
-## Previous Versions
 
 v4.0.2
 

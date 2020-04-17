@@ -122,7 +122,7 @@ namespace WatsonTcp
                  
                 if (ContentLength > 0 && _DataStream != null)
                 { 
-                    _Data = ReadStreamFully(_DataStream);
+                    _Data = ReadFromStream(_DataStream, ContentLength);
 
                     if (_DataStream is GZipStream || _DataStream is DeflateStream)
                     {
@@ -130,8 +130,8 @@ namespace WatsonTcp
                         // It is necessary to close the compression stream; when it was opened
                         // it was instructed to leave the underlying stream open
                         //
-
-                        _DataStream.Close();
+                        _DataStream.Flush();
+                        _DataStream.Dispose();
                     }
                 }
                  
@@ -333,7 +333,7 @@ namespace WatsonTcp
                     // do nothing
                 }
                 else
-                { 
+                {  
                     if (Compression == CompressionType.Deflate)
                     {
                         _DataStream = new DeflateStream(_DataStream, CompressionMode.Decompress, true);
@@ -345,7 +345,7 @@ namespace WatsonTcp
                     else
                     {
                         throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
-                    }
+                    } 
                 }
 
                 #endregion
@@ -440,35 +440,59 @@ namespace WatsonTcp
         private byte[] ReadFromStream(Stream stream, long count)
         {
             if (count <= 0) return null;
-            byte[] buffer = new byte[count];
+            byte[] buffer = new byte[_ReadStreamBuffer];
 
-            int bytesRead = 0;
+            int read = 0;
+            long bytesRemaining = count;
             MemoryStream ms = new MemoryStream();
 
-            while (bytesRead < count)
+            while (bytesRemaining > 0)
             {
-                int read = stream.Read(buffer, bytesRead, buffer.Length - bytesRead);
-                if (read == 0) throw new SocketException();
-                bytesRead += read;
+                if (_ReadStreamBuffer > bytesRemaining) buffer = new byte[bytesRemaining];
+
+                read = stream.Read(buffer, 0, buffer.Length);
+                if (read > 0)
+                {
+                    ms.Write(buffer, 0, read); 
+                    bytesRemaining -= read;
+                }
+                else
+                {
+                    throw new SocketException();
+                }
             }
 
-            return buffer;
+            byte[] data = ms.ToArray(); 
+            return data;
         }
 
         private async Task<byte[]> ReadFromStreamAsync(Stream stream, long count)
         {
             if (count <= 0) return null;
-            int bytesRead = 0;
-            byte[] readBuffer = new byte[count];
-             
-            while (bytesRead < count)
+            byte[] buffer = new byte[_ReadStreamBuffer];
+
+            int read = 0;
+            long bytesRemaining = count;
+            MemoryStream ms = new MemoryStream();
+
+            while (bytesRemaining > 0)
             {
-                int read = await stream.ReadAsync(readBuffer, bytesRead, readBuffer.Length - bytesRead);
-                if (read == 0) throw new SocketException();
-                bytesRead += read;
+                if (_ReadStreamBuffer > bytesRemaining) buffer = new byte[bytesRemaining];
+
+                read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (read > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                    bytesRemaining -= read;
+                }
+                else
+                {
+                    throw new SocketException();
+                }
             }
-             
-            return readBuffer;
+
+            byte[] data = ms.ToArray();
+            return data;
         }
 
         private byte[] AppendBytes(byte[] head, byte[] tail)
