@@ -295,6 +295,34 @@ namespace WatsonTcp
             Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
         }
 
+        /// <summary>
+        /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
+        /// </summary>
+        /// <param name="serverIp">The IP address or hostname of the server.</param>
+        /// <param name="serverPort">The TCP port on which the server is listening.</param>
+        /// <param name="cert">The SSL certificate</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public WatsonTcpClient(string serverIp, int serverPort, X509Certificate2 cert)
+        {
+            if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
+            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
+
+            _SslCertificate = cert ?? throw new ArgumentNullException(nameof(cert));
+
+            _Token = _TokenSource.Token;
+            _Mode = Mode.Ssl;
+            _ServerIp = serverIp;
+            _ServerPort = serverPort;
+
+            _SslCertificateCollection = new X509Certificate2Collection
+            {
+                _SslCertificate
+            };
+
+            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
+        }
+
         #endregion
 
         #region Public-Methods
