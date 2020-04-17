@@ -348,10 +348,10 @@ namespace WatsonTcp
             X509Certificate2 cert)
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
-
-            _SslCertificate = cert ?? throw new ArgumentNullException(nameof(cert));
+            if (cert == null) throw new ArgumentNullException(nameof(cert));
 
             _Mode = Mode.Ssl;
+            _SslCertificate = cert;
 
             if (String.IsNullOrEmpty(listenerIp))
             {

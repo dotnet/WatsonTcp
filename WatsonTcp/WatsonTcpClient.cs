@@ -303,15 +303,18 @@ namespace WatsonTcp
         /// <param name="cert">The SSL certificate</param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public WatsonTcpClient(string serverIp, int serverPort, X509Certificate2 cert)
+        public WatsonTcpClient(
+            string serverIp, 
+            int serverPort, 
+            X509Certificate2 cert)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
-
-            _SslCertificate = cert ?? throw new ArgumentNullException(nameof(cert));
+            if (cert == null) throw new ArgumentNullException(nameof(cert));
 
             _Token = _TokenSource.Token;
             _Mode = Mode.Ssl;
+            _SslCertificate = cert;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
 

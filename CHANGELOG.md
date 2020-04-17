@@ -2,12 +2,17 @@
 
 ## Current Version
 
+v4.1.2
+
+- New constructor for SSL, taking certificate as parameter (thank you @NormenSchwettmann)
+- **Known issue**: compression with SSL enabled causes deserialization exceptions; not recommended for use
+
+## Previous Versions
+
 v4.1.1
 
 - Bugfix for disconnect scenarios causing the next message headers to be read as part of the prior message
 - **Known issue**: compression with SSL enabled causes deserialization exceptions; not recommended for use
-
-## Previous Versions
 
 v4.1.0
 
