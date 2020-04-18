@@ -199,6 +199,11 @@ namespace WatsonTcp
         public EncryptionType Encryption = EncryptionType.None;
 
         /// <summary>
+        /// Type of custom encryption to apply on sent messages.
+        /// </summary>
+        public IEncryption CustomEncryption = null;
+
+        /// <summary>
         /// Passphrase that must be consistent between clients and this server for encrypted communication.
         /// </summary>
         public string EncryptionPassphrase = null;
@@ -1318,7 +1323,7 @@ namespace WatsonTcp
 
                         byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
                         byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                        if (key.Length > 32)
+                        if (key.Length < 32)
                         {
                             throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
                         }
@@ -1331,6 +1336,16 @@ namespace WatsonTcp
                         else if (Encryption == EncryptionType.TripleDes)
                         {
                             byte[] decryptedData = EncryptionHelper.Decrypt<TripleDESCryptoServiceProvider>(msgData, key, salt);
+                            msgData = decryptedData;
+                        }
+                        else if (Encryption == EncryptionType.Custom)
+                        {
+                            if (CustomEncryption == null)
+                            {
+                                throw new ArgumentNullException(nameof(CustomEncryption));
+                            }
+
+                            byte[] decryptedData = CustomEncryption.Decrypt(msgData, key, salt);
                             msgData = decryptedData;
                         }
                         else
@@ -1525,7 +1540,7 @@ namespace WatsonTcp
                     
                 byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
                 byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                if (key.Length > 32)
+                if (key.Length < 32)
                 {
                     throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
                 }
@@ -1542,9 +1557,23 @@ namespace WatsonTcp
                 else if (Encryption == EncryptionType.TripleDes)
                 {
                     byte[] streamData = ReadStreamFully(stream);
-                    byte[] aesData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    byte[] desData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
                     
-                    BytesToStream(aesData, out contentLength, out stream);
+                    BytesToStream(desData, out contentLength, out stream);
+
+                    msg.ContentLength = contentLength;
+                }
+                else if (Encryption == EncryptionType.Custom)
+                {
+                    if (CustomEncryption == null)
+                    {
+                        throw new ArgumentNullException(nameof(CustomEncryption));
+                    }
+                        
+                    byte[] streamData = ReadStreamFully(stream);
+                    byte[] customData = CustomEncryption.Encrypt(streamData, key, salt);
+                    
+                    BytesToStream(customData, out contentLength, out stream);
 
                     msg.ContentLength = contentLength;
                 }
@@ -1605,7 +1634,7 @@ namespace WatsonTcp
                     
                 byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
                 byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                if (key.Length > 32)
+                if (key.Length < 32)
                 {
                     throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
                 }
@@ -1622,9 +1651,23 @@ namespace WatsonTcp
                 else if (Encryption == EncryptionType.TripleDes)
                 {
                     byte[] streamData = ReadStreamFully(stream);
-                    byte[] aesData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    byte[] desData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
                     
-                    BytesToStream(aesData, out contentLength, out stream);
+                    BytesToStream(desData, out contentLength, out stream);
+
+                    msg.ContentLength = contentLength;
+                }
+                else if (Encryption == EncryptionType.Custom)
+                {
+                    if (CustomEncryption == null)
+                    {
+                        throw new ArgumentNullException(nameof(CustomEncryption));
+                    }
+                        
+                    byte[] streamData = ReadStreamFully(stream);
+                    byte[] customData = CustomEncryption.Encrypt(streamData, key, salt);
+                    
+                    BytesToStream(customData, out contentLength, out stream);
 
                     msg.ContentLength = contentLength;
                 }
@@ -1682,7 +1725,7 @@ namespace WatsonTcp
                     
                 byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
                 byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                if (key.Length > 32)
+                if (key.Length < 32)
                 {
                     throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
                 }
@@ -1699,9 +1742,23 @@ namespace WatsonTcp
                 else if (Encryption == EncryptionType.TripleDes)
                 {
                     byte[] streamData = ReadStreamFully(stream);
-                    byte[] aesData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    byte[] desData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
                     
-                    BytesToStream(aesData, out contentLength, out stream);
+                    BytesToStream(desData, out contentLength, out stream);
+
+                    msg.ContentLength = contentLength;
+                }
+                else if (Encryption == EncryptionType.Custom)
+                {
+                    if (CustomEncryption == null)
+                    {
+                        throw new ArgumentNullException(nameof(CustomEncryption));
+                    }
+                        
+                    byte[] streamData = ReadStreamFully(stream);
+                    byte[] customData = CustomEncryption.Encrypt(streamData, key, salt);
+                    
+                    BytesToStream(customData, out contentLength, out stream);
 
                     msg.ContentLength = contentLength;
                 }

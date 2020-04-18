@@ -2,7 +2,7 @@
 
 namespace WatsonTcp
 {
-    public class EncryptionInfo
+    internal class EncryptionInfo
     {
         public EncryptionInfo(EncryptionType algorithm)
         {
@@ -16,6 +16,10 @@ namespace WatsonTcp
             {
                 Salt = RandomizeSalt();
             } else if (Algorithm == EncryptionType.TripleDes)
+            {
+                Salt = RandomizeSalt();
+            }
+            else if (Algorithm == EncryptionType.Custom)
             {
                 Salt = RandomizeSalt();
             }
@@ -35,6 +39,10 @@ namespace WatsonTcp
         /// </summary>
         public string Salt = null;
 
+        
+        /// <summary>
+        /// Random salt
+        /// </summary>
         private static string RandomizeSalt()
         {
             return Guid.NewGuid().ToString("N");
