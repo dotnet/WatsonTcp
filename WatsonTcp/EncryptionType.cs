@@ -23,11 +23,6 @@ namespace WatsonTcp
         /// Object
         /// </summary>
         [EnumMember(Value = "Aes")]
-        Aes,
-        /// <summary>
-        /// Object
-        /// </summary>
-        [EnumMember(Value = "Xor")]
-        Xor
+        Aes
     }
 }

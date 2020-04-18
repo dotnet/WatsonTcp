@@ -177,15 +177,9 @@ namespace WatsonTcp
         public CompressionType Compression = CompressionType.None;
 
         /// <summary>
-        /// Encryption info to apply on sent messages.
+        /// Type of encryption to apply on sent messages.
         /// </summary>
-        public EncryptionInfo Encryption
-        {
-            get
-            {
-                return _EncryptionInfo;
-            }
-        }
+        public EncryptionType Encryption = EncryptionType.None;
         
         /// <summary>
         /// Passphrase that must be consistent between clients and this server for encrypted communication.
@@ -242,8 +236,6 @@ namespace WatsonTcp
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>();
 
         private Statistics _Stats = new Statistics();
-        private EncryptionInfo _EncryptionInfo = new EncryptionInfo();
-
         #endregion
 
         #region Constructors-and-Factories
@@ -1026,13 +1018,13 @@ namespace WatsonTcp
                     
                     byte[] msgData = msg.Data;
                         
-                    if (Encryption.Algorithm == EncryptionType.None)
+                    if (Encryption == EncryptionType.None)
                     {
                         // do nothing
                     }
                     else
                     {
-                        if (Encryption.Algorithm == EncryptionType.Aes)
+                        if (Encryption == EncryptionType.Aes)
                         {
                             if (String.IsNullOrEmpty(EncryptionPassphrase))
                             {
@@ -1047,22 +1039,6 @@ namespace WatsonTcp
                             }
 
                             byte[] decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
-                            msgData = decryptedData;
-                        }
-                        else if (Encryption.Algorithm == EncryptionType.Xor)
-                        {
-                            if (String.IsNullOrEmpty(EncryptionPassphrase))
-                            {
-                                throw new ArgumentNullException(EncryptionPassphrase);
-                            }
-
-                            byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                            if (key.Length > 32)
-                            {
-                                throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                            }
-                                
-                            byte[] decryptedData = EncryptionHelper.Xor(key, msgData);
                             msgData = decryptedData;
                         }
                         else
@@ -1227,21 +1203,19 @@ namespace WatsonTcp
                   
                 _WriteLock.Wait();
                 
-                if (Encryption.Algorithm == EncryptionType.None)
+                if (Encryption == EncryptionType.None)
                 {
                     // do nothing
                 }
                 else
                 {
-                    if (Encryption.Algorithm == EncryptionType.Aes)
+                    if (Encryption == EncryptionType.Aes)
                     {
                         if (String.IsNullOrEmpty(EncryptionPassphrase))
                         {
                             throw new ArgumentNullException(EncryptionPassphrase);
                         }
-
-                        msg.Encryption.RandomizeSalt();
-
+                        
                         byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
                         byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
                         if (key.Length > 32)
@@ -1254,26 +1228,6 @@ namespace WatsonTcp
 
                         BytesToStream(aesData, out contentLength, out stream);
 
-                        msg.ContentLength = contentLength;
-                    }
-                    else if (Encryption.Algorithm == EncryptionType.Xor)
-                    {
-                        if (String.IsNullOrEmpty(EncryptionPassphrase))
-                        {
-                            throw new ArgumentNullException(EncryptionPassphrase);
-                        }
-
-                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                        if (key.Length > 32)
-                        {
-                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                        }
-                                
-                        byte[] streamData = ReadStreamFully(stream);
-                        byte[] xorData = EncryptionHelper.Xor(key, streamData);
-                        
-                        BytesToStream(xorData, out contentLength, out stream);
-                        
                         msg.ContentLength = contentLength;
                     }
                     else
@@ -1342,21 +1296,19 @@ namespace WatsonTcp
                  
                 await _WriteLock.WaitAsync();
                 
-                if (Encryption.Algorithm == EncryptionType.None)
+                if (Encryption == EncryptionType.None)
                 {
                     // do nothing
                 }
                 else
                 {
-                    if (Encryption.Algorithm == EncryptionType.Aes)
+                    if (Encryption == EncryptionType.Aes)
                     {
                         if (String.IsNullOrEmpty(EncryptionPassphrase))
                         {
                             throw new ArgumentNullException(EncryptionPassphrase);
                         }
                         
-                        msg.Encryption.RandomizeSalt();
-
                         byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
                         byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
                         if (key.Length > 32)
@@ -1369,26 +1321,6 @@ namespace WatsonTcp
 
                         BytesToStream(aesData, out contentLength, out stream);
 
-                        msg.ContentLength = contentLength;
-                    }
-                    else if (Encryption.Algorithm == EncryptionType.Xor)
-                    {
-                        if (String.IsNullOrEmpty(EncryptionPassphrase))
-                        {
-                            throw new ArgumentNullException(EncryptionPassphrase);
-                        }
-
-                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                        if (key.Length > 32)
-                        {
-                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                        }
-                                
-                        byte[] streamData = ReadStreamFully(stream);
-                        byte[] xorData = EncryptionHelper.Xor(key, streamData);
-                        
-                        BytesToStream(xorData, out contentLength, out stream);
-                        
                         msg.ContentLength = contentLength;
                     }
                     else
@@ -1456,20 +1388,18 @@ namespace WatsonTcp
             { 
                 _WriteLock.Wait();
                 
-                if (Encryption.Algorithm == EncryptionType.None)
+                if (Encryption == EncryptionType.None)
                 {
                     // do nothing
                 }
                 else
                 {
-                    if (Encryption.Algorithm == EncryptionType.Aes)
+                    if (Encryption == EncryptionType.Aes)
                     {
                         if (String.IsNullOrEmpty(EncryptionPassphrase))
                         {
                             throw new ArgumentNullException(EncryptionPassphrase);
                         }
-
-                        msg.Encryption.RandomizeSalt();
                         
                         byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
                         byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
@@ -1482,26 +1412,6 @@ namespace WatsonTcp
                         byte[] aesData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
 
                         BytesToStream(aesData, out contentLength, out stream);
-                        
-                        msg.ContentLength = contentLength;
-                    }
-                    else if (Encryption.Algorithm == EncryptionType.Xor)
-                    {
-                        if (String.IsNullOrEmpty(EncryptionPassphrase))
-                        {
-                            throw new ArgumentNullException(EncryptionPassphrase);
-                        }
-
-                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                        if (key.Length > 32)
-                        {
-                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                        }
-                                
-                        byte[] streamData = ReadStreamFully(stream);
-                        byte[] xorData = EncryptionHelper.Xor(key, streamData);
-                        
-                        BytesToStream(xorData, out contentLength, out stream);
                         
                         msg.ContentLength = contentLength;
                     }

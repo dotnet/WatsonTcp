@@ -47,30 +47,5 @@ namespace WatsonTcp
                 }
             }
         }
-        
-        public static byte[] Xor(byte[] key, byte[] data)
-        {
-            int n1 = 11;
-            int n2 = 13;
-            int ns = 257;
-
-            for (int i = 0; i <= key.Length - 1; i++)
-            {
-                ns += ns % (key[i] + 1);
-            }
-
-            byte[] b = new byte[data.Length];
-            for (int i = 0; i <= data.Length - 1; i++)
-            {
-                ns = key[i % key.Length] + ns;
-                n1 = (ns + 5) * (n1 & 255) + (n1 >> 8);
-                n2 = (ns + 7) * (n2 & 255) + (n2 >> 8);
-                ns = ((n1 << 8) + n2) & 255;
-
-                b[i] = (byte)(data[i] ^ (byte)ns);
-            }
-
-            return b;
-        }
     }
 }

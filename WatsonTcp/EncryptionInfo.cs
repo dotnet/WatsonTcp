@@ -4,6 +4,12 @@ namespace WatsonTcp
 {
     public class EncryptionInfo
     {
+        public EncryptionInfo(EncryptionType algorithm)
+        {
+            Algorithm = algorithm;
+            Salt = RandomizeSalt();
+        }
+        
         /// <summary>
         /// The type of algorithm used in the message.
         /// </summary>
@@ -14,9 +20,9 @@ namespace WatsonTcp
         /// </summary>
         public string Salt = null;
 
-        public void RandomizeSalt()
+        private static string RandomizeSalt()
         {
-            Salt = Guid.NewGuid().ToString("N");
+            return Guid.NewGuid().ToString("N");
         }
     }
 }
