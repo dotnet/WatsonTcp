@@ -92,6 +92,8 @@ namespace TestServer
                         Console.WriteLine("  psk                 set preshared key");
                         Console.WriteLine("  stats               display server statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
+                        Console.WriteLine("  enc                 set the encryption type, currently: " + server.Encryption.ToString());
+                        Console.WriteLine("  encpass             set encryption passphrase, currently: " + server.EncryptionPassphrase.ToString());
                         Console.WriteLine("  comp                set the compression type, currently: " + server.Compression.ToString());
                         Console.WriteLine("  debug               enable/disable debug (currently " + server.DebugMessages + ")");
                         break;
@@ -194,7 +196,15 @@ namespace TestServer
                     case "comp":
                         server.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Default|Gzip]:", "None", false)));
                         break;
-
+                    
+                    case "encpass":
+                        server.EncryptionPassphrase = InputString("Encryption Passphrase: ", "@%53N&XZ6CCy9x32Fai%3WA", false);
+                        break;
+                    
+                    case "enc":
+                        server.Encryption = (EncryptionType)(Enum.Parse(typeof(EncryptionType), InputString("Encryption [None|Aes|Xor]:", "None", false)));
+                        break;
+                    
                     case "debug":
                         server.DebugMessages = !server.DebugMessages;
                         Console.WriteLine("Debug set to: " + server.DebugMessages);
