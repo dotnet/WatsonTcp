@@ -7,7 +7,22 @@ namespace WatsonTcp
         public EncryptionInfo(EncryptionType algorithm)
         {
             Algorithm = algorithm;
-            Salt = RandomizeSalt();
+
+            if (Algorithm == EncryptionType.None)
+            {
+                // do nothing
+            }
+            else if (Algorithm == EncryptionType.Aes)
+            {
+                Salt = RandomizeSalt();
+            } else if (Algorithm == EncryptionType.TripleDes)
+            {
+                Salt = RandomizeSalt();
+            }
+            else
+            {
+                throw new InvalidOperationException("Unknown encryption type: " + Algorithm.ToString());
+            }
         }
         
         /// <summary>

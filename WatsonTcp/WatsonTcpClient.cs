@@ -1024,21 +1024,26 @@ namespace WatsonTcp
                     }
                     else
                     {
+                        if (String.IsNullOrEmpty(EncryptionPassphrase))
+                        {
+                            throw new ArgumentNullException(EncryptionPassphrase);
+                        }
+
+                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                        byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
+                        if (key.Length > 32)
+                        {
+                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                        }
+                        
                         if (Encryption == EncryptionType.Aes)
                         {
-                            if (String.IsNullOrEmpty(EncryptionPassphrase))
-                            {
-                                throw new ArgumentNullException(EncryptionPassphrase);
-                            }
-
-                            byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                            byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                            if (key.Length > 32)
-                            {
-                                throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                            }
-
                             byte[] decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
+                            msgData = decryptedData;
+                        }
+                        else if (Encryption == EncryptionType.TripleDes)
+                        {
+                            byte[] decryptedData = EncryptionHelper.Decrypt<TripleDESCryptoServiceProvider>(msgData, key, salt);
                             msgData = decryptedData;
                         }
                         else
@@ -1209,23 +1214,32 @@ namespace WatsonTcp
                 }
                 else
                 {
+                    if (String.IsNullOrEmpty(EncryptionPassphrase))
+                    {
+                        throw new ArgumentNullException(EncryptionPassphrase);
+                    }
+                    
+                    byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                    byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
+                    if (key.Length > 32)
+                    {
+                        throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                    }
+                
                     if (Encryption == EncryptionType.Aes)
                     {
-                        if (String.IsNullOrEmpty(EncryptionPassphrase))
-                        {
-                            throw new ArgumentNullException(EncryptionPassphrase);
-                        }
-                        
-                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                        byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                        if (key.Length > 32)
-                        {
-                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                        }
-
                         byte[] streamData = ReadStreamFully(stream);
                         byte[] aesData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+                    
+                        BytesToStream(aesData, out contentLength, out stream);
 
+                        msg.ContentLength = contentLength;
+                    }
+                    else if (Encryption == EncryptionType.TripleDes)
+                    {
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] aesData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    
                         BytesToStream(aesData, out contentLength, out stream);
 
                         msg.ContentLength = contentLength;
@@ -1302,23 +1316,32 @@ namespace WatsonTcp
                 }
                 else
                 {
+                    if (String.IsNullOrEmpty(EncryptionPassphrase))
+                    {
+                        throw new ArgumentNullException(EncryptionPassphrase);
+                    }
+                    
+                    byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                    byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
+                    if (key.Length > 32)
+                    {
+                        throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                    }
+                
                     if (Encryption == EncryptionType.Aes)
                     {
-                        if (String.IsNullOrEmpty(EncryptionPassphrase))
-                        {
-                            throw new ArgumentNullException(EncryptionPassphrase);
-                        }
-                        
-                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                        byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                        if (key.Length > 32)
-                        {
-                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                        }
-
                         byte[] streamData = ReadStreamFully(stream);
                         byte[] aesData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+                    
+                        BytesToStream(aesData, out contentLength, out stream);
 
+                        msg.ContentLength = contentLength;
+                    }
+                    else if (Encryption == EncryptionType.TripleDes)
+                    {
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] aesData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    
                         BytesToStream(aesData, out contentLength, out stream);
 
                         msg.ContentLength = contentLength;
@@ -1394,25 +1417,34 @@ namespace WatsonTcp
                 }
                 else
                 {
+                    if (String.IsNullOrEmpty(EncryptionPassphrase))
+                    {
+                        throw new ArgumentNullException(EncryptionPassphrase);
+                    }
+                    
+                    byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                    byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
+                    if (key.Length > 32)
+                    {
+                        throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                    }
+                
                     if (Encryption == EncryptionType.Aes)
                     {
-                        if (String.IsNullOrEmpty(EncryptionPassphrase))
-                        {
-                            throw new ArgumentNullException(EncryptionPassphrase);
-                        }
-                        
-                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                        byte[] salt = Encoding.UTF8.GetBytes(msg.Encryption.Salt);
-                        if (key.Length > 32)
-                        {
-                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                        }
-
                         byte[] streamData = ReadStreamFully(stream);
                         byte[] aesData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
-
+                    
                         BytesToStream(aesData, out contentLength, out stream);
-                        
+
+                        msg.ContentLength = contentLength;
+                    }
+                    else if (Encryption == EncryptionType.TripleDes)
+                    {
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] aesData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    
+                        BytesToStream(aesData, out contentLength, out stream);
+
                         msg.ContentLength = contentLength;
                     }
                     else

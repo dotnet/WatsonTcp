@@ -23,6 +23,11 @@ namespace WatsonTcp
         /// Object
         /// </summary>
         [EnumMember(Value = "Aes")]
-        Aes
+        Aes,
+        /// <summary>
+        /// Object
+        /// </summary>
+        [EnumMember(Value = "TripleDes")]
+        TripleDes
     }
 }
