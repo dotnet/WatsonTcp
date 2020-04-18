@@ -1305,50 +1305,50 @@ namespace WatsonTcp
 
                     byte[] msgData = msg.Data;
                         
-                        if (Encryption == EncryptionType.None)
+                    if (Encryption == EncryptionType.None)
+                    {
+                        // do nothing
+                    }
+                    else
+                    {
+                        if (Encryption == EncryptionType.Aes)
                         {
-                            // do nothing
+                            if (String.IsNullOrEmpty(EncryptionPassphrase))
+                            {
+                                throw new ArgumentNullException(EncryptionPassphrase);
+                            }
+
+                            byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                            byte[] salt = {0x99, 0x22, 0xb2, 0x33, 0x2b, 0x2a, 0xa, 0x34, 0x33}; // add new packet to agree on random salt
+                            if (key.Length > 32)
+                            {
+                                throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                            }
+
+                            byte[] decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
+                            msgData = decryptedData;
+                        }
+                        else if (Encryption == EncryptionType.Xor)
+                        {
+                            if (String.IsNullOrEmpty(EncryptionPassphrase))
+                            {
+                                throw new ArgumentNullException(EncryptionPassphrase);
+                            }
+
+                            byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                            if (key.Length > 32)
+                            {
+                                throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                            }
+                                
+                            byte[] decryptedData = EncryptionHelper.Xor(key, msgData);
+                            msgData = decryptedData;
                         }
                         else
                         {
-                            if (Encryption == EncryptionType.Aes)
-                            {
-                                if (String.IsNullOrEmpty(EncryptionPassphrase))
-                                {
-                                    throw new ArgumentNullException(EncryptionPassphrase);
-                                }
-
-                                byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                                byte[] salt = {0x99, 0x22, 0xb2, 0x33, 0x2b, 0x2a, 0xa, 0x34, 0x33}; // add new packet to agree on random salt
-                                if (key.Length > 32)
-                                {
-                                    throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                                }
-
-                                byte[] decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
-                                msgData = decryptedData;
-                            }
-                            else if (Encryption == EncryptionType.Xor)
-                            {
-                                if (String.IsNullOrEmpty(EncryptionPassphrase))
-                                {
-                                    throw new ArgumentNullException(EncryptionPassphrase);
-                                }
-
-                                byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
-                                if (key.Length > 32)
-                                {
-                                    throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
-                                }
-                                
-                                byte[] decryptedData = EncryptionHelper.Xor(key, msgData);
-                                msgData = decryptedData;
-                            }
-                            else
-                            {
-                                throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
-                            }
+                            throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
                         }
+                    }
                     
                     if (msg.SyncRequest)
                     { 
@@ -1357,11 +1357,11 @@ namespace WatsonTcp
                             if (DateTime.Now < msg.Expiration.Value)
                             {
                                 SyncRequest syncReq = new SyncRequest(
-                                client.IpPort,
-                                msg.ConversationGuid,
-                                msg.Expiration.Value,
-                                msg.Metadata,
-                                msg.Data);
+                                    client.IpPort,
+                                    msg.ConversationGuid,
+                                    msg.Expiration.Value,
+                                    msg.Metadata,
+                                    msg.Data);
 
                                 SyncResponse syncResp = SyncRequestReceived(syncReq);
                                 if (syncResp != null)
@@ -1410,7 +1410,7 @@ namespace WatsonTcp
                             _MessageReceived?.Invoke(this, mr);
                         }
                         else if (_StreamReceived != null
-                            && _StreamReceived.GetInvocationList().Length > 0)
+                                 && _StreamReceived.GetInvocationList().Length > 0)
                         {
                             BytesToStream(msgData, out long contentLength, out Stream msgStream);
                             
@@ -1962,11 +1962,11 @@ namespace WatsonTcp
                 {
                     if (_SyncResponses.Any(s => 
                         s.Value.ExpirationUtc < DateTime.Now
-                        ))
+                    ))
                     {
                         Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s => 
                             s.Value.ExpirationUtc < DateTime.Now
-                            ).ToDictionary(dict => dict.Key, dict => dict.Value);
+                        ).ToDictionary(dict => dict.Key, dict => dict.Value);
 
                         foreach (KeyValuePair<string, SyncResponse> curr in expired)
                         {
