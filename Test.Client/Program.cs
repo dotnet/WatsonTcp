@@ -53,6 +53,8 @@ namespace TestClient
                         Console.WriteLine("  auth                authenticate using the preshared key");
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
+                        Console.WriteLine("  enc                 set the encryption type, currently: " + client.Encryption.ToString());
+                        Console.WriteLine("  encpass             set encryption passphrase, currently: " + client.EncryptionPassphrase.ToString());
                         Console.WriteLine("  comp                set the compression type, currently: " + client.Compression.ToString());
                         Console.WriteLine("  debug               enable/disable debug (currently " + client.DebugMessages + ")");
                         break;
@@ -162,6 +164,14 @@ namespace TestClient
 
                     case "comp":
                         client.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Default|Gzip]:", "None", false)));
+                        break;
+                    
+                    case "encpass":
+                        client.EncryptionPassphrase = InputString("Encryption Passphrase: ", "@%53N&XZ6CCy9x32Fai%3WA", false);
+                        break;
+                    
+                    case "enc":
+                        client.Encryption = (EncryptionType)(Enum.Parse(typeof(EncryptionType), InputString("Encryption [None|Aes|Xor]:", "None", false)));
                         break;
 
                     case "debug":
