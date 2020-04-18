@@ -1361,12 +1361,12 @@ namespace WatsonTcp
                                     msg.ConversationGuid,
                                     msg.Expiration.Value,
                                     msg.Metadata,
-                                    msg.Data);
+                                    msgData);
 
                                 SyncResponse syncResp = SyncRequestReceived(syncReq);
                                 if (syncResp != null)
                                 {
-                                    BytesToStream(syncResp.Data, out long contentLength, out Stream stream);
+                                    BytesToStream(msgData, out long contentLength, out Stream stream);
                                     WatsonMessage respMsg = new WatsonMessage(
                                         syncResp.Metadata,
                                         contentLength,
