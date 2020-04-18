@@ -171,7 +171,7 @@ namespace TestClient
                         break;
                     
                     case "enc":
-                        client.Encryption = (EncryptionType)(Enum.Parse(typeof(EncryptionType), InputString("Encryption [None|Aes|Xor]:", "None", false)));
+                        client.Encryption.Algorithm = (EncryptionType)(Enum.Parse(typeof(EncryptionType), InputString("Encryption [None|Aes|Xor]:", "None", false)));
                         break;
 
                     case "debug":

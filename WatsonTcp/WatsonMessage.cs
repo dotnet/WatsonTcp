@@ -106,11 +106,11 @@ namespace WatsonTcp
         /// The type of compression used in the message.
         /// </summary>
         public CompressionType Compression = CompressionType.None;
-        
+
         /// <summary>
-        /// The type of encryption used in the message.
+        /// Encryption info to apply on sent messages.
         /// </summary>
-        public EncryptionType Encryption = EncryptionType.None;
+        public EncryptionInfo Encryption = null;
 
         /// <summary>
         /// Message data from the stream.  Using 'Data' will fully read 'DataStream'.
@@ -242,7 +242,7 @@ namespace WatsonTcp
             DateTime? expiration, 
             string convGuid, 
             CompressionType compression, 
-            EncryptionType encryption, 
+            EncryptionInfo encryption, 
             Action<string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");

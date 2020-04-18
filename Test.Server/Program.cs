@@ -202,7 +202,7 @@ namespace TestServer
                         break;
                     
                     case "enc":
-                        server.Encryption = (EncryptionType)(Enum.Parse(typeof(EncryptionType), InputString("Encryption [None|Aes|Xor]:", "None", false)));
+                        server.Encryption.Algorithm = (EncryptionType)(Enum.Parse(typeof(EncryptionType), InputString("Encryption [None|Aes|Xor]:", "None", false)));
                         break;
                     
                     case "debug":
