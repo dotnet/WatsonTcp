@@ -93,7 +93,7 @@ namespace TestServer
                         Console.WriteLine("  stats               display server statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
                         Console.WriteLine("  enc                 set the encryption type, currently: " + server.Encryption.ToString());
-                        Console.WriteLine("  encpass             set encryption passphrase, currently: " + server.EncryptionPassphrase.ToString());
+                        Console.WriteLine("  encpass             set encryption passphrase");
                         Console.WriteLine("  comp                set the compression type, currently: " + server.Compression.ToString());
                         Console.WriteLine("  debug               enable/disable debug (currently " + server.DebugMessages + ")");
                         break;

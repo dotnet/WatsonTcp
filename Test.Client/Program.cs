@@ -54,7 +54,7 @@ namespace TestClient
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
                         Console.WriteLine("  enc                 set the encryption type, currently: " + client.Encryption.ToString());
-                        Console.WriteLine("  encpass             set encryption passphrase, currently: " + client.EncryptionPassphrase.ToString());
+                        Console.WriteLine("  encpass             set encryption passphrase");
                         Console.WriteLine("  comp                set the compression type, currently: " + client.Compression.ToString());
                         Console.WriteLine("  debug               enable/disable debug (currently " + client.DebugMessages + ")");
                         break;
