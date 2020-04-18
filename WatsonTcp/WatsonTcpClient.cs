@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -174,6 +175,16 @@ namespace WatsonTcp
         /// Type of compression to apply on sent messages.
         /// </summary>
         public CompressionType Compression = CompressionType.None;
+        
+        /// <summary>
+        /// Type of encryption to apply on sent messages.
+        /// </summary>
+        public EncryptionType Encryption = EncryptionType.None;
+        
+        /// <summary>
+        /// Passphrase that must be consistent between clients and this server for encrypted communication.
+        /// </summary>
+        public string EncryptionPassphrase = null;
 
         /// <summary>
         /// Method to invoke when sending a log message.
@@ -659,7 +670,7 @@ namespace WatsonTcp
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]); 
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, Encryption, (DebugMessages ? Logger : null));
             return SendInternal(msg, contentLength, stream);
         }
 
@@ -670,7 +681,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(Dictionary<object, object> metadata)
         {
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, Encryption, (DebugMessages ? Logger : null));
             return SendInternal(msg, 0, new MemoryStream(new byte[0]));
         }
 
@@ -745,7 +756,7 @@ namespace WatsonTcp
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, Encryption, (DebugMessages ? Logger : null));
             return await SendInternalAsync(msg, contentLength, stream);
         }
 
@@ -756,7 +767,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(Dictionary<object, object> metadata)
         {
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, Encryption, (DebugMessages ? Logger : null));
             return await SendInternalAsync(msg, 0, new MemoryStream(new byte[0]));
         }
 
@@ -845,7 +856,7 @@ namespace WatsonTcp
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]);
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), Compression, Encryption, (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, contentLength, stream);
         }
 
@@ -859,7 +870,7 @@ namespace WatsonTcp
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), Compression, Encryption, (DebugMessages ? Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, 0, new MemoryStream(new byte[0]));
         }
 
@@ -968,7 +979,7 @@ namespace WatsonTcp
                         await Task.Delay(30);
                         continue;
                     }
-
+                    
                     if (msg.Status == MessageStatus.Removed)
                     {
                         Logger?.Invoke("[WatsonTcpClient] Disconnect due to server-side removal");
@@ -1005,6 +1016,53 @@ namespace WatsonTcp
                         }
                         continue;
                     }
+                    
+                    byte[] msgData = msg.Data;
+                        
+                    if (Encryption == EncryptionType.None)
+                    {
+                        // do nothing
+                    }
+                    else
+                    {
+                        if (Encryption == EncryptionType.Aes)
+                        {
+                            if (String.IsNullOrEmpty(EncryptionPassphrase))
+                            {
+                                throw new ArgumentNullException(EncryptionPassphrase);
+                            }
+
+                            byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                            byte[] salt = {0x99, 0x22, 0xb2, 0x33, 0x2b, 0x2a, 0xa, 0x34, 0x33}; // add new packet to agree on random salt
+                            if (key.Length > 32)
+                            {
+                                throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                            }
+
+                            byte[] decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
+                            msgData = decryptedData;
+                        }
+                        else if (Encryption == EncryptionType.Xor)
+                        {
+                            if (String.IsNullOrEmpty(EncryptionPassphrase))
+                            {
+                                throw new ArgumentNullException(EncryptionPassphrase);
+                            }
+
+                            byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                            if (key.Length > 32)
+                            {
+                                throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                            }
+                                
+                            byte[] decryptedData = EncryptionHelper.Xor(key, msgData);
+                            msgData = decryptedData;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
+                        }
+                    }
 
                     if (msg.SyncRequest)
                     { 
@@ -1032,6 +1090,7 @@ namespace WatsonTcp
                                         msg.Expiration.Value,
                                         msg.ConversationGuid, 
                                         Compression,
+                                        Encryption,
                                         (DebugMessages ? Logger : null)); 
                                     SendInternal(respMsg, contentLength, stream);
                                 }
@@ -1048,7 +1107,7 @@ namespace WatsonTcp
                         {
                             lock (_SyncResponseLock)
                             {
-                                _SyncResponses.Add(msg.ConversationGuid, new SyncResponse(msg.Expiration.Value, msg.Metadata, msg.Data));
+                                _SyncResponses.Add(msg.ConversationGuid, new SyncResponse(msg.Expiration.Value, msg.Metadata, msgData));
                             }
                         }
                         else
@@ -1061,13 +1120,15 @@ namespace WatsonTcp
                         if (_MessageReceived != null
                             && _MessageReceived.GetInvocationList().Length > 0)
                         {
-                            MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msg.Data);
+                            MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msgData);
                             _MessageReceived?.Invoke(this, args);
                         }
                         else if (_StreamReceived != null
-                            && _StreamReceived.GetInvocationList().Length > 0)
+                                 && _StreamReceived.GetInvocationList().Length > 0)
                         {
-                            StreamReceivedFromServerEventArgs args = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, msg.DataStream);
+                            BytesToStream(msgData, out long contentLength, out Stream msgStream);
+                            
+                            StreamReceivedFromServerEventArgs args = new StreamReceivedFromServerEventArgs(msg.Metadata, contentLength, msgStream);
                             _StreamReceived?.Invoke(this, args);
                         }
                         else
@@ -1158,6 +1219,59 @@ namespace WatsonTcp
                 }
                   
                 _WriteLock.Wait();
+                
+                if (Encryption == EncryptionType.None)
+                {
+                    // do nothing
+                }
+                else
+                {
+                    if (Encryption == EncryptionType.Aes)
+                    {
+                        if (String.IsNullOrEmpty(EncryptionPassphrase))
+                        {
+                            throw new ArgumentNullException(EncryptionPassphrase);
+                        }
+
+                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                        byte[] salt = {0x99, 0x22, 0xb2, 0x33, 0x2b, 0x2a, 0xa, 0x34, 0x33}; // add new packet to agree on random salt
+                        if (key.Length > 32)
+                        {
+                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                        }
+
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] aesData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+
+                        BytesToStream(aesData, out contentLength, out stream);
+
+                        msg.ContentLength = contentLength;
+                    }
+                    else if (Encryption == EncryptionType.Xor)
+                    {
+                        if (String.IsNullOrEmpty(EncryptionPassphrase))
+                        {
+                            throw new ArgumentNullException(EncryptionPassphrase);
+                        }
+
+                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                        if (key.Length > 32)
+                        {
+                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                        }
+                                
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] xorData = EncryptionHelper.Xor(key, streamData);
+                        
+                        BytesToStream(xorData, out contentLength, out stream);
+
+                        msg.ContentLength = contentLength;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
+                    }
+                }
 
                 try
                 { 
@@ -1218,6 +1332,59 @@ namespace WatsonTcp
                 }
                  
                 await _WriteLock.WaitAsync();
+                
+                if (Encryption == EncryptionType.None)
+                {
+                    // do nothing
+                }
+                else
+                {
+                    if (Encryption == EncryptionType.Aes)
+                    {
+                        if (String.IsNullOrEmpty(EncryptionPassphrase))
+                        {
+                            throw new ArgumentNullException(EncryptionPassphrase);
+                        }
+
+                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                        byte[] salt = {0x99, 0x22, 0xb2, 0x33, 0x2b, 0x2a, 0xa, 0x34, 0x33}; // add new packet to agree on random salt
+                        if (key.Length > 32)
+                        {
+                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                        }
+
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] aesData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+
+                        BytesToStream(aesData, out contentLength, out stream);
+
+                        msg.ContentLength = contentLength;
+                    }
+                    else if (Encryption == EncryptionType.Xor)
+                    {
+                        if (String.IsNullOrEmpty(EncryptionPassphrase))
+                        {
+                            throw new ArgumentNullException(EncryptionPassphrase);
+                        }
+
+                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                        if (key.Length > 32)
+                        {
+                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                        }
+                                
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] xorData = EncryptionHelper.Xor(key, streamData);
+                        
+                        BytesToStream(xorData, out contentLength, out stream);
+
+                        msg.ContentLength = contentLength;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
+                    }
+                }
 
                 try
                 { 
@@ -1277,7 +1444,60 @@ namespace WatsonTcp
             try
             { 
                 _WriteLock.Wait();
+                
+                if (Encryption == EncryptionType.None)
+                {
+                    // do nothing
+                }
+                else
+                {
+                    if (Encryption == EncryptionType.Aes)
+                    {
+                        if (String.IsNullOrEmpty(EncryptionPassphrase))
+                        {
+                            throw new ArgumentNullException(EncryptionPassphrase);
+                        }
 
+                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                        byte[] salt = {0x99, 0x22, 0xb2, 0x33, 0x2b, 0x2a, 0xa, 0x34, 0x33}; // add new packet to agree on random salt
+                        if (key.Length > 32)
+                        {
+                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                        }
+
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] aesData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+
+                        BytesToStream(aesData, out contentLength, out stream);
+
+                        msg.ContentLength = contentLength;
+                    }
+                    else if (Encryption == EncryptionType.Xor)
+                    {
+                        if (String.IsNullOrEmpty(EncryptionPassphrase))
+                        {
+                            throw new ArgumentNullException(EncryptionPassphrase);
+                        }
+
+                        byte[] key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                        if (key.Length > 32)
+                        {
+                            throw new ArgumentException("EncryptionPassphrase must be 32 bytes or greater.");
+                        }
+                                
+                        byte[] streamData = ReadStreamFully(stream);
+                        byte[] xorData = EncryptionHelper.Xor(key, streamData);
+                        
+                        BytesToStream(xorData, out contentLength, out stream);
+
+                        msg.ContentLength = contentLength;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
+                    }
+                }
+                
                 try
                 {
                     SendHeaders(msg);
@@ -1336,7 +1556,7 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             int bytesRead = 0;
             byte[] buffer = new byte[_ReadStreamBufferSize];
-             
+
             if (Compression == CompressionType.None)
             {
                 while (bytesRemaining > 0)
@@ -1398,7 +1618,7 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             int bytesRead = 0;
             byte[] buffer = new byte[_ReadStreamBufferSize];
-
+            
             if (Compression == CompressionType.None)
             {
                 while (bytesRemaining > 0)
@@ -1465,11 +1685,11 @@ namespace WatsonTcp
                 { 
                     if (_SyncResponses.Any(s => 
                         s.Value.ExpirationUtc < DateTime.Now
-                        ))
+                    ))
                     {
                         Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s => 
                             s.Value.ExpirationUtc < DateTime.Now
-                            ).ToDictionary(dict => dict.Key, dict => dict.Value);
+                        ).ToDictionary(dict => dict.Key, dict => dict.Value);
 
                         foreach (KeyValuePair<string, SyncResponse> curr in expired)
                         {

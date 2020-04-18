@@ -106,6 +106,11 @@ namespace WatsonTcp
         /// The type of compression used in the message.
         /// </summary>
         public CompressionType Compression = CompressionType.None;
+        
+        /// <summary>
+        /// The type of encryption used in the message.
+        /// </summary>
+        public EncryptionType Encryption = EncryptionType.Aes;
 
         /// <summary>
         /// Message data from the stream.  Using 'Data' will fully read 'DataStream'.
@@ -134,7 +139,7 @@ namespace WatsonTcp
                         _DataStream.Dispose();
                     }
                 }
-                 
+
                 return _Data;
             }
         }
@@ -225,6 +230,7 @@ namespace WatsonTcp
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
         /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
         /// <param name="compression">The type of compression to use.</param>
+        /// <param name="encryption">The type of encryption to use.</param>
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
         internal WatsonMessage(
@@ -236,6 +242,7 @@ namespace WatsonTcp
             DateTime? expiration, 
             string convGuid, 
             CompressionType compression, 
+            EncryptionType encryption, 
             Action<string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
@@ -254,7 +261,8 @@ namespace WatsonTcp
             SyncResponse = syncResponse;
             Expiration = expiration;
             ConversationGuid = convGuid;
-            Compression = compression; 
+            Compression = compression;
+            Encryption = encryption;
             
             _DataStream = stream;
             _Logger = logger; 
@@ -321,6 +329,7 @@ namespace WatsonTcp
                 Expiration = msg.Expiration;
                 ConversationGuid = msg.ConversationGuid;
                 Compression = msg.Compression;
+                Encryption = msg.Encryption;
 
                 _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(buffer).Trim()); 
 
@@ -349,7 +358,7 @@ namespace WatsonTcp
                 }
 
                 #endregion
-                 
+
                 return true;
             }
             catch (IOException)
