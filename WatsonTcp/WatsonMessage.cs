@@ -110,7 +110,7 @@ namespace WatsonTcp
         /// <summary>
         /// The type of encryption used in the message.
         /// </summary>
-        public EncryptionType Encryption = EncryptionType.Aes;
+        public EncryptionType Encryption = EncryptionType.None;
 
         /// <summary>
         /// Message data from the stream.  Using 'Data' will fully read 'DataStream'.
