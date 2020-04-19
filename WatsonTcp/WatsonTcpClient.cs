@@ -30,12 +30,12 @@ namespace WatsonTcp
         {
             get
             {
-                return _ReadStreamBufferSize;
+                return _StreamBufferSize;
             }
             set
             {
                 if (value < 1) throw new ArgumentException("Read stream buffer size must be greater than zero.");
-                _ReadStreamBufferSize = value;
+                _StreamBufferSize = value;
             }
         }
 
@@ -195,7 +195,7 @@ namespace WatsonTcp
 
         #region Private-Members
 
-        private int _ReadStreamBufferSize = 65536;
+        private int _StreamBufferSize = 65536;
         private int _ConnectTimeoutSeconds = 5;
         private Mode _Mode = Mode.Tcp;
         private string _SourceIp = null;
@@ -1041,7 +1041,7 @@ namespace WatsonTcp
                     { 
                         if (SyncRequestReceived != null)
                         {
-                            byte[] msgData = await ReadMessageDataAsync(msg);
+                            byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
 
                             if (DateTime.Now < msg.Expiration.Value)
                             {
@@ -1079,7 +1079,7 @@ namespace WatsonTcp
                     {
                         if (DateTime.Now < msg.Expiration.Value)
                         {
-                            byte[] msgData = await ReadMessageDataAsync(msg);
+                            byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
 
                             lock (_SyncResponseLock)
                             {
@@ -1099,7 +1099,7 @@ namespace WatsonTcp
                         if (_MessageReceived != null
                             && _MessageReceived.GetInvocationList().Length > 0)
                         {
-                            msgData = await ReadMessageDataAsync(msg); 
+                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize); 
                             MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msgData);
                             _MessageReceived?.Invoke(this, args);
                         }
@@ -1379,7 +1379,7 @@ namespace WatsonTcp
              
             long bytesRemaining = contentLength;
             int bytesRead = 0;
-            byte[] buffer = new byte[_ReadStreamBufferSize];
+            byte[] buffer = new byte[_StreamBufferSize];
              
             if (Compression == CompressionType.None)
             {
@@ -1443,7 +1443,7 @@ namespace WatsonTcp
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
-            byte[] buffer = new byte[_ReadStreamBufferSize];
+            byte[] buffer = new byte[_StreamBufferSize];
 
             if (Compression == CompressionType.None)
             {
@@ -1501,40 +1501,6 @@ namespace WatsonTcp
             await _DataStream.FlushAsync();
         }
          
-        private async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg)
-        {
-            if (msg == null) throw new ArgumentNullException(nameof(msg));
-            if (msg.ContentLength == 0) return new byte[0];
-
-            byte[] msgData = null;
-            MemoryStream ms = new MemoryStream();
-
-            if (msg.Compression == CompressionType.None)
-            {
-                msgData = await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, _ReadStreamBufferSize);
-            }
-            else if (msg.Compression == CompressionType.Deflate)
-            {
-                using (DeflateStream ds = new DeflateStream(msg.DataStream, CompressionMode.Decompress, true))
-                {
-                    msgData = WatsonCommon.ReadStreamFully(ds); 
-                }
-            }
-            else if (msg.Compression == CompressionType.Gzip)
-            {
-                using (GZipStream gs = new GZipStream(msg.DataStream, CompressionMode.Decompress, true))
-                {
-                    msgData = WatsonCommon.ReadStreamFully(gs);
-                }
-            }
-            else
-            {
-                throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
-            }
-
-            return msgData;
-        }
-
         private async Task MonitorForExpiredSyncResponses()
         {
             while (!_TokenSource.IsCancellationRequested)

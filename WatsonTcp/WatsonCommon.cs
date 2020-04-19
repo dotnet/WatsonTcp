@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -91,6 +92,40 @@ namespace WatsonTcp
 
             byte[] data = ms.ToArray();
             return data;
+        }
+
+        internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen)
+        {
+            if (msg == null) throw new ArgumentNullException(nameof(msg));
+            if (msg.ContentLength == 0) return new byte[0];
+
+            byte[] msgData = null;
+            MemoryStream ms = new MemoryStream();
+
+            if (msg.Compression == CompressionType.None)
+            {
+                msgData = await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen);
+            }
+            else if (msg.Compression == CompressionType.Deflate)
+            {
+                using (DeflateStream ds = new DeflateStream(msg.DataStream, CompressionMode.Decompress, true))
+                {
+                    msgData = WatsonCommon.ReadStreamFully(ds);
+                }
+            }
+            else if (msg.Compression == CompressionType.Gzip)
+            {
+                using (GZipStream gs = new GZipStream(msg.DataStream, CompressionMode.Decompress, true))
+                {
+                    msgData = WatsonCommon.ReadStreamFully(gs);
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("Unknown compression type: " + msg.Compression.ToString());
+            }
+
+            return msgData;
         }
 
         internal static byte[] AppendBytes(byte[] head, byte[] tail)

@@ -9,10 +9,9 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-## New in v4.1.3
+## New in v4.1.4
 
-- Fix for issue: compression with SSL enabled causes deserialization exceptions; not recommended for use
-- Minor refactor
+- Minor internal refactor
 
 ## Test Applications
 

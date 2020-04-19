@@ -2,12 +2,16 @@
 
 ## Current Version
 
+v4.1.4
+
+- Minor internal refactor
+
+## Previous Versions
+
 v4.1.3
 
 - Fix for issue: compression with SSL enabled causes deserialization exceptions; not recommended for use
 - Minor refactor
-
-## Previous Versions
 
 v4.1.2
 
