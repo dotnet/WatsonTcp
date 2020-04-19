@@ -98,6 +98,8 @@ namespace TestServer
                         Console.WriteLine("  encpass             set encryption passphrase");
                         Console.WriteLine("  custom enc          set custom encryption");
                         Console.WriteLine("  comp                set the compression type, currently: " + server.Compression.ToString());
+                        Console.WriteLine("  enc                 set the encryption type, currently: " + server.Encryption.ToString());
+                        Console.WriteLine("  encpass             set encryption passphrase");
                         Console.WriteLine("  debug               enable/disable debug (currently " + server.DebugMessages + ")");
                         break;
 
@@ -208,10 +210,6 @@ namespace TestServer
                         server.EncryptionPassphrase = InputString("Encryption Passphrase:", "f%RadSSAr@pqC8#77SgiB8wxoCihDf%!", false);
                         break;
 
-                    case "custom enc":
-                        server.CustomEncryption = new CustomDes();
-                        break;
-                    
                     case "debug":
                         server.DebugMessages = !server.DebugMessages;
                         Console.WriteLine("Debug set to: " + server.DebugMessages);
@@ -461,76 +459,6 @@ namespace TestServer
         private static void Logger(string msg)
         {
             Console.WriteLine(msg);
-        }
-    }
-    
-    public class CustomDes : IEncryption
-    {
-        public byte[] Decrypt(byte[] data, byte[] key = null, byte[] salt = null)
-        {
-            if (data == null)
-            {
-                return null;
-            }
-            
-            return Decrypt<DESCryptoServiceProvider>(data, key, salt);
-        }
-        
-        public byte[] Encrypt(byte[] data, byte[] key = null, byte[] salt = null)
-        {
-            if (data == null)
-            {
-                return null;
-            }
-            
-            return Encrypt<DESCryptoServiceProvider>(data, key, salt);
-        }
-
-        private static byte[] Encrypt<T>(byte[] data, byte[] key, byte[] salt)
-            where T : SymmetricAlgorithm, new()
-        {
-            T algorithm = new T();
-
-            Rfc2898DeriveBytes rgb = new Rfc2898DeriveBytes(key, salt, 1000);
-            byte[] rgbKey = rgb.GetBytes(algorithm.KeySize >> 3);
-            byte[] rgbIV = rgb.GetBytes(algorithm.BlockSize >> 3);
-
-            ICryptoTransform transform = algorithm.CreateEncryptor(rgbKey, rgbIV);
-
-            using (MemoryStream ms = new MemoryStream())
-            {
-                using (CryptoStream cs = new CryptoStream(ms, transform, CryptoStreamMode.Write))
-                {
-                    cs.Write(data, 0, data.Length);
-                }
-
-                return ms.ToArray();
-            }
-        }
-
-        private static byte[] Decrypt<T>(byte[] data, byte[] key, byte[] salt)
-            where T : SymmetricAlgorithm, new()
-        {
-            T algorithm = new T();
-
-            Rfc2898DeriveBytes rgb = new Rfc2898DeriveBytes(key, salt, 1000);
-            byte[] rgbKey = rgb.GetBytes(algorithm.KeySize >> 3);
-            byte[] rgbIV = rgb.GetBytes(algorithm.BlockSize >> 3);
-
-            ICryptoTransform transform = algorithm.CreateDecryptor(rgbKey, rgbIV);
-
-            using (CryptoStream cs = new CryptoStream(new MemoryStream(data), transform, CryptoStreamMode.Read))
-            {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    cs.CopyTo(ms);
-                    return ms.ToArray();
-                }
-            }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

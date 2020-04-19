@@ -143,7 +143,7 @@ namespace WatsonTcp
                 return _Data;
             }
         }
-
+        
         /// <summary>
         /// Stream containing the message data.
         /// </summary>
@@ -263,7 +263,7 @@ namespace WatsonTcp
             ConversationGuid = convGuid;
             Compression = compression;
             Encryption = new EncryptionInfo(encryption);
-            
+
             _DataStream = stream;
             _Logger = logger; 
         }
@@ -399,6 +399,8 @@ namespace WatsonTcp
             ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
             ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
             ret += "  Conversation GUID : " + ConversationGuid + Environment.NewLine;
+            ret += "  Compression       : " + Compression.ToString() + Environment.NewLine;
+            ret += "  Encryption        : " + Encryption.ToString() + Environment.NewLine;
 
             if (Metadata != null)
             {
