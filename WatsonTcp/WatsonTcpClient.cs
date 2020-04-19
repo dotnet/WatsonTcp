@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -1387,6 +1388,47 @@ namespace WatsonTcp
         private void SendDataStream(long contentLength, Stream stream)
         {
             if (contentLength <= 0) return;
+            
+            if (Encryption == EncryptionType.None)
+            {
+                // do nothing
+            }
+            else
+            {
+                byte[] key = null;
+                byte[] salt = null;
+
+                if (String.IsNullOrEmpty(EncryptionPassphrase))
+                {
+                    throw new ArgumentNullException(EncryptionPassphrase);
+                }
+
+                key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                salt = Encoding.UTF8.GetBytes($"{EncryptionPassphrase}__salted");
+
+                if (key.Length < 32)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(EncryptionPassphrase));
+                }
+                
+                if (Encryption == EncryptionType.Aes)
+                {
+                    byte[] streamData = WatsonCommon.ReadStreamFully(stream);
+
+                    byte[] encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, out contentLength, out stream);
+                } else if (Encryption == EncryptionType.TripleDes)
+                {
+                    byte[] streamData = WatsonCommon.ReadStreamFully(stream);
+
+                    byte[] encryptedData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, out contentLength, out stream);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
+                }
+            }
              
             long bytesRemaining = contentLength;
             int bytesRead = 0;
@@ -1451,6 +1493,47 @@ namespace WatsonTcp
         private async Task SendDataStreamAsync(long contentLength, Stream stream)
         {
             if (contentLength <= 0) return;
+            
+            if (Encryption == EncryptionType.None)
+            {
+                // do nothing
+            }
+            else
+            {
+                byte[] key = null;
+                byte[] salt = null;
+
+                if (String.IsNullOrEmpty(EncryptionPassphrase))
+                {
+                    throw new ArgumentNullException(EncryptionPassphrase);
+                }
+
+                key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                salt = Encoding.UTF8.GetBytes($"{EncryptionPassphrase}__salted");
+
+                if (key.Length < 32)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(EncryptionPassphrase));
+                }
+                
+                if (Encryption == EncryptionType.Aes)
+                {
+                    byte[] streamData = WatsonCommon.ReadStreamFully(stream);
+
+                    byte[] encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, out contentLength, out stream);
+                } else if (Encryption == EncryptionType.TripleDes)
+                {
+                    byte[] streamData = WatsonCommon.ReadStreamFully(stream);
+
+                    byte[] encryptedData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, out contentLength, out stream);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
+                }
+            }
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
@@ -1541,6 +1624,41 @@ namespace WatsonTcp
             else
             {
                 throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
+            }
+            
+            if (msg.Encryption.Algorithm == EncryptionType.None)
+            {
+                // do nothing
+            }
+            else
+            {
+                byte[] key = null;
+                byte[] salt = null;
+
+                if (String.IsNullOrEmpty(EncryptionPassphrase))
+                {
+                    throw new ArgumentNullException(EncryptionPassphrase);
+                }
+
+                key = Encoding.UTF8.GetBytes(EncryptionPassphrase);
+                salt = Encoding.UTF8.GetBytes($"{EncryptionPassphrase}__salted");
+
+                if (key.Length < 32)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(EncryptionPassphrase));
+                }
+                
+                if (msg.Encryption.Algorithm == EncryptionType.Aes)
+                {
+                    msgData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
+                } else if (msg.Encryption.Algorithm == EncryptionType.TripleDes)
+                {
+                    msgData = EncryptionHelper.Decrypt<TripleDESCryptoServiceProvider>(msgData, key, salt);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unknown encryption type: " + Encryption.ToString());
+                }   
             }
 
             return msgData;
