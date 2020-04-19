@@ -110,7 +110,7 @@ namespace WatsonTcp
         /// <summary>
         /// Encryption info used in the message.
         /// </summary>
-        public EncryptionInfo Encryption = null;
+        public EncryptionHeader Encryption = null;
 
         /// <summary>
         /// Message data from the stream.  Using 'Data' will fully read 'DataStream'.
@@ -262,7 +262,7 @@ namespace WatsonTcp
             Expiration = expiration;
             ConversationGuid = convGuid;
             Compression = compression;
-            Encryption = new EncryptionInfo(encryption);
+            Encryption = new EncryptionHeader(encryption);
 
             _DataStream = stream;
             _Logger = logger; 

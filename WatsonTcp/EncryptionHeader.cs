@@ -1,10 +1,10 @@
-﻿using System;
+﻿﻿using System;
 
 ﻿namespace WatsonTcp
 {
-    internal class EncryptionInfo
+    internal class EncryptionHeader
     {
-        public EncryptionInfo(EncryptionType algorithm)
+        public EncryptionHeader(EncryptionType algorithm)
         {
             Algorithm = algorithm;
         }
