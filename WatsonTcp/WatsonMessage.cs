@@ -106,39 +106,7 @@ namespace WatsonTcp
         /// The type of compression used in the message.
         /// </summary>
         public CompressionType Compression = CompressionType.None;
-
-        /// <summary>
-        /// Message data from the stream.  Using 'Data' will fully read 'DataStream'.
-        /// </summary>
-        [JsonIgnore]
-        public byte[] Data
-        {
-            get
-            {
-                if (_Data != null)
-                { 
-                    return _Data;
-                }
-                 
-                if (ContentLength > 0 && _DataStream != null)
-                { 
-                    _Data = ReadFromStream(_DataStream, ContentLength);
-
-                    if (_DataStream is GZipStream || _DataStream is DeflateStream)
-                    {
-                        // 
-                        // It is necessary to close the compression stream; when it was opened
-                        // it was instructed to leave the underlying stream open
-                        //
-                        _DataStream.Flush();
-                        _DataStream.Dispose();
-                    }
-                }
-                 
-                return _Data;
-            }
-        }
-
+         
         /// <summary>
         /// Stream containing the message data.
         /// </summary>
@@ -161,8 +129,8 @@ namespace WatsonTcp
             {
                 string jsonStr = SerializationHelper.SerializeJson(this, false);
                 byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonStr);
-                byte[] end = AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
-                byte[] final = AppendBytes(jsonBytes, end);
+                byte[] end = WatsonCommon.AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
+                byte[] final = WatsonCommon.AppendBytes(jsonBytes, end);
                 return final;
             }
         }
@@ -199,8 +167,7 @@ namespace WatsonTcp
 
         private int _ReadStreamBuffer = 65536; 
         private byte[] _PresharedKey; 
-        private Dictionary<object, object> _Metadata = new Dictionary<object, object>();
-        private byte[] _Data = null;
+        private Dictionary<object, object> _Metadata = new Dictionary<object, object>(); 
         private Stream _DataStream = null;
 
         #endregion
@@ -291,14 +258,14 @@ namespace WatsonTcp
                 #region Read-Headers
 
                 byte[] buffer = new byte[0];
-                byte[] end = AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
+                byte[] end = WatsonCommon.AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
 
                 while (true)
                 {
-                    byte[] data = await ReadFromStreamAsync(_DataStream, 1);
+                    byte[] data = await WatsonCommon.ReadFromStreamAsync(_DataStream, 1, _ReadStreamBuffer);
                     if (data != null && data.Length == 1)
                     {
-                        buffer = AppendBytes(buffer, data);
+                        buffer = WatsonCommon.AppendBytes(buffer, data);
                         if (buffer.Length >= 4)
                         {
                             byte[] endCheck = buffer.Skip(buffer.Length - 4).Take(4).ToArray();
@@ -324,32 +291,8 @@ namespace WatsonTcp
 
                 _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(buffer).Trim()); 
 
-                #endregion
+                #endregion 
 
-                #region Setup-Stream
-
-                if (Compression == CompressionType.None)
-                { 
-                    // do nothing
-                }
-                else
-                {  
-                    if (Compression == CompressionType.Deflate)
-                    {
-                        _DataStream = new DeflateStream(_DataStream, CompressionMode.Decompress, true);
-                    }
-                    else if (Compression == CompressionType.Gzip)
-                    {
-                        _DataStream = new GZipStream(_DataStream, CompressionMode.Decompress, true);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
-                    } 
-                }
-
-                #endregion
-                 
                 return true;
             }
             catch (IOException)
@@ -384,25 +327,19 @@ namespace WatsonTcp
         public override string ToString()
         {
             string ret = "---" + Environment.NewLine; 
-            ret += "  Preshared key     : " + (PresharedKey != null ? ByteArrayToHex(PresharedKey) : "null") + Environment.NewLine;
+            ret += "  Preshared key     : " + (PresharedKey != null ? WatsonCommon.ByteArrayToHex(PresharedKey) : "null") + Environment.NewLine;
             ret += "  Status            : " + Status.ToString() + Environment.NewLine;
             ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
             ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
             ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
             ret += "  Conversation GUID : " + ConversationGuid + Environment.NewLine;
+            ret += "  Compression       : " + Compression.ToString() + Environment.NewLine;
 
             if (Metadata != null)
             {
                 ret += "  Metadata          : " + Metadata.Count + " entries" + Environment.NewLine;
             }
-
-            if (Data != null)
-            {
-                ret += "  Data              : " + Data.Length + " bytes" + Environment.NewLine;
-                if (Data.Length > 0) 
-                    ret += Encoding.UTF8.GetString(Data); 
-            }
-
+             
             if (DataStream != null)
                 ret += "  DataStream        : present, " + ContentLength + " bytes" + Environment.NewLine;
 
@@ -412,103 +349,6 @@ namespace WatsonTcp
         #endregion Public-Methods
 
         #region Private-Methods
-
-        private byte[] ReadStreamFully(Stream input)
-        { 
-            byte[] buffer = new byte[65536];
-            using (MemoryStream ms = new MemoryStream())
-            {
-                int read = 0;
-                while (true)
-                {
-                    read = input.Read(buffer, 0, buffer.Length); 
-                    if (read > 0)
-                    {
-                        ms.Write(buffer, 0, read); 
-                        if (read < buffer.Length) break;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                 
-                return ms.ToArray();
-            }
-        }
-
-        private byte[] ReadFromStream(Stream stream, long count)
-        {
-            if (count <= 0) return null;
-            byte[] buffer = new byte[_ReadStreamBuffer];
-
-            int read = 0;
-            long bytesRemaining = count;
-            MemoryStream ms = new MemoryStream();
-
-            while (bytesRemaining > 0)
-            {
-                if (_ReadStreamBuffer > bytesRemaining) buffer = new byte[bytesRemaining];
-
-                read = stream.Read(buffer, 0, buffer.Length);
-                if (read > 0)
-                {
-                    ms.Write(buffer, 0, read); 
-                    bytesRemaining -= read;
-                }
-                else
-                {
-                    throw new SocketException();
-                }
-            }
-
-            byte[] data = ms.ToArray(); 
-            return data;
-        }
-
-        private async Task<byte[]> ReadFromStreamAsync(Stream stream, long count)
-        {
-            if (count <= 0) return null;
-            byte[] buffer = new byte[_ReadStreamBuffer];
-
-            int read = 0;
-            long bytesRemaining = count;
-            MemoryStream ms = new MemoryStream();
-
-            while (bytesRemaining > 0)
-            {
-                if (_ReadStreamBuffer > bytesRemaining) buffer = new byte[bytesRemaining];
-
-                read = await stream.ReadAsync(buffer, 0, buffer.Length);
-                if (read > 0)
-                {
-                    ms.Write(buffer, 0, read);
-                    bytesRemaining -= read;
-                }
-                else
-                {
-                    throw new SocketException();
-                }
-            }
-
-            byte[] data = ms.ToArray();
-            return data;
-        }
-
-        private byte[] AppendBytes(byte[] head, byte[] tail)
-        {
-            byte[] arrayCombined = new byte[head.Length + tail.Length];
-            Array.Copy(head, 0, arrayCombined, 0, head.Length);
-            Array.Copy(tail, 0, arrayCombined, head.Length, tail.Length);
-            return arrayCombined;
-        }
-
-        private string ByteArrayToHex(byte[] data)
-        {
-            StringBuilder hex = new StringBuilder(data.Length * 2);
-            foreach (byte b in data) hex.AppendFormat("{0:x2}", b);
-            return hex.ToString();
-        }
 
         #endregion
     }
