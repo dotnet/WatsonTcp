@@ -2,10 +2,7 @@
 
 # WatsonTcp
 
-[![][nuget-img]][nuget]
-
-[nuget]:     https://www.nuget.org/packages/WatsonTcp/
-[nuget-img]: https://badge.fury.io/nu/Object.svg
+[![NuGet Version](https://img.shields.io/nuget/v/WatsonTcp.svg?style=flat)](https://www.nuget.org/packages/WatsonTcp/) [![NuGet](https://img.shields.io/nuget/dt/WatsonTcp.svg)](https://www.nuget.org/packages/WatsonTcp) 
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
