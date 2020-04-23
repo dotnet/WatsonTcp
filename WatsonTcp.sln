@@ -29,7 +29,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.WinFormClient", "Test.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.WinFormServer", "Test.WinFormServer\Test.WinFormServer.csproj", "{183A2823-C114-40BE-AE05-139A71631E84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.FastDisconnect", "Test.FastDisconnect\Test.FastDisconnect.csproj", "{95826F62-2E9C-4886-929B-6D01D8276640}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.FastDisconnect", "Test.FastDisconnect\Test.FastDisconnect.csproj", "{95826F62-2E9C-4886-929B-6D01D8276640}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.TimeoutRecovery", "Test.TimeoutRecovery\Test.TimeoutRecovery.csproj", "{F72A4314-206A-4AF0-998D-A9D9090163D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -93,6 +95,10 @@ Global
 		{95826F62-2E9C-4886-929B-6D01D8276640}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95826F62-2E9C-4886-929B-6D01D8276640}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95826F62-2E9C-4886-929B-6D01D8276640}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F72A4314-206A-4AF0-998D-A9D9090163D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F72A4314-206A-4AF0-998D-A9D9090163D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F72A4314-206A-4AF0-998D-A9D9090163D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F72A4314-206A-4AF0-998D-A9D9090163D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

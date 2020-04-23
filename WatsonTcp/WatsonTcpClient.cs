@@ -1077,10 +1077,10 @@ namespace WatsonTcp
                     }
                     else if (msg.SyncResponse)
                     {
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
+
                         if (DateTime.Now < msg.Expiration.Value)
                         {
-                            byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
-
                             lock (_SyncResponseLock)
                             {
                                 _SyncResponses.Add(msg.ConversationGuid, new SyncResponse(msg.Expiration.Value, msg.Metadata, msgData));

@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.1.5
+
+- Fix for synchronous request timeout leaving message data in the underlying stream (thank you @ozrecsec!)
+
+## Previous Versions
+
 v4.1.4
 
 - Minor internal refactor
-
-## Previous Versions
 
 v4.1.3
 
