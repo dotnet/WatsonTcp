@@ -380,7 +380,7 @@ namespace Test.TimeoutRecovery
                 if (Int32.TryParse(dataString, out int seconds))
                 {
                     Console.WriteLine(dataString + " [Responding in " + seconds + " seconds]");
-                    resp += "  I waited " + seconds + " to send this to you.";
+                    resp += "  I waited " + seconds + " seconds to send this to you.";
                     Task.Delay((seconds * 1000)).Wait();
                 }
                 else

@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.1.6
+
+- Added SenderTimestamp to sync messages and derived expiration based on difference in sender vs receiver perception of time (thank you @karstennilsen)
+
+## Previous Versions
+
 v4.1.5
 
 - Fix for synchronous request timeout leaving message data in the underlying stream (thank you @ozrecsec!)
-
-## Previous Versions
 
 v4.1.4
 

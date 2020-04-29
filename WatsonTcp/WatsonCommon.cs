@@ -155,6 +155,24 @@ namespace WatsonTcp
                 stream.Write(data, 0, data.Length);
                 stream.Seek(0, SeekOrigin.Begin);
             }
-        } 
+        }
+
+        internal static DateTime GetExpirationTimestamp(WatsonMessage msg)
+        {
+            DateTime expiration = msg.Expiration.Value;
+
+            if (msg.SenderTimestamp != null)
+            {
+                //
+                // TimeSpan will be negative if sender timestamp is earlier than now or positive if sender timestamp is later than now
+                // Goal #1: if sender has a later timestamp, increase expiration by the difference between sender time and our time
+                // Goal #2: if sender has an earlier timestamp, decrease expiration by the difference between sender time and our time
+                //
+                TimeSpan ts = msg.SenderTimestamp.Value - DateTime.Now;
+                expiration = expiration.AddMilliseconds(ts.TotalMilliseconds);
+            }
+
+            return expiration;
+        }
     }
 }

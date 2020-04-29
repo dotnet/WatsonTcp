@@ -24,8 +24,7 @@ namespace WatsonTcp
         public long ContentLength { get; set; }
          
         /// <summary>
-        /// Preshared key for connection authentication.  
-        /// _HeaderFields[0], 16 bytes.
+        /// Preshared key for connection authentication.
         /// </summary>
         public byte[] PresharedKey
         {
@@ -50,14 +49,12 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Status of the message.  
-        /// _HeaderFields[1], 4 bytes (Int32).
+        /// Status of the message.   
         /// </summary>
         public MessageStatus Status = MessageStatus.Normal;
           
         /// <summary>
-        /// Metadata dictionary.  
-        /// _HeaderFields[2], 8 bytes (Int64).
+        /// Metadata dictionary; contains user-supplied metadata.
         /// </summary>
         public Dictionary<object, object> Metadata
         {
@@ -80,25 +77,26 @@ namespace WatsonTcp
 
         /// <summary>
         /// Indicates if the message is a synchronous request.
-        /// _HeaderFields[3], 4 bytes (Int32).
         /// </summary>
         public bool SyncRequest = false;
 
         /// <summary>
         /// Indicates if the message is a synchronous response.
-        /// _HeaderFields[4], 4 bytes (Int32).
         /// </summary>
         public bool SyncResponse = false;
 
         /// <summary>
+        /// Indicates the current time as perceived by the sender; useful for determining expiration windows.
+        /// </summary>
+        public DateTime? SenderTimestamp = null;
+
+        /// <summary>
         /// Indicates an expiration time in UTC; only applicable to synchronous requests.
-        /// _HeaderFields[5], 32 bytes (DateTime as string).
         /// </summary>
         public DateTime? Expiration = null;
 
         /// <summary>
-        /// Indicates the conversation GUID of the message.
-        /// _HeaderFields[6], 36 bytes (byte[36]).
+        /// Indicates the conversation GUID of the message. 
         /// </summary>
         public string ConversationGuid = null;
 
@@ -221,8 +219,9 @@ namespace WatsonTcp
             SyncResponse = syncResponse;
             Expiration = expiration;
             ConversationGuid = convGuid;
-            Compression = compression; 
-            
+            Compression = compression;
+            if (SyncRequest || SyncResponse) SenderTimestamp = DateTime.Now;
+
             _DataStream = stream;
             _Logger = logger; 
         }
@@ -285,6 +284,7 @@ namespace WatsonTcp
                 Metadata = msg.Metadata;
                 SyncRequest = msg.SyncRequest;
                 SyncResponse = msg.SyncResponse;
+                SenderTimestamp = msg.SenderTimestamp;
                 Expiration = msg.Expiration;
                 ConversationGuid = msg.ConversationGuid;
                 Compression = msg.Compression;

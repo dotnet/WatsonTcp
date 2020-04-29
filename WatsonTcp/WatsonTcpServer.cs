@@ -1320,19 +1320,20 @@ namespace WatsonTcp
                     }
 
                     if (msg.SyncRequest)
-                    { 
+                    {
+                        DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
+
                         if (SyncRequestReceived != null)
                         {
-                            byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
-
-                            if (DateTime.Now < msg.Expiration.Value)
+                            if (DateTime.Now < expiration)
                             {
                                 SyncRequest syncReq = new SyncRequest(
-                                client.IpPort,
-                                msg.ConversationGuid,
-                                msg.Expiration.Value,
-                                msg.Metadata,
-                                msgData);
+                                    client.IpPort,
+                                    msg.ConversationGuid,
+                                    msg.Expiration.Value,
+                                    msg.Metadata,
+                                    msgData);
 
                                 SyncResponse syncResp = SyncRequestReceived(syncReq);
                                 if (syncResp != null)
@@ -1359,9 +1360,10 @@ namespace WatsonTcp
                     }
                     else if (msg.SyncResponse)
                     {
+                        DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
 
-                        if (DateTime.Now < msg.Expiration.Value)
+                        if (DateTime.Now < expiration)
                         {
                             lock (_SyncResponseLock)
                             {
@@ -1378,18 +1380,15 @@ namespace WatsonTcp
                         byte[] msgData = null;
                         MemoryStream ms = new MemoryStream();
 
-                        if (_MessageReceived != null
-                            && _MessageReceived.GetInvocationList().Length > 0)
+                        if (_MessageReceived != null && _MessageReceived.GetInvocationList().Length > 0)
                         {
                             msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
                             MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msgData);
                             _MessageReceived?.Invoke(this, mr);
                         }
-                        else if (_StreamReceived != null
-                            && _StreamReceived.GetInvocationList().Length > 0)
+                        else if (_StreamReceived != null && _StreamReceived.GetInvocationList().Length > 0)
                         {
-                            StreamReceivedFromClientEventArgs sr = null;
-
+                            StreamReceivedFromClientEventArgs sr = null; 
                             if (msg.Compression == CompressionType.None)
                             {
                                 sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
@@ -1401,8 +1400,7 @@ namespace WatsonTcp
                                 {
                                     msgData = WatsonCommon.ReadStreamFully(ds);
                                     ms = new MemoryStream(msgData);
-                                    ms.Seek(0, SeekOrigin.Begin);
-
+                                    ms.Seek(0, SeekOrigin.Begin); 
                                     sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ms);
                                     _StreamReceived?.Invoke(this, sr);
                                 }
@@ -1413,8 +1411,7 @@ namespace WatsonTcp
                                 {
                                     msgData = WatsonCommon.ReadStreamFully(gs);
                                     ms = new MemoryStream(msgData);
-                                    ms.Seek(0, SeekOrigin.Begin);
-
+                                    ms.Seek(0, SeekOrigin.Begin); 
                                     sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ms);
                                     _StreamReceived?.Invoke(this, sr);
                                 }
