@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.1.8
+
+- Fix for message expiration (thank you @karstennilsen)
+
+## Previous Versions
+
 v4.1.7
 
 - AuthenticationRequested, AuthenticationSucceeded, and AuthenticationFailed events in WatsonTcpServer
-
-## Previous Versions
 
 v4.1.6
 

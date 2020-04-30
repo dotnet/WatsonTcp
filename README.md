@@ -6,9 +6,9 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-## New in v4.1.7
+## New in v4.1.8
 
-- AuthenticationRequested, AuthenticationSucceeded, and AuthenticationFailed events in WatsonTcpServer
+- Fix for message expiration (thank you @karstennilsen)
 
 ## Test Applications
 
@@ -53,6 +53,7 @@ Special thanks to the following people for their support and contributions to th
 - @ozrecsec
 - @developervariety
 - @NormenSchwettmann
+- @karstennilsen
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
