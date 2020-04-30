@@ -108,6 +108,21 @@ namespace WatsonTcp
         public List<string> PermittedIPs = new List<string>();
 
         /// <summary>
+        /// Event to fire when authentication is requested from a client.
+        /// </summary>
+        public event EventHandler<AuthenticationRequestedEventArgs> AuthenticationRequested;
+
+        /// <summary>
+        /// Event to fire when a client successfully authenticates.
+        /// </summary>
+        public event EventHandler<AuthenticationSucceededEventArgs> AuthenticationSucceeded;
+
+        /// <summary>
+        /// Event to fire when a client fails authentication.
+        /// </summary>
+        public event EventHandler<AuthenticationFailedEventArgs> AuthenticationFailed;
+
+        /// <summary>
         /// Event to fire when a client connects to the server.
         /// The IP:port of the client is passed in the arguments.
         /// </summary>
@@ -1265,6 +1280,7 @@ namespace WatsonTcp
                                     {
                                         Logger?.Invoke("[WatsonTcpServer] Accepted authentication for " + client.IpPort);
                                         _UnauthenticatedClients.TryRemove(client.IpPort, out DateTime dt);
+                                        AuthenticationSucceeded?.Invoke(this, new AuthenticationSucceededEventArgs(client.IpPort));
                                         byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
                                         WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
                                         WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
@@ -1276,6 +1292,7 @@ namespace WatsonTcp
                                     {
                                         Logger?.Invoke("[WatsonTcpServer] Declined authentication for " + client.IpPort);
                                         byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
+                                        AuthenticationFailed?.Invoke(this, new AuthenticationFailedEventArgs(client.IpPort));
                                         WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
                                         WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
                                         authMsg.Status = MessageStatus.AuthFailure;
@@ -1287,6 +1304,7 @@ namespace WatsonTcp
                                 {
                                     Logger?.Invoke("[WatsonTcpServer] No authentication material for " + client.IpPort);
                                     byte[] data = Encoding.UTF8.GetBytes("No authentication material");
+                                    AuthenticationFailed?.Invoke(this, new AuthenticationFailedEventArgs(client.IpPort));
                                     WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
                                     WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
                                     authMsg.Status = MessageStatus.AuthFailure;
@@ -1299,6 +1317,7 @@ namespace WatsonTcp
                                 // decline the message
                                 Logger?.Invoke("[WatsonTcpServer] No authentication material for " + client.IpPort);
                                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
+                                AuthenticationRequested?.Invoke(this, new AuthenticationRequestedEventArgs(client.IpPort));
                                 WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
                                 WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
                                 authMsg.Status = MessageStatus.AuthRequired;
