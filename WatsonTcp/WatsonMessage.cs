@@ -220,7 +220,7 @@ namespace WatsonTcp
             Expiration = expiration;
             ConversationGuid = convGuid;
             Compression = compression;
-            if (SyncRequest || SyncResponse) SenderTimestamp = DateTime.Now;
+            if (SyncRequest) SenderTimestamp = DateTime.Now;
 
             _DataStream = stream;
             _Logger = logger; 
