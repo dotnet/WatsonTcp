@@ -339,6 +339,8 @@ namespace TestServer
         {
             lastIpPort = args.IpPort;
             Console.WriteLine("Client connected: " + args.IpPort);
+            // Console.WriteLine("Disconnecting: " + args.IpPort);
+            // server.DisconnectClient(args.IpPort);
         }
          
         private static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)

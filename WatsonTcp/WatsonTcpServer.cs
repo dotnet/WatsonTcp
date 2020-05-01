@@ -1454,6 +1454,7 @@ namespace WatsonTcp
                 catch (OperationCanceledException)
                 {
                     Logger?.Invoke("[WatsonTcpServer] Cancellation requested");
+                    break;
                 }
                 catch (Exception e)
                 { 
