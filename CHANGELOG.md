@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.1.10
+
+- Minor fixes to synchronous message expiration (thank you @karstennilsen)
+
+## Previous Versions
+
 v4.1.9
 
 - Fix for being unable to disconnect a client from ClientConnected (thank you @motridox)
-
-## Previous Versions
 
 v4.1.8
 

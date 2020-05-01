@@ -1379,10 +1379,11 @@ namespace WatsonTcp
                     }
                     else if (msg.SyncResponse)
                     {
-                        DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
+                        // No need to amend message expiration; it is copied from the request, which was set by this node
+                        // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
 
-                        if (DateTime.Now < expiration)
+                        if (DateTime.Now < msg.Expiration.Value)
                         {
                             lock (_SyncResponseLock)
                             {
