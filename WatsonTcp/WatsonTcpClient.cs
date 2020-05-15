@@ -466,15 +466,15 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
              
-            Logger?.Invoke("[WatsonTcpClient] Connected to server");
-            ServerConnected?.Invoke(this, EventArgs.Empty);  
+            Logger?.Invoke("[WatsonTcpClient] Connected to server, starting data receiver");
             Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
+            ServerConnected?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
         /// Start the client and establish a connection to the server.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Task.</returns>
         public Task StartAsync()
         {
             _Client = new TcpClient();
@@ -599,9 +599,10 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
-            Logger?.Invoke("[WatsonTcpClient] Connected to server");
+            Logger?.Invoke("[WatsonTcpClient] Connected to server, starting data receiver");
+            Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
             ServerConnected?.Invoke(this, EventArgs.Empty);
-            return DataReceiver();
+            return dataReceiver;
         }
 
         /// <summary>

@@ -367,7 +367,7 @@ namespace TestServer
          
         private static SyncResponse SyncRequestReceived(SyncRequest req)
         {
-            Console.Write("Message received from " + req.IpPort + ": ");
+            Console.Write("Synchronous request received from " + req.IpPort + ": ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
             else Console.WriteLine("[null]");
 
@@ -383,9 +383,10 @@ namespace TestServer
             Dictionary<object, object> retMetadata = new Dictionary<object, object>();
             retMetadata.Add("foo", "bar");
             retMetadata.Add("bar", "baz");
-            
+
             // Uncomment to test timeout
             // Task.Delay(10000).Wait();
+            Console.WriteLine("Sending synchronous response");
             return new SyncResponse(req, retMetadata, "Here is your response!");
         }
 

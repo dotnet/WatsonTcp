@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.1.11
+
+- Fix to order of ServerConnected and starting DataReceiver in WatsonTcpClient (thank you @ozrecsec)
+
+## Previous Versions
+
 v4.1.10
 
 - Minor fixes to synchronous message expiration (thank you @karstennilsen)
-
-## Previous Versions
 
 v4.1.9
 

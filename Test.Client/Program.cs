@@ -418,7 +418,7 @@ namespace TestClient
 
         private static void ServerConnected(object sender, EventArgs args) 
         {
-            Console.WriteLine("Server connected");
+            Console.WriteLine("Server connected"); 
         }
 
         private static void ServerDisconnected(object sender, EventArgs args)
