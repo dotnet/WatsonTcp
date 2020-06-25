@@ -10,9 +10,9 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.1.11
+## New in v4.1.12
 
-- Fix to order of ServerConnected and starting DataReceiver in WatsonTcpClient (thank you @ozrecsec)
+- Fix for ClientMetadata.Dispose
 
 ## Test Applications
 

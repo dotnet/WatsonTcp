@@ -1452,6 +1452,11 @@ namespace WatsonTcp
                     _Stats.ReceivedBytes += msg.ContentLength;
                     UpdateClientLastSeen(client.IpPort);
                 }
+                catch (ObjectDisposedException)
+                {
+                    Logger?.Invoke("[WatsonTcpServer] Client " + client.IpPort + " disconnected due to disposal");
+                    break;
+                }
                 catch (OperationCanceledException)
                 {
                     Logger?.Invoke("[WatsonTcpServer] Cancellation requested");

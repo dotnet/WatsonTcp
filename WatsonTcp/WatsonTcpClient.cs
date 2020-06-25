@@ -1150,10 +1150,16 @@ namespace WatsonTcp
                      
                     _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
                     _Stats.ReceivedBytes += msg.ContentLength;
-                } 
+                }
+                catch (ObjectDisposedException)
+                {
+                    Logger?.Invoke("[WatsonTcpClient] Disconnected due to disposal");
+                    break;
+                }
                 catch (OperationCanceledException)
                 {
                     Logger?.Invoke("[WatsonTcpClient] Cancellation requested");
+                    break;
                 }
                 catch (Exception e)
                 {

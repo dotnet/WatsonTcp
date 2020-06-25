@@ -93,14 +93,12 @@ namespace WatsonTcp
         {
             if (_SslStream != null)
             {
-                _SslStream.Close();
-                _SslStream = null;
+                _SslStream.Close(); 
             }
 
             if (_NetworkStream != null)
             {
-                _NetworkStream.Close();
-                _NetworkStream = null;
+                _NetworkStream.Close(); 
             }
 
             if (TokenSource != null)
@@ -125,7 +123,7 @@ namespace WatsonTcp
             if (_TcpClient != null)
             {
                 _TcpClient.Close();
-                _TcpClient = null;
+                _TcpClient.Dispose();
             }
         } 
     }
