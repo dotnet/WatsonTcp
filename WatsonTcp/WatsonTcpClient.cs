@@ -1508,11 +1508,9 @@ namespace WatsonTcp
          
         private async Task MonitorForExpiredSyncResponses()
         {
-            while (!_TokenSource.IsCancellationRequested)
+            while (_TokenSource != null && !_TokenSource.IsCancellationRequested)
             {
                 if (_Token.IsCancellationRequested) break;
-
-                await Task.Delay(1000);
 
                 lock (_SyncResponseLock)
                 { 
@@ -1531,6 +1529,8 @@ namespace WatsonTcp
                         }
                     }
                 }
+
+                await Task.Delay(1000);
             }
         }
 
