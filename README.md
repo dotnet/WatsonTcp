@@ -1,6 +1,13 @@
 ![alt tag](https://github.com/jchristn/watsontcp/blob/master/assets/watson.ico)
 
-# WatsonTcp
+# WatsonTcp.ProtoBuf
+
+** THIS IS A FORK OF WatsonTcp USING Protobuf-net INSTEAD OF JSON FOR SERIALISATION **
+This version uses Protobuf for the Metadata class, instead of serialising Dictionary<object, object> using Json.Net, this allows us to avoid using byte[] arrays as temporary buffers when sending messages using the Stream method, which lowers the overall memory thrashing on a busy server.
+
+This fork also implements memory pooling using Microsoft.Extensions.ObjectPool<T> on frequently accessed objects such as WatsonMessage - be aware, when handling a message, you need to manually call .Return() on the message once you are done with it to return it to the memory pool.
+
+# WatsonTcp Original Readme Below
 
 [![NuGet Version](https://img.shields.io/nuget/v/WatsonTcp.svg?style=flat)](https://www.nuget.org/packages/WatsonTcp/) [![NuGet](https://img.shields.io/nuget/dt/WatsonTcp.svg)](https://www.nuget.org/packages/WatsonTcp) 
 
