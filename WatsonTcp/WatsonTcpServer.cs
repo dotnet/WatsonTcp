@@ -1568,6 +1568,8 @@ namespace WatsonTcp
                 {
                     client.WriteLock.Release();
                 }
+
+                msg.Return();
             }
         }
          
@@ -1603,6 +1605,7 @@ namespace WatsonTcp
             finally
             {
                 client.WriteLock.Release();
+                msg.Return();
             }
         }
          
@@ -1621,6 +1624,9 @@ namespace WatsonTcp
              
             client.WriteLock.Wait();
 
+            var guid = msg.ConversationGuid;
+            var msgExpiration = msg.Expiration.HasValue ? msg.Expiration.Value : (DateTime.Now + TimeSpan.FromMilliseconds(timeoutMs));
+
             try
             {
                 SendHeaders(client, msg);
@@ -1637,9 +1643,10 @@ namespace WatsonTcp
             finally
             {
                 client.WriteLock.Release();
+                msg.Return();
             }
-
-            SyncResponse<TMetadata> ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
+            
+            SyncResponse<TMetadata> ret = GetSyncResponse(guid, msgExpiration); 
             return ret;
         }
 

@@ -1251,6 +1251,8 @@ namespace WatsonTcp
                     Connected = false;
                     Dispose();
                 }
+
+                msg.Return();
             }
         }
 
@@ -1311,6 +1313,8 @@ namespace WatsonTcp
                     Connected = false;
                     Dispose();
                 }
+
+                msg.Return();
             }
         }
          
@@ -1333,7 +1337,10 @@ namespace WatsonTcp
                 disconnectDetected = true;
                 throw new InvalidOperationException("Client is not connected to the server.");
             }
-             
+
+            var guid = msg.ConversationGuid;
+            var msgExpiration = msg.Expiration.HasValue ? msg.Expiration.Value : (DateTime.Now + TimeSpan.FromMilliseconds(timeoutMs));
+
             try
             { 
                 _WriteLock.Wait();
@@ -1369,9 +1376,11 @@ namespace WatsonTcp
                     Connected = false;
                     Dispose(); 
                 }
+
+                msg.Return();
             }
 
-            var ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
+            var ret = GetSyncResponse(guid, msgExpiration); 
             return ret;
         }
 
