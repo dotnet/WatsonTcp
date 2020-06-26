@@ -937,16 +937,12 @@ namespace WatsonTcp
 
                 if (_SslStream != null)
                 {
-                    _SslStream.Close();
-                    _SslStream.Dispose();
-                    _SslStream = null;
+                    _SslStream.Close(); 
                 }
 
                 if (_TcpStream != null)
                 {
-                    _TcpStream.Close();
-                    _TcpStream.Dispose();
-                    _TcpStream = null;
+                    _TcpStream.Close(); 
                 }
 
                 if (_Client != null)

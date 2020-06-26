@@ -13,6 +13,7 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 ## New in v4.1.12
 
 - Fix for ClientMetadata.Dispose
+- Security fix for JSON serializer
 
 ## Test Applications
 
@@ -59,6 +60,7 @@ Special thanks to the following people for their support and contributions to th
 - @NormenSchwettmann
 - @karstennilsen
 - @motridox
+- @AdamFrisby
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
