@@ -1116,6 +1116,7 @@ namespace WatsonTcp
                             msgData = await WatsonCommon<TMetadata>.ReadMessageDataAsync(msg, _StreamBufferSize); 
                             var args = new MessageReceivedFromServerEventArgs<TMetadata>(msg.Metadata, msgData);
                             _MessageReceived?.Invoke(this, args);
+                            msg.Return();
                         }
                         else if (_StreamReceived != null && _StreamReceived.GetInvocationList().Length > 0)
                         {
@@ -1124,6 +1125,7 @@ namespace WatsonTcp
                             {
                                 sr = new StreamReceivedFromServerEventArgs<TMetadata>(msg.Metadata, msg.ContentLength, msg.DataStream);
                                 _StreamReceived?.Invoke(this, sr);
+                                msg.Return();
                             }
                             else if (msg.Compression == CompressionType.Deflate)
                             {
@@ -1134,6 +1136,7 @@ namespace WatsonTcp
                                     ms.Seek(0, SeekOrigin.Begin); 
                                     sr = new StreamReceivedFromServerEventArgs<TMetadata>(msg.Metadata, msg.ContentLength, ms);
                                     _StreamReceived?.Invoke(this, sr); 
+                                    msg.Return();
                                 }
                             }
                             else if (msg.Compression == CompressionType.Gzip)
@@ -1145,6 +1148,7 @@ namespace WatsonTcp
                                     ms.Seek(0, SeekOrigin.Begin); 
                                     sr = new StreamReceivedFromServerEventArgs<TMetadata>(msg.Metadata, msg.ContentLength, ms);
                                     _StreamReceived?.Invoke(this, sr);
+                                    msg.Return();
                                 }
                             }
                             else
