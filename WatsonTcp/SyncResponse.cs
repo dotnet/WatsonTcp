@@ -34,7 +34,7 @@ namespace WatsonTcp
             Metadata = default(TMetadata);
             if (String.IsNullOrEmpty(data))
             {
-                Data = new byte[0];
+                Data = WatsonCommon<TMetadata>.BlankByteArray;
             }
             else
             {
@@ -71,7 +71,7 @@ namespace WatsonTcp
 
             if (String.IsNullOrEmpty(data))
             {
-                Data = new byte[0];
+                Data = WatsonCommon<TMetadata>.BlankByteArray;
             }
             else
             {

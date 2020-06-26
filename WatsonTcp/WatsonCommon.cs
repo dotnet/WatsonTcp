@@ -98,7 +98,7 @@ namespace WatsonTcp
         internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage<TMetadata> msg, int bufferLen)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
-            if (msg.ContentLength == 0) return new byte[0];
+            if (msg.ContentLength == 0) return BlankByteArray;
 
             byte[] msgData = null;
 
@@ -146,7 +146,7 @@ namespace WatsonTcp
         internal static void BytesToStream(byte[] data, out long contentLength, out Stream stream)
         {
             contentLength = 0;
-            stream = new MemoryStream(new byte[0]);
+            stream = new MemoryStream(WatsonCommon<TMetadata>.BlankByteArray);
 
             if (data != null && data.Length > 0)
             {
@@ -178,5 +178,7 @@ namespace WatsonTcp
 
             return expiration;
         }
+
+        internal static readonly byte[] BlankByteArray = new byte[0];
     }
 }
