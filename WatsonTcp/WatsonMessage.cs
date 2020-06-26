@@ -113,7 +113,6 @@ namespace WatsonTcp
         /// <summary>
         /// Stream containing the message data.
         /// </summary>
-        [ProtoMember(11)]
         public Stream DataStream
         {
             get
