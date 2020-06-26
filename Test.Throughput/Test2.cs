@@ -45,7 +45,7 @@ namespace TestThroughput
 
         internal void RunTest()
         {  
-            using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 10000))
+            using (var server = new WatsonTcpServer<BlankMetadata>("127.0.0.1", 10000))
             {
                 server.MessageReceived += Test2ServerMsgRcv;
                 server.Start();
@@ -117,7 +117,7 @@ namespace TestThroughput
                 long msgsSent = 0;
                 long bytesSent = 0;
 
-                using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
+                using (var client = new WatsonTcpClient<BlankMetadata>("127.0.0.1", 10000))
                 {
                     client.MessageReceived += Test2ClientMsgRcv;
                     client.Start();
@@ -148,7 +148,7 @@ namespace TestThroughput
             }
         }
          
-        private void Test2ServerMsgRcv(object sender, MessageReceivedFromClientEventArgs args) 
+        private void Test2ServerMsgRcv(object sender, MessageReceivedFromClientEventArgs<BlankMetadata> args) 
         {
             try
             {
@@ -161,7 +161,7 @@ namespace TestThroughput
             }
         }
 
-        private void Test2ClientMsgRcv(object sender, MessageReceivedFromServerEventArgs args)
+        private void Test2ClientMsgRcv(object sender, MessageReceivedFromServerEventArgs<BlankMetadata> args)
         {
 
         }

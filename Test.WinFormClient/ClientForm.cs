@@ -13,7 +13,7 @@ namespace Test.WinFormClient
 {
     public partial class ClientForm : Form
     {
-        private WatsonTcpClient _Client = null;
+        private WatsonTcpClient<BlankMetadata> _Client = null;
 
         delegate void _LogDelegate(string msg);
         
@@ -22,7 +22,7 @@ namespace Test.WinFormClient
             InitializeComponent();
             label1.Text = "";
             
-            _Client = new WatsonTcpClient("127.0.0.1", 9000);
+            _Client = new WatsonTcpClient<BlankMetadata>("127.0.0.1", 9000);
             _Client.ServerConnected += OnServerConnected;
             _Client.ServerDisconnected += OnServerDisconnected;
             _Client.AuthenticationFailure += OnAuthenticationFailure;
@@ -71,7 +71,7 @@ namespace Test.WinFormClient
             _Client.Dispose();
         }
 
-        private void MessageReceived(object sender, MessageReceivedFromServerEventArgs e)
+        private void MessageReceived(object sender, MessageReceivedFromServerEventArgs<BlankMetadata> e)
         {
             Logger("Message received: " + Encoding.UTF8.GetString(e.Data));
         }

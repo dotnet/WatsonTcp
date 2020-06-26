@@ -13,7 +13,7 @@ namespace TestParallel
         private static int numIterations = 10000;
         private static Random rng;
         private static byte[] data;
-        private static WatsonTcpServer server;
+        private static WatsonTcpServer<BlankMetadata> server;
 
         private static void Main(string[] args)
         {
@@ -22,7 +22,7 @@ namespace TestParallel
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");
 
-            server = new WatsonTcpServer(null, serverPort);
+            server = new WatsonTcpServer<BlankMetadata>(null, serverPort);
             server.ClientConnected += ServerClientConnected;
             server.ClientDisconnected += ServerClientDisconnected;
             server.MessageReceived += ServerMsgReceived;
@@ -153,7 +153,7 @@ namespace TestParallel
 
         private static void ClientTask()
         {
-            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
+            using (var client = new WatsonTcpClient<BlankMetadata>("localhost", serverPort))
             {
                 client.ServerConnected += ClientServerConnected;
                 client.ServerDisconnected += ClientServerDisconnected;
@@ -180,7 +180,7 @@ namespace TestParallel
             Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs<BlankMetadata> args) 
         {
             Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
@@ -193,7 +193,7 @@ namespace TestParallel
         {
         }
          
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
+        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs<BlankMetadata> args) 
         {
             Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }

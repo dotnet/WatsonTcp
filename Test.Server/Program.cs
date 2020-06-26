@@ -12,7 +12,7 @@ namespace TestServer
         private static string serverIp = "";
         private static int serverPort = 0;
         private static bool useSsl = false;
-        private static WatsonTcpServer server = null;
+        private static WatsonTcpServer<BlankMetadata> server = null;
         private static string certFile = "";
         private static string certPass = "";
         private static bool debugMessages = true;
@@ -30,7 +30,7 @@ namespace TestServer
             {
                 if (!useSsl)
                 {
-                    server = new WatsonTcpServer(serverIp, serverPort);
+                    server = new WatsonTcpServer<BlankMetadata>(serverIp, serverPort);
                 }
                 else
                 {
@@ -39,7 +39,7 @@ namespace TestServer
                     acceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
                     mutualAuthentication = InputBoolean("Mutually authenticate:", false);
 
-                    server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
+                    server = new WatsonTcpServer<BlankMetadata>(serverIp, serverPort, certFile, certPass);
                     server.AcceptInvalidCertificates = acceptInvalidCerts;
                     server.MutuallyAuthenticate = mutualAuthentication;
                 }
@@ -65,7 +65,7 @@ namespace TestServer
             bool runForever = true;
             List<string> clients;
             string ipPort;
-            Dictionary<object, object> metadata;
+            BlankMetadata metadata;
             bool success = false;
 
             while (runForever)
@@ -140,8 +140,8 @@ namespace TestServer
 
                     case "send md large":
                         ipPort = InputString("IP:port:", lastIpPort, false);
-                        metadata = new Dictionary<object, object>();
-                        for (int i = 0; i < 100000; i++) metadata.Add(i, i);
+                        metadata = new BlankMetadata();
+                        
                         if (!server.Send(ipPort, metadata, "Hello!")) Console.WriteLine("Failed");
                         break;
 
@@ -317,22 +317,11 @@ namespace TestServer
             }
         }
 
-        private static Dictionary<object, object> InputDictionary()
+        private static BlankMetadata InputDictionary()
         {
             Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
-
-            Dictionary<object, object> ret = new Dictionary<object, object>();
-
-            while (true)
-            {
-                Console.Write("Key   : ");
-                string key = Console.ReadLine();
-                if (String.IsNullOrEmpty(key)) return ret;
-
-                Console.Write("Value : ");
-                string val = Console.ReadLine();
-                ret.Add(key, val);
-            }
+            return new BlankMetadata();
+            // TODO: Reimplement me
         }
          
         private static void ClientConnected(object sender, ClientConnectedEventArgs args)
@@ -348,46 +337,28 @@ namespace TestServer
             Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs<BlankMetadata> args)
         {
             lastIpPort = args.IpPort;
             Console.Write("Message received from " + args.IpPort + ": ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
-            if (args.Metadata != null && args.Metadata.Count > 0)
-            {
-                Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in args.Metadata)
-                {
-                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                }
-            }
         }
          
-        private static SyncResponse SyncRequestReceived(SyncRequest req)
+        private static SyncResponse<BlankMetadata> SyncRequestReceived(SyncRequest<BlankMetadata> req)
         {
             Console.Write("Synchronous request received from " + req.IpPort + ": ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
             else Console.WriteLine("[null]");
 
-            if (req.Metadata != null && req.Metadata.Count > 0)
-            {
-                Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in req.Metadata)
-                {
-                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                }
-            }
 
-            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
-            retMetadata.Add("foo", "bar");
-            retMetadata.Add("bar", "baz");
+            var retMetadata = new BlankMetadata();
 
             // Uncomment to test timeout
             // Task.Delay(10000).Wait();
             Console.WriteLine("Sending synchronous response");
-            return new SyncResponse(req, retMetadata, "Here is your response!");
+            return new SyncResponse<BlankMetadata>(req, retMetadata, "Here is your response!");
         }
 
         private static void SendAndWait()
@@ -398,16 +369,8 @@ namespace TestServer
 
             try
             {
-                SyncResponse resp = server.SendAndWait(ipPort, timeoutMs, userInput);
-                if (resp.Metadata != null && resp.Metadata.Count > 0)
-                {
-                    Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
-                    {
-                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                    }
-                }
-
+                SyncResponse<BlankMetadata> resp = server.SendAndWait(ipPort, timeoutMs, userInput);
+                
                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
             }
             catch (Exception e)
@@ -421,21 +384,12 @@ namespace TestServer
             string ipPort = InputString("IP:port:", lastIpPort, false); 
             int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
 
-            Dictionary<object, object> dict = new Dictionary<object, object>();
-            dict.Add("foo", "bar");
+            var dict = new BlankMetadata();
 
             try
             {
-                SyncResponse resp = server.SendAndWait(ipPort, dict, timeoutMs);
-                if (resp.Metadata != null && resp.Metadata.Count > 0)
-                {
-                    Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
-                    {
-                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                    }
-                }
-
+                var resp = server.SendAndWait(ipPort, dict, timeoutMs);
+                
                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
             }
             catch (Exception e)

@@ -1,14 +1,10 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Converters;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 
 namespace WatsonTcp
 {
     /// <summary>
     /// Message status.
     /// </summary>
-    [JsonConverter(typeof(StringEnumConverter))]
     public enum MessageStatus
     {
         /// <summary>

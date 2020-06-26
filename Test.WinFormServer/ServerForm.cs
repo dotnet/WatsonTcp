@@ -14,7 +14,7 @@ namespace Test.WinFormServer
     public partial class ServerForm : Form
     {
         private string _ClientIpPort = null;
-        private WatsonTcpServer _Server = null;
+        private WatsonTcpServer<BlankMetadata> _Server = null;
         delegate void _LogDelegate(string msg);
         
         public ServerForm()
@@ -23,7 +23,7 @@ namespace Test.WinFormServer
 
             label1.Text = "";
 
-            _Server = new WatsonTcpServer("127.0.0.1", 9000);
+            _Server = new WatsonTcpServer<BlankMetadata>("127.0.0.1", 9000);
             // _Server.MaxConnections = 1;
             _Server.MessageReceived += OnMessageReceived;
             _Server.ClientConnected += OnClientConnected;
@@ -46,7 +46,7 @@ namespace Test.WinFormServer
             _ClientIpPort = e.IpPort;
         }
 
-        private void OnMessageReceived(object sender, MessageReceivedFromClientEventArgs e)
+        private void OnMessageReceived(object sender, MessageReceivedFromClientEventArgs<BlankMetadata> e)
         {
             Logger("Client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }

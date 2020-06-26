@@ -14,8 +14,8 @@ namespace TestMultiThread
         private static Random rng;
         private static byte[] data;
 
-        private static WatsonTcpServer server;
-        private static WatsonTcpClient c;
+        private static WatsonTcpServer<BlankMetadata> server;
+        private static WatsonTcpClient<BlankMetadata> c;
 
         private static void Main(string[] args)
         {
@@ -24,7 +24,7 @@ namespace TestMultiThread
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");
 
-            server = new WatsonTcpServer(null, serverPort);
+            server = new WatsonTcpServer<BlankMetadata>(null, serverPort);
             server.ClientConnected += ServerClientConnected;
             server.ClientDisconnected += ServerClientDisconnected;
             server.MessageReceived += ServerMsgReceived;
@@ -32,7 +32,7 @@ namespace TestMultiThread
 
             Thread.Sleep(3000);
 
-            c = new WatsonTcpClient("localhost", serverPort);
+            c = new WatsonTcpClient<BlankMetadata>("localhost", serverPort);
             c.ServerConnected += ClientServerConnected;
             c.ServerDisconnected += ClientServerDisconnected;
             c.MessageReceived += ClientMsgReceived;
@@ -180,7 +180,7 @@ namespace TestMultiThread
             Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs<BlankMetadata> args)
         {
             Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
@@ -193,7 +193,7 @@ namespace TestMultiThread
         {
         }
          
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
+        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs<BlankMetadata> args) 
         {
             Console.WriteLine("[client] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }

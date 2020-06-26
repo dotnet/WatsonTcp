@@ -1,14 +1,10 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Converters;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 
 namespace WatsonTcp
 {
     /// <summary>
     /// Mode.
     /// </summary>
-    [JsonConverter(typeof(StringEnumConverter))]
     internal enum Mode
     {
         /// <summary>

@@ -16,7 +16,7 @@ namespace TestClientStream
         private static string certPass = "";
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
-        private static WatsonTcpClient client = null;
+        private static WatsonTcpClient<BlankMetadata> client = null;
         private static string presharedKey = null;
 
         private static void Main(string[] args)
@@ -28,7 +28,7 @@ namespace TestClientStream
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<object, object> metadata;
+            BlankMetadata metadata;
             bool success;
 
             while (runForever)
@@ -136,7 +136,7 @@ namespace TestClientStream
                         }
                         else
                         {
-                            client = new WatsonTcpClient(serverIp, serverPort);
+                            client = new WatsonTcpClient<BlankMetadata>(serverIp, serverPort);
                             client.ServerConnected += ServerConnected;
                             client.ServerDisconnected += ServerDisconnected;
                             client.StreamReceived += StreamReceived;
@@ -146,7 +146,7 @@ namespace TestClientStream
 
                     case "reconnect":
                         if (client != null) client.Dispose();
-                        client = new WatsonTcpClient(serverIp, serverPort);
+                        client = new WatsonTcpClient<BlankMetadata>(serverIp, serverPort);
                         client.ServerConnected += ServerConnected;
                         client.ServerDisconnected += ServerDisconnected;
                         client.StreamReceived += StreamReceived;
@@ -176,7 +176,7 @@ namespace TestClientStream
         {
             if (!useSsl)
             {
-                client = new WatsonTcpClient(serverIp, serverPort);
+                client = new WatsonTcpClient<BlankMetadata>(serverIp, serverPort);
             }
             else
             {
@@ -185,7 +185,7 @@ namespace TestClientStream
                 acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
                 mutualAuthentication = InputBoolean("Mutually authenticate:", true);
 
-                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client = new WatsonTcpClient<BlankMetadata>(serverIp, serverPort, certFile, certPass);
                 client.AcceptInvalidCertificates = acceptInvalidCerts;
                 client.MutuallyAuthenticate = mutualAuthentication;
             }
@@ -312,22 +312,12 @@ namespace TestClientStream
             }
         }
 
-        private static Dictionary<object, object> InputDictionary()
+        private static BlankMetadata InputDictionary()
         {
             Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
 
-            Dictionary<object, object> ret = new Dictionary<object, object>();
-
-            while (true)
-            {
-                Console.Write("Key   : ");
-                string key = Console.ReadLine();
-                if (String.IsNullOrEmpty(key)) return ret;
-
-                Console.Write("Value : ");
-                string val = Console.ReadLine();
-                ret.Add(key, val);
-            }
+            return new BlankMetadata();
+            // TODO: Reimplement me
         }
 
         private static void LogException(string method, Exception e)
@@ -344,7 +334,7 @@ namespace TestClientStream
             Console.WriteLine("");
         }
          
-        private static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args) 
+        private static void StreamReceived(object sender, StreamReceivedFromServerEventArgs<BlankMetadata> args) 
         {
             try
             {
@@ -378,15 +368,6 @@ namespace TestClientStream
                 {
                     Console.WriteLine("[null]");
                 }
-                  
-                if (args.Metadata != null && args.Metadata.Count > 0)
-                {
-                    Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in args.Metadata)
-                    {
-                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                    }
-                } 
             }
             catch (Exception e)
             {

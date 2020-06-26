@@ -10,7 +10,7 @@ namespace TestMultiClient
     internal class Program
     {
         private static int serverPort = 9000;
-        private static WatsonTcpServer server = null;
+        private static WatsonTcpServer<BlankMetadata> server = null;
         private static int clientThreads = 16;
         private static int numIterations = 1000;
         private static int connectionCount = 0;
@@ -27,7 +27,7 @@ namespace TestMultiClient
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
 
             Console.WriteLine("Starting server");
-            server = new WatsonTcpServer(null, serverPort);
+            server = new WatsonTcpServer<BlankMetadata>(null, serverPort);
             server.ClientConnected += ServerClientConnected;
             server.ClientDisconnected += ServerClientDisconnected;
             server.MessageReceived += ServerMsgReceived;
@@ -160,7 +160,7 @@ namespace TestMultiClient
         private static void ClientTask()
         {
             Console.WriteLine("ClientTask entering");
-            using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
+            using (var client = new WatsonTcpClient<BlankMetadata>("localhost", serverPort))
             {
                 client.ServerConnected += ClientServerConnected;
                 client.ServerDisconnected += ClientServerDisconnected;
@@ -201,7 +201,7 @@ namespace TestMultiClient
             Console.WriteLine("[server] disconnection from " + args.IpPort + " [now " + connectionCount + "]: " + args.Reason.ToString());
         }
          
-        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs<BlankMetadata> args) 
         {
         }
          
@@ -213,7 +213,7 @@ namespace TestMultiClient
         {
         }
          
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
+        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs<BlankMetadata> args) 
         {
         }
 

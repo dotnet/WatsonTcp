@@ -16,7 +16,7 @@ namespace TestClient
         private static bool debugMessages = true;
         private static bool acceptInvalidCerts = true;
         private static bool mutualAuthentication = true;
-        private static WatsonTcpClient client = null;
+        private static WatsonTcpClient<BlankMetadata> client = null;
         private static string presharedKey = null;
 
         private static void Main(string[] args)
@@ -24,7 +24,7 @@ namespace TestClient
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<object, object> metadata; 
+            BlankMetadata metadata; 
             bool success;
 
             while (runForever)
@@ -77,8 +77,8 @@ namespace TestClient
                         break;
 
                     case "send md large":
-                        metadata = new Dictionary<object, object>();
-                        for (int i = 0; i < 100000; i++) metadata.Add(i, i);
+                        metadata = new BlankMetadata();
+                        //for (int i = 0; i < 100000; i++) metadata.Add(i, i);
                         if (!client.Send(metadata, "Hello!")) Console.WriteLine("Failed");
                         break;
 
@@ -132,7 +132,7 @@ namespace TestClient
                         }
                         else
                         {
-                            client = new WatsonTcpClient(serverIp, serverPort);
+                            client = new WatsonTcpClient<BlankMetadata>(serverIp, serverPort);
                             client.ServerConnected += ServerConnected;
                             client.ServerDisconnected += ServerDisconnected;
                             client.MessageReceived += MessageReceived;
@@ -204,11 +204,11 @@ namespace TestClient
 
             if (!useSsl)
             {
-                client = new WatsonTcpClient(serverIp, serverPort);
+                client = new WatsonTcpClient<BlankMetadata>(serverIp, serverPort);
             }
             else
             {
-                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
+                client = new WatsonTcpClient<BlankMetadata>(serverIp, serverPort, certFile, certPass);
                 client.AcceptInvalidCertificates = acceptInvalidCerts;
                 client.MutuallyAuthenticate = mutualAuthentication;
             }
@@ -337,22 +337,11 @@ namespace TestClient
             }
         }
 
-        private static Dictionary<object, object> InputDictionary()
+        private static BlankMetadata InputDictionary()
         {
             Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
-
-            Dictionary<object, object> ret = new Dictionary<object, object>();
-
-            while (true)
-            {
-                Console.Write("Key   : ");
-                string key = Console.ReadLine();
-                if (String.IsNullOrEmpty(key)) return ret;
-
-                Console.Write("Value : ");
-                string val = Console.ReadLine();
-                ret.Add(key, val);
-            }
+            // TODO: Rebuild
+            return new BlankMetadata();
         }
 
         private static string AuthenticationRequested()
@@ -376,44 +365,25 @@ namespace TestClient
             Console.WriteLine("Authentication failed");
         }
          
-        private static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
+        private static void MessageReceived(object sender, MessageReceivedFromServerEventArgs<BlankMetadata> args)
         {
             Console.Write("Message from server: ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
-            if (args.Metadata != null && args.Metadata.Count > 0)
-            {
-                Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in args.Metadata)
-                {
-                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                }
-            } 
         }
 
-        private static SyncResponse SyncRequestReceived(SyncRequest req)
+        private static SyncResponse<BlankMetadata> SyncRequestReceived(SyncRequest<BlankMetadata> req)
         {
             Console.Write("Message received from " + req.IpPort + ": ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
             else Console.WriteLine("[null]");
 
-            if (req.Metadata != null && req.Metadata.Count > 0)
-            {
-                Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in req.Metadata)
-                {
-                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                }
-            }
-
-            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
-            retMetadata.Add("foo", "bar");
-            retMetadata.Add("bar", "baz");
+            var retMetadata = new BlankMetadata();
 
             // Uncomment to test timeout
             // Task.Delay(10000).Wait();
-            return new SyncResponse(req, retMetadata, "Here is your response!");
+            return new SyncResponse<BlankMetadata>(req, retMetadata, "Here is your response!");
         }
 
         private static void ServerConnected(object sender, EventArgs args) 
@@ -433,16 +403,8 @@ namespace TestClient
 
             try
             {
-                SyncResponse resp = client.SendAndWait(timeoutMs, userInput);
-                if (resp.Metadata != null && resp.Metadata.Count > 0)
-                {
-                    Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
-                    {
-                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                    }
-                }
-
+                var resp = client.SendAndWait(timeoutMs, userInput);
+                
                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
             }
             catch (Exception e)
@@ -454,22 +416,11 @@ namespace TestClient
         private static void SendAndWaitEmpty()
         { 
             int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
-
-            Dictionary<object, object> dict = new Dictionary<object, object>();
-            dict.Add("foo", "bar");
-
+            
             try
             {
-                SyncResponse resp = client.SendAndWait(dict, timeoutMs);
-                if (resp.Metadata != null && resp.Metadata.Count > 0)
-                {
-                    Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
-                    {
-                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                    }
-                }
-
+                var resp = client.SendAndWait(new BlankMetadata(), timeoutMs);
+                
                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
             }
             catch (Exception e)

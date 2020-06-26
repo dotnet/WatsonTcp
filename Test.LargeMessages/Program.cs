@@ -11,12 +11,12 @@ namespace TestLargeMessages
 {
     class Program
     {
-        static WatsonTcpServer server = null;
-        static WatsonTcpClient client = null;
+        static WatsonTcpServer<BlankMetadata> server = null;
+        static WatsonTcpClient<BlankMetadata> client = null;
 
         static void Main(string[] args)
         {
-            server = new WatsonTcpServer("127.0.0.1", 9000);
+            server = new WatsonTcpServer<BlankMetadata>("127.0.0.1", 9000);
             server.ClientConnected += ServerClientConnected;
             server.ClientDisconnected += ServerClientDisconnected;
             server.MessageReceived += ServerMessageReceived;
@@ -24,7 +24,7 @@ namespace TestLargeMessages
             // server.Debug = true;
             server.Start();
 
-            client = new WatsonTcpClient("127.0.0.1", 9000);
+            client = new WatsonTcpClient<BlankMetadata>("127.0.0.1", 9000);
             client.ServerConnected += ServerConnected;
             client.ServerDisconnected += ServerDisconnected;
             client.MessageReceived += MessageReceived;
@@ -86,12 +86,12 @@ namespace TestLargeMessages
             Console.WriteLine("Server detected disconnection from client: " + args.IpPort + " [" + args.Reason.ToString() + "]");
         }
          
-        static void ServerMessageReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        static void ServerMessageReceived(object sender, MessageReceivedFromClientEventArgs<BlankMetadata> args) 
         {
             Console.WriteLine("Server received " + args.Data.Length + " bytes from " + args.IpPort + ": MD5 " + Md5(args.Data));
         }
          
-        static void ServerStreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+        static void ServerStreamReceived(object sender, StreamReceivedFromClientEventArgs<BlankMetadata> args)
         {
             Console.Write("Server received " + args.ContentLength + " bytes from " + args.IpPort + ": MD5 " + Md5(args.DataStream)); 
         }
@@ -110,12 +110,12 @@ namespace TestLargeMessages
             Console.WriteLine("Client detected disconnection from server");
         }
          
-        static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args) 
+        static void MessageReceived(object sender, MessageReceivedFromServerEventArgs<BlankMetadata> args) 
         {
             Console.WriteLine("Client received " + args.Data.Length + " bytes from server: MD5 " + Md5(args.Data));
         }
          
-        static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args) 
+        static void StreamReceived(object sender, StreamReceivedFromServerEventArgs<BlankMetadata> args) 
         {
             Console.Write("Client received " + args.ContentLength + " bytes from server: MD5 " + Md5(args.DataStream));
         }

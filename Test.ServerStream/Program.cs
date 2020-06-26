@@ -13,7 +13,7 @@ namespace TestServerStream
         private static string serverIp = "";
         private static int serverPort = 0;
         private static bool useSsl = false;
-        private static WatsonTcpServer server = null;
+        private static WatsonTcpServer<BlankMetadata> server = null;
         private static string certFile = "";
         private static string certPass = "";
         private static bool acceptInvalidCerts = true;
@@ -27,7 +27,7 @@ namespace TestServerStream
 
             if (!useSsl)
             {
-                server = new WatsonTcpServer(serverIp, serverPort);
+                server = new WatsonTcpServer<BlankMetadata>(serverIp, serverPort);
             }
             else
             {
@@ -36,7 +36,7 @@ namespace TestServerStream
                 acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
                 mutualAuthentication = InputBoolean("Mutually authenticate:", true);
 
-                server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
+                server = new WatsonTcpServer<BlankMetadata>(serverIp, serverPort, certFile, certPass);
                 server.AcceptInvalidCertificates = acceptInvalidCerts;
                 server.MutuallyAuthenticate = mutualAuthentication;
             }
@@ -56,7 +56,7 @@ namespace TestServerStream
 
                 byte[] data = null;
                 MemoryStream ms = null;
-                Dictionary<object, object> metadata;
+                BlankMetadata metadata;
                 bool success = false;
 
                 List<string> clients;
@@ -291,22 +291,10 @@ namespace TestServerStream
             }
         }
 
-        private static Dictionary<object, object> InputDictionary()
+        private static BlankMetadata InputDictionary()
         {
-            Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
-
-            Dictionary<object, object> ret = new Dictionary<object, object>();
-
-            while (true)
-            {
-                Console.Write("Key   : ");
-                string key = Console.ReadLine();
-                if (String.IsNullOrEmpty(key)) return ret;
-
-                Console.Write("Value : ");
-                string val = Console.ReadLine();
-                ret.Add(key, val);
-            }
+            return new BlankMetadata();
+            // TODO: Reimplement this example.
         }
 
         private static void LogException(string method, Exception e)
@@ -333,7 +321,7 @@ namespace TestServerStream
             Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void StreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+        private static void StreamReceived(object sender, StreamReceivedFromClientEventArgs<BlankMetadata> args)
         {
             try
             {
@@ -359,17 +347,6 @@ namespace TestServerStream
                         }
 
                         bytesRemaining -= bytesRead;
-                    }
-
-                    Console.WriteLine("");
-
-                    if (args.Metadata != null && args.Metadata.Count > 0)
-                    {
-                        Console.WriteLine("Metadata:");
-                        foreach (KeyValuePair<object, object> curr in args.Metadata)
-                        {
-                            Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
-                        }
                     }
                 }
                 else
