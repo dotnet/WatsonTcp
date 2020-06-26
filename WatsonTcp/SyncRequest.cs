@@ -7,7 +7,7 @@ namespace WatsonTcp
     /// <summary>
     /// Request that demands a response within a specific timeout.
     /// </summary>
-    public class SyncRequest
+    public class SyncRequest<TMetadata>
     {
         /// <summary>
         /// IP:port from which the request was received.
@@ -22,7 +22,7 @@ namespace WatsonTcp
         /// <summary>
         /// Metadata attached to the request.
         /// </summary>
-        public Dictionary<object, object> Metadata { get; }
+        public TMetadata Metadata { get; }
 
         /// <summary>
         /// Request data.
@@ -31,7 +31,7 @@ namespace WatsonTcp
 
         internal string ConversationGuid { get; }
 
-        internal SyncRequest(string ipPort, string convGuid, DateTime expirationUtc, Dictionary<object, object> metadata, byte[] data)
+        internal SyncRequest(string ipPort, string convGuid, DateTime expirationUtc, TMetadata metadata, byte[] data)
         {
             IpPort = ipPort;
             ConversationGuid = convGuid;

@@ -10,22 +10,26 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Microsoft.Extensions.ObjectPool;
+using ProtoBuf;
 
 namespace WatsonTcp
 {
-    internal class WatsonMessage
+    [ProtoContract]
+    internal class WatsonMessage<TMetadata>
     {
         #region Public-Members
 
         /// <summary>
         /// Length of the data.
         /// </summary>
+        [ProtoMember(1)]
         public long ContentLength { get; set; }
-         
+
         /// <summary>
         /// Preshared key for connection authentication.
         /// </summary>
+        [ProtoMember(2)]
         public byte[] PresharedKey
         {
             get
@@ -51,12 +55,14 @@ namespace WatsonTcp
         /// <summary>
         /// Status of the message.   
         /// </summary>
+        [ProtoMember(3)]
         public MessageStatus Status = MessageStatus.Normal;
-          
+
         /// <summary>
         /// Metadata dictionary; contains user-supplied metadata.
         /// </summary>
-        public Dictionary<object, object> Metadata
+        [ProtoMember(4)]
+        public TMetadata Metadata
         {
             get
             {
@@ -64,51 +70,50 @@ namespace WatsonTcp
             }
             set
             {
-                if (value == null || value.Count < 1)
-                {
-                    _Metadata = new Dictionary<object, object>(); 
-                }
-                else
-                {
-                    _Metadata = value; 
-                }
+                _Metadata = value;
             }
         }
 
         /// <summary>
         /// Indicates if the message is a synchronous request.
         /// </summary>
+        [ProtoMember(5)]
         public bool SyncRequest = false;
 
         /// <summary>
         /// Indicates if the message is a synchronous response.
         /// </summary>
+        [ProtoMember(6)]
         public bool SyncResponse = false;
 
         /// <summary>
         /// Indicates the current time as perceived by the sender; useful for determining expiration windows.
         /// </summary>
+        [ProtoMember(7)]
         public DateTime? SenderTimestamp = null;
 
         /// <summary>
         /// Indicates an expiration time in UTC; only applicable to synchronous requests.
         /// </summary>
+        [ProtoMember(8)]
         public DateTime? Expiration = null;
 
         /// <summary>
         /// Indicates the conversation GUID of the message. 
         /// </summary>
+        [ProtoMember(9)]
         public string ConversationGuid = null;
 
         /// <summary>
         /// The type of compression used in the message.
         /// </summary>
+        [ProtoMember(10)]
         public CompressionType Compression = CompressionType.None;
-         
+
         /// <summary>
         /// Stream containing the message data.
         /// </summary>
-        [JsonIgnore]
+        [ProtoMember(11)]
         public Stream DataStream
         {
             get
@@ -118,18 +123,35 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Message headers in byte-array form ready to send.
+        /// Transmits the header to the destination stream
         /// </summary>
-        [JsonIgnore]
-        public byte[] HeaderBytes
+        /// <param name="target"></param>
+        internal void SendHeader(Stream target)
         {
-            get
+            Serializer.Serialize<WatsonMessage<TMetadata>>(target, this);
+        }
+
+        private static readonly ObjectPool<MemoryStream> MemoryStreamsPool =
+            new DefaultObjectPool<MemoryStream>(new DefaultPooledObjectPolicy<MemoryStream>());
+
+        /// <summary>
+        /// Transmits the header to the destination stream asynchronously
+        /// </summary>
+        /// <param name="target"></param>
+        internal Task SendHeaderAsync(Stream target)
+        {
+            var ms = MemoryStreamsPool.Get();
+            ms.SetLength(0);
+            Serializer.Serialize<WatsonMessage<TMetadata>>(ms, this);
+            return ms.CopyToAsync(target)
+                .ContinueWith(ReturnMemoryStream, ms);
+        }
+
+        private static void ReturnMemoryStream(Task job, object ms)
+        {
+            if (ms is MemoryStream stream)
             {
-                string jsonStr = SerializationHelper.SerializeJson(this, false);
-                byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonStr);
-                byte[] end = WatsonCommon.AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
-                byte[] final = WatsonCommon.AppendBytes(jsonBytes, end);
-                return final;
+                MemoryStreamsPool.Return(stream);
             }
         }
 
@@ -158,14 +180,13 @@ namespace WatsonTcp
         #region Private-Members
 
         private Action<string> _Logger = null;
-        private string _Header = "[WatsonMessage] ";
-        //                                         1         2         3
-        //                                12345678901234567890123456789012
+
+        private string _Header = "[WatsonMessage<" + typeof(TMetadata).Name + ">] ";
         private string _DateTimeFormat = "yyyy-MM-dd HH:mm:ss.fffzzz"; // 32 bytes
 
         private int _ReadStreamBuffer = 65536; 
-        private byte[] _PresharedKey; 
-        private Dictionary<object, object> _Metadata = new Dictionary<object, object>(); 
+        private byte[] _PresharedKey;
+        private TMetadata _Metadata = default(TMetadata);
         private Stream _DataStream = null;
 
         #endregion
@@ -175,9 +196,51 @@ namespace WatsonTcp
         /// <summary>
         /// Do not use.
         /// </summary>
-        internal WatsonMessage()
+        [Obsolete("Do not use, instead use WatsonMessage<TMetadata>.Borrow();")]
+        public WatsonMessage()
         { 
             Status = MessageStatus.Normal;
+            Register();
+        }
+
+        #region ProtoBuf Type Registration
+        // ReSharper disable once StaticMemberInGenericType
+        private static bool _haveRegisteredType = false;
+        private void Register()
+        {
+            if (!_haveRegisteredType)
+            {
+                ProtoBuf.Meta.RuntimeTypeModel.Default.Add(typeof(WatsonMessage<TMetadata>), true).AddSubType(100, typeof(TMetadata));
+                _haveRegisteredType = true;
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// If enabled, will use a ObjectPool to manage instances. You will need to call .Return() when done to return items to the pool.
+        /// </summary>
+        // ReSharper disable once StaticMemberInGenericType
+        public static bool UsePooling = false;
+
+        private static readonly ObjectPool<WatsonMessage<TMetadata>> Pool = new DefaultObjectPool<WatsonMessage<TMetadata>>(new DefaultPooledObjectPolicy<WatsonMessage<TMetadata>>());
+
+        public void Return()
+        {
+            if (UsePooling)
+                Pool.Return(this);
+        }
+
+        /// <summary>
+        /// Do not use.
+        /// </summary>
+        internal static WatsonMessage<TMetadata> Borrow()
+        {
+            if (UsePooling)
+                return Pool.Get();
+            
+#pragma warning disable 618
+            return new WatsonMessage<TMetadata>();
+#pragma warning restore 618
         }
          
         /// <summary>
@@ -192,8 +255,8 @@ namespace WatsonTcp
         /// <param name="compression">The type of compression to use.</param>
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(
-            Dictionary<object, object> metadata, 
+        internal void Set(
+            TMetadata metadata, 
             long contentLength, 
             Stream stream, 
             bool syncRequest, 
@@ -220,28 +283,19 @@ namespace WatsonTcp
             Expiration = expiration;
             ConversationGuid = convGuid;
             Compression = compression;
-            if (SyncRequest) SenderTimestamp = DateTime.Now;
+
+            if (SyncRequest)
+                SenderTimestamp = DateTime.Now;
 
             _DataStream = stream;
             _Logger = logger; 
         }
 
-        /// <summary>
-        /// Read from a stream and construct a message.  Call Build() to populate.
-        /// </summary>
-        /// <param name="stream">Stream.</param>
-        /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(Stream stream, Action<string> logger)
+        internal void Reset()
         {
-            if (stream == null) throw new ArgumentNullException(nameof(stream));
-            if (!stream.CanRead) throw new ArgumentException("Cannot read from stream.");
-             
-            Status = MessageStatus.Normal; 
-            
-            _DataStream = stream;
-            _Logger = logger; 
+            Set(default(TMetadata), 0, null, false, false, null, null, CompressionType.None, null);
         }
-         
+        
         #endregion
         
         #region Internal-Methods
@@ -255,29 +309,10 @@ namespace WatsonTcp
             try
             {
                 #region Read-Headers
+                
+                WatsonMessage<TMetadata> msg =
+                    Serializer.DeserializeWithLengthPrefix<WatsonMessage<TMetadata>>(_DataStream,  PrefixStyle.Fixed32);
 
-                byte[] buffer = new byte[0];
-                byte[] end = WatsonCommon.AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
-
-                while (true)
-                {
-                    byte[] data = await WatsonCommon.ReadFromStreamAsync(_DataStream, 1, _ReadStreamBuffer);
-                    if (data != null && data.Length == 1)
-                    {
-                        buffer = WatsonCommon.AppendBytes(buffer, data);
-                        if (buffer.Length >= 4)
-                        {
-                            byte[] endCheck = buffer.Skip(buffer.Length - 4).Take(4).ToArray();
-                            if (endCheck.SequenceEqual(end))
-                            {
-                                _Logger?.Invoke(_Header + "ReadHeaders found header demarcation");
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                WatsonMessage msg = SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(buffer));
                 ContentLength = msg.ContentLength;
                 PresharedKey = msg.PresharedKey;
                 Status = msg.Status;
@@ -289,7 +324,7 @@ namespace WatsonTcp
                 ConversationGuid = msg.ConversationGuid;
                 Compression = msg.Compression;
 
-                _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(buffer).Trim()); 
+                _Logger?.Invoke(_Header + "BuildFromStream header processing complete: " + this);
 
                 #endregion 
 
@@ -314,7 +349,7 @@ namespace WatsonTcp
             {
                 _Logger?.Invoke(_Header + "BuildStream exception: " +
                     Environment.NewLine +
-                    SerializationHelper.SerializeJson(e, true) +
+                    e +
                     Environment.NewLine);
                 return false;
             }
@@ -326,24 +361,25 @@ namespace WatsonTcp
         /// <returns>String.</returns>
         public override string ToString()
         {
-            string ret = "---" + Environment.NewLine; 
-            ret += "  Preshared key     : " + (PresharedKey != null ? WatsonCommon.ByteArrayToHex(PresharedKey) : "null") + Environment.NewLine;
-            ret += "  Status            : " + Status.ToString() + Environment.NewLine;
-            ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
-            ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
-            ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
-            ret += "  Conversation GUID : " + ConversationGuid + Environment.NewLine;
-            ret += "  Compression       : " + Compression.ToString() + Environment.NewLine;
+            StringBuilder ret = new StringBuilder();
+            ret.AppendLine("---");
+            ret.AppendLine($"  Preshared key     : {(PresharedKey != null ? WatsonCommon<TMetadata>.ByteArrayToHex(PresharedKey) : "null")}");
+            ret.AppendLine($"  Status            : {Status}");
+            ret.AppendLine($"  SyncRequest       : {SyncRequest}");
+            ret.AppendLine($"  SyncResponse      : {SyncResponse}");
+            ret.AppendLine($"  ExpirationUtc     : {(Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null")}");
+            ret.AppendLine($"  Conversation GUID : {ConversationGuid}");
+            ret.AppendLine($"  Compression       : {Compression}");
 
             if (Metadata != null)
             {
-                ret += "  Metadata          : " + Metadata.Count + " entries" + Environment.NewLine;
+                ret.AppendLine("  Metadata          : " + Metadata);
             }
-             
-            if (DataStream != null)
-                ret += "  DataStream        : present, " + ContentLength + " bytes" + Environment.NewLine;
 
-            return ret;
+            if (DataStream != null)
+                ret.AppendLine("  DataStream        : present, " + ContentLength + " bytes");
+
+            return ret.ToString();
         }
 
         #endregion Public-Methods

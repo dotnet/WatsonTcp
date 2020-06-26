@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace WatsonTcp
 {
-    internal static class WatsonCommon
+    internal static class WatsonCommon<TMetadata>
     {
         internal static byte[] ReadStreamFully(Stream input)
         { 
@@ -64,6 +64,7 @@ namespace WatsonTcp
             return data;
         }
 
+        [Obsolete("This causes undesirable GC allocations")]
         internal static async Task<byte[]> ReadFromStreamAsync(Stream stream, long count, int bufferLen)
         {
             if (count <= 0) return null;
@@ -94,30 +95,29 @@ namespace WatsonTcp
             return data;
         }
 
-        internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen)
+        internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage<TMetadata> msg, int bufferLen)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (msg.ContentLength == 0) return new byte[0];
 
             byte[] msgData = null;
-            MemoryStream ms = new MemoryStream();
 
             if (msg.Compression == CompressionType.None)
             {
-                msgData = await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen);
+                msgData = await ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen);
             }
             else if (msg.Compression == CompressionType.Deflate)
             {
                 using (DeflateStream ds = new DeflateStream(msg.DataStream, CompressionMode.Decompress, true))
                 {
-                    msgData = WatsonCommon.ReadStreamFully(ds);
+                    msgData = ReadStreamFully(ds);
                 }
             }
             else if (msg.Compression == CompressionType.Gzip)
             {
                 using (GZipStream gs = new GZipStream(msg.DataStream, CompressionMode.Decompress, true))
                 {
-                    msgData = WatsonCommon.ReadStreamFully(gs);
+                    msgData = ReadStreamFully(gs);
                 }
             }
             else
@@ -157,7 +157,7 @@ namespace WatsonTcp
             }
         }
 
-        internal static DateTime GetExpirationTimestamp(WatsonMessage msg)
+        internal static DateTime GetExpirationTimestamp(WatsonMessage<TMetadata> msg)
         {
             DateTime expiration = msg.Expiration.Value;
 

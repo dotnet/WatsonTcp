@@ -7,12 +7,12 @@ namespace WatsonTcp
     /// <summary>
     /// Response to a synchronous request.
     /// </summary>
-    public class SyncResponse
+    public class SyncResponse<TMetadata>
     { 
         /// <summary>
         /// Metadata to attach to the response.
         /// </summary>
-        public Dictionary<object, object> Metadata { get; }
+        public TMetadata Metadata { get; }
 
         /// <summary>
         /// Data to attach to the response.
@@ -26,12 +26,12 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="req">The synchronous request for which this response is intended.</param>
         /// <param name="data">Data to send as a response.</param>
-        public SyncResponse(SyncRequest req, string data)
+        public SyncResponse(SyncRequest<TMetadata> req, string data)
         {
             if (req == null) throw new ArgumentNullException(nameof(req));  
             ExpirationUtc = req.ExpirationUtc;
 
-            Metadata = new Dictionary<object, object>();
+            Metadata = default(TMetadata);
             if (String.IsNullOrEmpty(data))
             {
                 Data = new byte[0];
@@ -47,12 +47,12 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="req">The synchronous request for which this response is intended.</param>
         /// <param name="data">Data to send as a response.</param>
-        public SyncResponse(SyncRequest req, byte[] data)
+        public SyncResponse(SyncRequest<TMetadata> req, byte[] data)
         {
             if (req == null) throw new ArgumentNullException(nameof(req));
             ExpirationUtc = req.ExpirationUtc;
 
-            Metadata = new Dictionary<object, object>();
+            Metadata = default(TMetadata);
             Data = data;
         }
 
@@ -62,7 +62,7 @@ namespace WatsonTcp
         /// <param name="req">The synchronous request for which this response is intended.</param>
         /// <param name="metadata">Metadata to attach to the response.</param>
         /// <param name="data">Data to send as a response.</param>
-        public SyncResponse(SyncRequest req, Dictionary<object, object> metadata, string data)
+        public SyncResponse(SyncRequest<TMetadata> req, TMetadata metadata, string data)
         {
             if (req == null) throw new ArgumentNullException(nameof(req));
             ExpirationUtc = req.ExpirationUtc;
@@ -85,7 +85,7 @@ namespace WatsonTcp
         /// <param name="req">The synchronous request for which this response is intended.</param>
         /// <param name="metadata">Metadata to attach to the response.</param>
         /// <param name="data">Data to send as a response.</param>
-        public SyncResponse(SyncRequest req, Dictionary<object, object> metadata, byte[] data)
+        public SyncResponse(SyncRequest<TMetadata> req, TMetadata metadata, byte[] data)
         {
             if (req == null) throw new ArgumentNullException(nameof(req));
             ExpirationUtc = req.ExpirationUtc;
@@ -94,7 +94,7 @@ namespace WatsonTcp
             Data = data;
         }
 
-        internal SyncResponse(DateTime expirationUtc, Dictionary<object, object> metadata, byte[] data)
+        internal SyncResponse(DateTime expirationUtc, TMetadata metadata, byte[] data)
         {
             ExpirationUtc = expirationUtc;
             Metadata = metadata;

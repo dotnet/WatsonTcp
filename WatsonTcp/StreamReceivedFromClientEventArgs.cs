@@ -8,9 +8,9 @@ namespace WatsonTcp
     /// <summary>
     /// Event arguments for when a stream is received from a client.
     /// </summary>
-    public class StreamReceivedFromClientEventArgs
+    public class StreamReceivedFromClientEventArgs<TMetadata>
     {
-        internal StreamReceivedFromClientEventArgs(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
+        internal StreamReceivedFromClientEventArgs(string ipPort, TMetadata metadata, long contentLength, Stream stream)
         {
             IpPort = ipPort;
             Metadata = metadata;
@@ -26,7 +26,7 @@ namespace WatsonTcp
         /// <summary>
         /// The metadata received from the client.
         /// </summary>
-        public Dictionary<object, object> Metadata
+        public TMetadata Metadata
         {
             get
             {
@@ -34,7 +34,7 @@ namespace WatsonTcp
             }
             set
             {
-                if (value == null) _Metadata = new Dictionary<object, object>();
+                if (value == null) _Metadata = default(TMetadata);
                 else _Metadata = value;
             }
         }
@@ -64,7 +64,7 @@ namespace WatsonTcp
             }
         }
 
-        private Dictionary<object, object> _Metadata = new Dictionary<object, object>();
+        private TMetadata _Metadata;
         private byte[] _Data = null;
 
         private byte[] StreamToBytes(Stream input)
