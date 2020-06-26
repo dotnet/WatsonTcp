@@ -97,13 +97,18 @@ namespace WatsonTcp
             }
         }
 
+        private static readonly JsonSerializerSettings HardenedSerializerSettings = new JsonSerializerSettings
+        {
+            TypeNameHandling = TypeNameHandling.None // Prevents CS2328 style attacks if a project is allowing automatic type resolution elsewhere.
+        };
+
         internal static T DeserializeJson<T>(string json)
         {
             if (String.IsNullOrEmpty(json)) throw new ArgumentNullException(nameof(json));
 
             try
             {
-                return JsonConvert.DeserializeObject<T>(json);
+                return JsonConvert.DeserializeObject<T>(json, HardenedSerializerSettings);
             }
             catch (Exception e)
             {
@@ -118,6 +123,12 @@ namespace WatsonTcp
             }
         }
 
+        private static readonly JsonSerializerSettings SerializerDefaults = new JsonSerializerSettings
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+            DateTimeZoneHandling = DateTimeZoneHandling.Local,
+        };
+
         internal static string SerializeJson(object obj, bool pretty)
         {
             if (obj == null) return null;
@@ -126,22 +137,17 @@ namespace WatsonTcp
             if (pretty)
             {
                 json = JsonConvert.SerializeObject(
-                  obj,
-                  Newtonsoft.Json.Formatting.Indented,
-                  new JsonSerializerSettings
-                  {
-                      NullValueHandling = NullValueHandling.Ignore,
-                      DateTimeZoneHandling = DateTimeZoneHandling.Local,
-                  });
+                    obj,
+                    Newtonsoft.Json.Formatting.Indented,
+                    SerializerDefaults
+                );
             }
             else
             {
-                json = JsonConvert.SerializeObject(obj,
-                  new JsonSerializerSettings
-                  {
-                      NullValueHandling = NullValueHandling.Ignore,
-                      DateTimeZoneHandling = DateTimeZoneHandling.Local
-                  });
+                json = JsonConvert.SerializeObject(
+                    obj,
+                    SerializerDefaults
+                );
             }
 
             return json;
