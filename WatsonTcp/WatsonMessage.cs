@@ -127,7 +127,7 @@ namespace WatsonTcp
             {
                 string jsonStr = SerializationHelper.SerializeJson(this, false);
                 byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonStr);
-                byte[] end = WatsonCommon.AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
+                byte[] end = Encoding.UTF8.GetBytes("\r\n\r\n");
                 byte[] final = WatsonCommon.AppendBytes(jsonBytes, end);
                 return final;
             }
@@ -257,7 +257,6 @@ namespace WatsonTcp
                 #region Read-Headers
 
                 byte[] buffer = new byte[0];
-                byte[] end = WatsonCommon.AppendBytes(Encoding.UTF8.GetBytes(Environment.NewLine), Encoding.UTF8.GetBytes(Environment.NewLine));
 
                 while (true)
                 {
@@ -268,7 +267,10 @@ namespace WatsonTcp
                         if (buffer.Length >= 4)
                         {
                             byte[] endCheck = buffer.Skip(buffer.Length - 4).Take(4).ToArray();
-                            if (endCheck.SequenceEqual(end))
+                            if ((int)endCheck[3] == 10
+                                && (int)endCheck[2] == 13
+                                && (int)endCheck[1] == 10
+                                && (int)endCheck[0] == 13) 
                             {
                                 _Logger?.Invoke(_Header + "ReadHeaders found header demarcation");
                                 break;
