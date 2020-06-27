@@ -71,27 +71,28 @@ namespace WatsonTcp
             byte[] buffer = new byte[bufferLen];
 
             int read = 0;
-            long bytesRemaining = count;
-            MemoryStream ms = new MemoryStream();
+            long bytesRemaining = count; 
 
-            while (bytesRemaining > 0)
+            using (MemoryStream ms = new MemoryStream())
             {
-                if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
+                while (bytesRemaining > 0)
+                {
+                    if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
 
-                read = await stream.ReadAsync(buffer, 0, buffer.Length);
-                if (read > 0)
-                {
-                    ms.Write(buffer, 0, read);
-                    bytesRemaining -= read;
+                    read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    if (read > 0)
+                    {
+                        ms.Write(buffer, 0, read);
+                        bytesRemaining -= read;
+                    }
+                    else
+                    {
+                        throw new IOException("Could not read from supplied stream.");
+                    }
                 }
-                else
-                {
-                    throw new IOException("Could not read from supplied stream.");
-                }
+
+                return ms.ToArray();
             }
-
-            byte[] data = ms.ToArray();
-            return data;
         }
 
         internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen)

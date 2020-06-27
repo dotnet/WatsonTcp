@@ -61,6 +61,7 @@ Special thanks to the following people for their support and contributions to th
 - @karstennilsen
 - @motridox
 - @AdamFrisby
+- @Job79
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
