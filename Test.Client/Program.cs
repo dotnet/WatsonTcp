@@ -18,7 +18,7 @@ namespace TestClient
         private static bool mutualAuthentication = true;
         private static WatsonTcpClient client = null;
         private static string presharedKey = null;
-
+        
         private static void Main(string[] args)
         {
             InitializeClient();
@@ -161,7 +161,7 @@ namespace TestClient
                         break;
 
                     case "comp":
-                        client.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Default|Gzip]:", "None", false)));
+                        client.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Deflate|Gzip]:", "None", false)));
                         break;
 
                     case "debug":
@@ -430,10 +430,12 @@ namespace TestClient
         {
             string userInput = InputString("Data:", null, false);
             int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+            Dictionary<object, object> metadata = new Dictionary<object, object>();
+            metadata.Add("foo", "bar");
 
             try
             {
-                SyncResponse resp = client.SendAndWait(timeoutMs, userInput);
+                SyncResponse resp = client.SendAndWait(metadata, timeoutMs, userInput);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

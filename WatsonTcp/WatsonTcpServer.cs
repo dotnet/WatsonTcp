@@ -1401,10 +1401,10 @@ namespace WatsonTcp
                         MemoryStream ms = new MemoryStream();
 
                         if (_MessageReceived != null && _MessageReceived.GetInvocationList().Length > 0)
-                        {
-                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
-                            MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msgData);
-                            _MessageReceived?.Invoke(this, mr);
+                        { 
+                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize); 
+                            MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msgData); 
+                            _MessageReceived?.Invoke(this, mr); 
                         }
                         else if (_StreamReceived != null && _StreamReceived.GetInvocationList().Length > 0)
                         {

@@ -192,7 +192,7 @@ namespace TestServer
                         break;
 
                     case "comp":
-                        server.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Default|Gzip]:", "None", false)));
+                        server.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Deflate|Gzip]:", "None", false)));
                         break;
 
                     case "debug":

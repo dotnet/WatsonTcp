@@ -1097,10 +1097,10 @@ namespace WatsonTcp
                         MemoryStream ms = new MemoryStream();
 
                         if (_MessageReceived != null && _MessageReceived.GetInvocationList().Length > 0)
-                        {
+                        { 
                             msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize); 
-                            MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msgData);
-                            _MessageReceived?.Invoke(this, args);
+                            MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msgData); 
+                            _MessageReceived?.Invoke(this, args); 
                         }
                         else if (_StreamReceived != null && _StreamReceived.GetInvocationList().Length > 0)
                         {

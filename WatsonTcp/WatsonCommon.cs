@@ -111,14 +111,16 @@ namespace WatsonTcp
             {
                 using (DeflateStream ds = new DeflateStream(msg.DataStream, CompressionMode.Decompress, true))
                 {
-                    msgData = WatsonCommon.ReadStreamFully(ds);
+                    msgData = WatsonCommon.ReadFromStream(ds, msg.ContentLength, bufferLen);
+                    // msgData = WatsonCommon.ReadStreamFully(ds);
                 }
             }
             else if (msg.Compression == CompressionType.Gzip)
             {
                 using (GZipStream gs = new GZipStream(msg.DataStream, CompressionMode.Decompress, true))
                 {
-                    msgData = WatsonCommon.ReadStreamFully(gs);
+                    msgData = WatsonCommon.ReadFromStream(gs, msg.ContentLength, bufferLen);
+                    // msgData = WatsonCommon.ReadStreamFully(gs);
                 }
             }
             else
