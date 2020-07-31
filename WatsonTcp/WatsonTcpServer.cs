@@ -255,7 +255,13 @@ namespace WatsonTcp
          
         private readonly object _SyncResponseLock = new object();
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>();
-         
+
+        private readonly object _ClientsSendLock = new object();
+        private List<string> _ClientsSending = new List<string>();
+
+        private readonly object _ClientsReceiveLock = new object();
+        private List<string> _ClientsReceiving = new List<string>();
+
         private Statistics _Stats = new Statistics();
 
         #endregion
@@ -464,9 +470,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, string data)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (String.IsNullOrEmpty(data)) return Send(ipPort, new byte[0]);
-            else return Send(ipPort, Encoding.UTF8.GetBytes(data));
+            return Send(ipPort, null, data);
         }
 
         /// <summary>
@@ -479,8 +483,9 @@ namespace WatsonTcp
         public bool Send(string ipPort, Dictionary<object, object> metadata, string data)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (String.IsNullOrEmpty(data)) return Send(ipPort, new byte[0]);
-            else return Send(ipPort, metadata, Encoding.UTF8.GetBytes(data));
+            byte[] bytes = new byte[0];
+            if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
+            return Send(ipPort, metadata, bytes);
         }
 
         /// <summary>
@@ -491,16 +496,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, byte[] data)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
-            {
-                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort); 
-                return false;
-            }
-
-            if (data == null) data = new byte[0];
-            WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return Send(ipPort, contentLength, stream);
+            return Send(ipPort, null, data); 
         }
 
         /// <summary>
@@ -533,17 +529,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string ipPort, long contentLength, Stream stream)
         {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
-            {
-                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
-                return false;
-            }
-
-            if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(null, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
-            return SendInternal(client, msg, contentLength, stream);
+            return Send(ipPort, null, contentLength, stream);
         }
 
         /// <summary>
@@ -596,9 +582,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, string data)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (String.IsNullOrEmpty(data)) return await SendAsync(ipPort, new byte[0]);
-            else return await SendAsync(ipPort, Encoding.UTF8.GetBytes(data));
+            return await SendAsync(ipPort, null, data);
         }
 
         /// <summary>
@@ -611,8 +595,9 @@ namespace WatsonTcp
         public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, string data)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (String.IsNullOrEmpty(data)) return await SendAsync(ipPort, new byte[0]);
-            else return await SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(data));
+            byte[] bytes = new byte[0];
+            if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
+            return await SendAsync(ipPort, metadata, bytes);
         }
 
         /// <summary>
@@ -623,16 +608,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, byte[] data)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
-            {
-                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
-                return false;
-            }
-
-            if (data == null) data = new byte[0];
-            WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return await SendAsync(ipPort, null, contentLength, stream);
+            return await SendAsync(ipPort, null, data); 
         }
 
         /// <summary>
@@ -665,17 +641,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string ipPort, long contentLength, Stream stream)
         {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
-            {
-                Logger?.Invoke("[WatsonTcpServer] Unable to find client " + ipPort);
-                return false;
-            }
-
-            if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(null, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
-            return await SendInternalAsync(client, msg, contentLength, stream);
+            return await SendAsync(ipPort, null, contentLength, stream);
         }
 
         /// <summary>
@@ -729,10 +695,7 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(string ipPort, int timeoutMs, string data)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (String.IsNullOrEmpty(data)) return SendAndWait(ipPort, null, timeoutMs, new byte[0]);
-            return SendAndWait(ipPort, null, timeoutMs, Encoding.UTF8.GetBytes(data));
+            return SendAndWait(ipPort, null, timeoutMs, data);
         }
 
         /// <summary>
@@ -744,9 +707,6 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(string ipPort, int timeoutMs, byte[] data)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (data == null) data = new byte[0];
             return SendAndWait(ipPort, null, timeoutMs, data);
         }
 
@@ -760,11 +720,7 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(string ipPort, int timeoutMs, long contentLength, Stream stream)
         {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (stream == null) stream = new MemoryStream(new byte[0]);
-            return SendAndWait(ipPort, null, timeoutMs, contentLength, stream);
+            return SendAndWait(ipPort, null, timeoutMs, contentLength, stream); 
         }
 
         /// <summary>
@@ -777,10 +733,9 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(string ipPort, Dictionary<object, object> metadata, int timeoutMs, string data)
         {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (String.IsNullOrEmpty(data)) return SendAndWait(ipPort, metadata, timeoutMs, new byte[0]);
-            return SendAndWait(ipPort, metadata, timeoutMs, Encoding.UTF8.GetBytes(data));
+            byte[] bytes = new byte[0];
+            if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
+            return SendAndWait(ipPort, metadata, timeoutMs, bytes);
         }
 
         /// <summary>
@@ -1168,14 +1123,11 @@ namespace WatsonTcp
             if (client.TcpClient.Connected)
             {
                 byte[] tmp = new byte[1];
-                bool success = false;
-                bool sendLocked = false;
-                bool readLocked = false;
+                bool success = false; 
 
                 try
                 {
-                    client.WriteLock.Wait(1);
-                    sendLocked = true;
+                    AcquireSendLock(client.IpPort);  
                     client.TcpClient.Client.Send(tmp, 0, 0);
                     success = true;
                 }
@@ -1196,15 +1148,14 @@ namespace WatsonTcp
                 }
                 finally
                 {
-                    if (sendLocked) client.WriteLock.Release();
+                    if (client != null) ReleaseSendLock(client.IpPort); 
                 }
 
                 if (success) return true;
 
                 try
                 {
-                    client.ReadLock.Wait(1);
-                    readLocked = true;
+                    AcquireReceiveLock(client.IpPort);
 
                     if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
                         && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
@@ -1231,7 +1182,7 @@ namespace WatsonTcp
                 }
                 finally
                 {
-                    if (readLocked) client.ReadLock.Release();
+                    if (client != null) ReleaseReceiveLock(client.IpPort);
                 }
             }
             else
@@ -1522,7 +1473,7 @@ namespace WatsonTcp
                 }
             }
 
-            client.WriteLock.Wait();
+            AcquireSendLock(client.IpPort); 
 
             try
             {
@@ -1540,9 +1491,9 @@ namespace WatsonTcp
             }
             finally
             {
-                if (client != null && client.WriteLock != null)
+                if (client != null)
                 {
-                    client.WriteLock.Release();
+                    ReleaseSendLock(client.IpPort); 
                 }
             }
         }
@@ -1559,8 +1510,8 @@ namespace WatsonTcp
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
             }
-             
-            await client.WriteLock.WaitAsync();
+
+            AcquireSendLock(client.IpPort); 
 
             try
             {
@@ -1578,7 +1529,7 @@ namespace WatsonTcp
             }
             finally
             {
-                client.WriteLock.Release();
+                ReleaseSendLock(client.IpPort); 
             }
         }
          
@@ -1594,8 +1545,8 @@ namespace WatsonTcp
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
             }
-             
-            client.WriteLock.Wait();
+
+            AcquireSendLock(client.IpPort); 
 
             try
             {
@@ -1612,7 +1563,7 @@ namespace WatsonTcp
             }
             finally
             {
-                client.WriteLock.Release();
+                ReleaseSendLock(client.IpPort); 
             }
 
             SyncResponse ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
@@ -1849,6 +1800,70 @@ namespace WatsonTcp
 
             if (ret != null) return ret;
             else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+        }
+
+        private void AcquireSendLock(string ipPort)
+        {
+            bool added = false;
+
+            while (!added)
+            {
+                lock (_ClientsSendLock)
+                {
+                    if (_ClientsSending.Contains(ipPort))
+                    {
+                        Task.Delay(25).Wait();
+                    }
+                    else
+                    {
+                        _ClientsSending.Add(ipPort);
+                        added = true;
+                    }
+                }
+            }
+        }
+
+        private void ReleaseSendLock(string ipPort)
+        {
+            lock (_ClientsSendLock)
+            {
+                if (_ClientsSending.Contains(ipPort))
+                {
+                    _ClientsSending.Remove(ipPort);
+                }
+            }
+        }
+
+        private void AcquireReceiveLock(string ipPort)
+        {
+            bool added = false;
+
+            while (!added)
+            {
+                lock (_ClientsReceiveLock)
+                {
+                    if (_ClientsReceiving.Contains(ipPort))
+                    {
+                        Task.Delay(25).Wait();
+                    }
+                    else
+                    {
+                        _ClientsReceiving.Add(ipPort);
+                        added = true;
+                    }
+                }
+            }
+        }
+
+        private void ReleaseReceiveLock(string ipPort)
+        {
+            lock (_ClientsReceiveLock)
+            {
+                if (_ClientsReceiving.Contains(ipPort))
+                {
+                    _ClientsReceiving.Remove(ipPort);
+                }
+            }
         }
 
         #endregion

@@ -48,7 +48,7 @@ namespace TestThroughput
                 {
                     server.MessageReceived += Test1ServerMsgRcv;
                     server.Start();
-                    server.Logger = ServerLogger;
+                    // server.Logger = ServerLogger;
                     // server.Debug = true; 
 
                     using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
@@ -126,11 +126,6 @@ namespace TestThroughput
         private void Test1ClientMsgRcv(object sender, MessageReceivedFromServerEventArgs args)
         {
 
-        }
-
-        private void ServerLogger(string msg)
-        {
-            Console.WriteLine("[server logger]: " + msg);
-        }
+        } 
     }
 }

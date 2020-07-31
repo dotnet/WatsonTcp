@@ -63,9 +63,7 @@ namespace WatsonTcp
                 return _IpPort; 
             }
         }
-
-        internal SemaphoreSlim ReadLock = new SemaphoreSlim(1);
-        internal SemaphoreSlim WriteLock = new SemaphoreSlim(1);
+         
         internal CancellationTokenSource TokenSource = new CancellationTokenSource();
         internal CancellationToken Token;
          
@@ -106,18 +104,6 @@ namespace WatsonTcp
                 if (!TokenSource.IsCancellationRequested) TokenSource.Cancel();
                 TokenSource.Dispose();
                 TokenSource = null;
-            }
-
-            if (WriteLock != null)
-            {
-                WriteLock.Dispose();
-                WriteLock = null;
-            }
-
-            if (ReadLock != null)
-            {
-                ReadLock.Dispose();
-                ReadLock = null;
             }
              
             if (_TcpClient != null)

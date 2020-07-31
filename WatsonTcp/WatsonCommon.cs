@@ -111,8 +111,8 @@ namespace WatsonTcp
             {
                 using (DeflateStream ds = new DeflateStream(msg.DataStream, CompressionMode.Decompress, true))
                 {
-                    msgData = WatsonCommon.ReadFromStream(ds, msg.ContentLength, bufferLen);
-                    // msgData = WatsonCommon.ReadStreamFully(ds);
+                    // msgData = WatsonCommon.ReadFromStream(ds, msg.ContentLength, bufferLen);
+                    msgData = WatsonCommon.ReadStreamFully(ds);
                 }
             }
             else if (msg.Compression == CompressionType.Gzip)
