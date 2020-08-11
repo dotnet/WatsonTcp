@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Security.Cryptography;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using WatsonTcp;
@@ -8,10 +9,7 @@ namespace TestMultiThread
 {
     internal class Program
     {
-        private static int _ServerPort = 8000;
-        private static int _ServerThreads = 4;
-        private static int _ClientThreads = 4;
-        private static int _NumIterations = 256;
+        private static int _NumIterations = 128;
         private static Random _Random;
         private static int _DataLargeSize = 10485760;
         private static byte[] _DataLargeBytes;
@@ -19,13 +17,23 @@ namespace TestMultiThread
         private static int _DataSmallSize = 128;
         private static byte[] _DataSmallBytes;
         private static string _DataSmallMd5;
-        private static int _SendAndWaitInterval = 5000;
+        private static int _SendAndWaitInterval = 2000;
         private static bool _Debug = false;
 
-        private static WatsonTcpServer _Server;
-        private static WatsonTcpClient _Client;
+        private static WatsonTcpServer _Server; 
+        private static WatsonTcpClient _Client; 
         private static string _ClientIpPort = null;
-         
+        private static bool _UseStreams = true;
+
+        private static int _ServerPort = 8000;
+        private static int _ServerThreads = 2;
+        private static int _ClientThreads = 2;
+        private static int _MaxProxiedStreamSize = 524288;
+        // private static int _MaxProxiedStreamSize = 524288000;
+
+        private static int _Success = 0;
+        private static int _Failure = 0;
+
         private static void Main(string[] args)
         {
             Console.WriteLine("1: Client to server");
@@ -50,8 +58,10 @@ namespace TestMultiThread
             _Server = new WatsonTcpServer(null, _ServerPort);
             _Server.ClientConnected += ServerClientConnected;
             _Server.ClientDisconnected += ServerClientDisconnected;
-            _Server.MessageReceived += ServerMsgReceived;
+            if (!_UseStreams) _Server.MessageReceived += ServerMsgReceived; 
+            else _Server.StreamReceived += ServerStreamReceived; 
             _Server.SyncRequestReceived = ServerSyncRequestReceived;
+            _Server.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Server.Logger = Console.WriteLine;
             _Server.DebugMessages = _Debug;
             _Server.Start();
@@ -61,8 +71,10 @@ namespace TestMultiThread
             _Client = new WatsonTcpClient("localhost", _ServerPort);
             _Client.ServerConnected += ClientServerConnected;
             _Client.ServerDisconnected += ClientServerDisconnected;
-            _Client.MessageReceived += ClientMsgReceived;
+            if (!_UseStreams) _Client.MessageReceived += ClientMsgReceived;
+            else _Client.StreamReceived += ClientStreamReceived; 
             _Client.SyncRequestReceived = ClientSyncRequestReceived;
+            _Client.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Client.Logger = Console.WriteLine;
             _Client.DebugMessages = _Debug;
             _Client.Start();
@@ -77,7 +89,11 @@ namespace TestMultiThread
                 Task.Run(() => ClientTask());
             }
 
+            Console.WriteLine("Press ENTER after completion to view statistics");
             Console.ReadLine();
+
+            Console.WriteLine("Success: " + _Success);
+            Console.WriteLine("Failure: " + _Failure);
         } 
          
         private static void ServerToClient()
@@ -94,8 +110,10 @@ namespace TestMultiThread
             _Server = new WatsonTcpServer(null, _ServerPort);
             _Server.ClientConnected += ServerClientConnected;
             _Server.ClientDisconnected += ServerClientDisconnected;
-            _Server.MessageReceived += ServerMsgReceived;
+            if (!_UseStreams) _Server.MessageReceived += ServerMsgReceived;
+            else _Server.StreamReceived += ServerStreamReceived;
             _Server.SyncRequestReceived = ServerSyncRequestReceived;
+            _Server.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Server.Logger = Console.WriteLine;
             _Server.Start();
 
@@ -104,8 +122,10 @@ namespace TestMultiThread
             _Client = new WatsonTcpClient("localhost", _ServerPort);
             _Client.ServerConnected += ClientServerConnected;
             _Client.ServerDisconnected += ClientServerDisconnected;
-            _Client.MessageReceived += ClientMsgReceived;
+            if (!_UseStreams) _Client.MessageReceived += ClientMsgReceived;
+            else _Client.StreamReceived += ClientStreamReceived;
             _Client.SyncRequestReceived = ClientSyncRequestReceived;
+            _Client.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Client.Logger = Console.WriteLine;
             _Client.Start();
 
@@ -121,7 +141,11 @@ namespace TestMultiThread
                 Task.Run(() => ServerTask());
             }
 
+            Console.WriteLine("Press ENTER after completion to view statistics");
             Console.ReadLine();
+
+            Console.WriteLine("Success: " + _Success);
+            Console.WriteLine("Failure: " + _Failure);
         }
 
         private static void ClientTask()
@@ -132,22 +156,30 @@ namespace TestMultiThread
                 Task.Delay(waitVal).Wait();
                 if (waitVal % 3 == 0)
                 {
-                    Console.WriteLine(i.ToString() + "/" + _NumIterations.ToString() + " Sending large message");
+                    Console.WriteLine("[client] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending large message");
                     _Client.Send(_DataLargeBytes);
                 }
                 else if (waitVal % 2 == 0)
                 {
-                    Console.WriteLine(i.ToString() + "/" + _NumIterations.ToString() + " Sending small message");
+                    Console.WriteLine("[client] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending small message");
                     _Client.Send(_DataSmallBytes);
                 }
                 else
                 {
-                    Console.WriteLine(i.ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
-                    _Client.SendAndWait(_SendAndWaitInterval, _DataSmallBytes); 
+                    Console.WriteLine("[client] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
+                    try
+                    {
+                        SyncResponse syncResponse = _Client.SendAndWait(_SendAndWaitInterval, _DataSmallBytes);
+                        Console.WriteLine("[client] Sync response received");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("[client] Sync response not received: " + e.Message);
+                    }
                 }
             }
 
-            Console.WriteLine("[client] finished");
+            Console.WriteLine("[client] Finished");
         }
 
         private static void ServerTask()
@@ -158,22 +190,30 @@ namespace TestMultiThread
                 Task.Delay(waitVal).Wait();
                 if (waitVal % 3 == 0)
                 {
-                    Console.WriteLine(i.ToString() + "/" + _NumIterations.ToString() + " Sending large message");
+                    Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending large message");
                     _Server.Send(_ClientIpPort, _DataLargeBytes);
                 }
                 else if (waitVal % 2 == 0)
                 {
-                    Console.WriteLine(i.ToString() + "/" + _NumIterations.ToString() + " Sending small message");
+                    Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending small message");
                     _Server.Send(_ClientIpPort, _DataSmallBytes);
                 }
                 else
                 {
-                    Console.WriteLine(i.ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
-                    _Server.SendAndWait(_ClientIpPort, _SendAndWaitInterval, _DataSmallBytes);
+                    Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
+                    try
+                    {
+                        SyncResponse syncResponse = _Server.SendAndWait(_ClientIpPort, _SendAndWaitInterval, _DataSmallBytes);
+                        Console.WriteLine("[server] Sync response received");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("[server] Sync response not received: " + e.Message);
+                    }
                 }
             }
 
-            Console.WriteLine("[client] finished");
+            Console.WriteLine("[server] Finished");
         }
 
         private static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
@@ -186,20 +226,74 @@ namespace TestMultiThread
         {
             Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
-         
+
         private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args)
         {
             // Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
-            string md5 = BytesToHex(Md5(args.Data));
-            if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5)) Console.WriteLine("[async] Data MD5 validation failed");
-            // else Console.WriteLine("[async] Data MD5 validation success: " + md5);
+            try
+            {
+                string md5 = BytesToHex(Md5(args.Data));
+                if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5))
+                {
+                    Interlocked.Increment(ref _Failure);
+                    Console.WriteLine("[server] [msg] [async] Data MD5 validation failed");
+                }
+                else
+                {
+                    Interlocked.Increment(ref _Success);
+                    // Console.WriteLine("[server] [msg] [async] Data MD5 validation success: " + md5);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
         }
-         
+
+        private static void ServerStreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+        {
+            // Console.WriteLine("[server] stream from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
+            try
+            {
+                string md5 = BytesToHex(Md5(args.Data)); 
+                if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5))
+                {
+                    Interlocked.Increment(ref _Failure);
+                    Console.WriteLine("[server] [stream] [async] Data MD5 validation failed");
+                }
+                else
+                {
+                    Interlocked.Increment(ref _Success);
+                    // Console.WriteLine("[server] [stream] [async] Data MD5 validation success: " + md5);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
         private static SyncResponse ServerSyncRequestReceived(SyncRequest req)
-        { 
-            string md5 = BytesToHex(Md5(req.Data));
-            if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5)) Console.WriteLine("[sync] Data MD5 validation failed");
-            // else Console.WriteLine("[sync] Data MD5 validation success: " + md5);
+        {
+            try
+            {
+                string md5 = BytesToHex(Md5(req.Data));
+                if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5))
+                {
+                    Interlocked.Increment(ref _Failure);
+                    Console.WriteLine("[server] [sync] Data MD5 validation failed");
+                }
+                else
+                {
+                    Interlocked.Increment(ref _Success);
+                    // Console.WriteLine("[server] [sync] Data MD5 validation success: " + md5);
+                } 
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString()); 
+            }
+
             return new SyncResponse(req, new byte[0]);
         }
 
@@ -210,24 +304,78 @@ namespace TestMultiThread
         private static void ClientServerDisconnected(object sender, EventArgs args) 
         {
         }
-         
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
+
+        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args)
         {
             // Console.WriteLine("[client] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
-            string md5 = BytesToHex(Md5(args.Data)); 
-            if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5)) Console.WriteLine("[async] Data MD5 validation failed");
-            // else Console.WriteLine("[async] Data MD5 validation success: " + md5);
+            try
+            {
+                string md5 = BytesToHex(Md5(args.Data));
+                if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5))
+                {
+                    Interlocked.Increment(ref _Failure);
+                    Console.WriteLine("[client] [msg] [async] Data MD5 validation failed");
+                }
+                else
+                {
+                    Interlocked.Increment(ref _Success);
+                    // Console.WriteLine("[client] [msg] [async] Data MD5 validation success: " + md5);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        private static void ClientStreamReceived(object sender, StreamReceivedFromServerEventArgs args)
+        {
+            // Console.WriteLine("[client] stream from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
+            try
+            {
+                string md5 = BytesToHex(Md5(args.Data)); 
+                if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5))
+                {
+                    Interlocked.Increment(ref _Failure);
+                    Console.WriteLine("[client] [stream] [async] Data MD5 validation failed");
+                }
+                else
+                {
+                    Interlocked.Increment(ref _Success);
+                    // Console.WriteLine("[client] [stream] [async] Data MD5 validation success: " + md5);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
         }
 
         private static SyncResponse ClientSyncRequestReceived(SyncRequest req)
         {
-            string md5 = BytesToHex(Md5(req.Data));
-            if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5)) Console.WriteLine("[sync] Data MD5 validation failed");
-            // else Console.WriteLine("[sync] Data MD5 validation success: " + md5);
+            try
+            {
+                string md5 = BytesToHex(Md5(req.Data));
+                if (!md5.Equals(_DataLargeMd5) && !md5.Equals(_DataSmallMd5))
+                {
+                    Interlocked.Increment(ref _Failure);
+                    Console.WriteLine("[client] [sync] Data MD5 validation failed");
+                }
+                else
+                {
+                    Interlocked.Increment(ref _Success);
+                    // Console.WriteLine("[client] [sync] Data MD5 validation success: " + md5);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+
             return new SyncResponse(req, new byte[0]);
         }
 
-        public static byte[] InitByteArray(int count, byte val)
+        private static byte[] InitByteArray(int count, byte val)
         {
             byte[] ret = new byte[count];
             for (int i = 0; i < ret.Length; i++)
@@ -250,7 +398,7 @@ namespace TestMultiThread
             }
         }
 
-        public static string BytesToHex(byte[] bytes)
+        private static string BytesToHex(byte[] bytes)
         {
             if (bytes == null)
             {
@@ -264,5 +412,36 @@ namespace TestMultiThread
 
             return BitConverter.ToString(bytes).Replace("-", "");
         }
+
+        private static byte[] ReadFromStream(Stream stream, long count, int bufferLen)
+        {
+            if (count <= 0) return new byte[0];
+            if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes.");
+            byte[] buffer = new byte[bufferLen];
+
+            int read = 0;
+            long bytesRemaining = count;
+            MemoryStream ms = new MemoryStream();
+
+            while (bytesRemaining > 0)
+            {
+                if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
+
+                read = stream.Read(buffer, 0, buffer.Length);
+                if (read > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                    bytesRemaining -= read;
+                }
+                else
+                {
+                    throw new IOException("Could not read from supplied stream.");
+                }
+            }
+
+            byte[] data = ms.ToArray();
+            return data;
+        }
+
     }
 }

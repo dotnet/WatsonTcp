@@ -53,31 +53,42 @@ namespace WatsonTcp
             {
                 if (_Data != null) return _Data;
                 if (ContentLength <= 0) return null;
-                _Data = StreamToBytes(DataStream);
+                _Data = ReadFromStream(DataStream, ContentLength);
                 return _Data;
             }
         }
 
         private Dictionary<object, object> _Metadata = new Dictionary<object, object>();
         private byte[] _Data = null;
+        private int _BufferSize = 65536;
 
-        private byte[] StreamToBytes(Stream input)
+        private byte[] ReadFromStream(Stream stream, long count)
         {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (!input.CanRead) throw new InvalidOperationException("Input stream is not readable");
+            if (count <= 0) return new byte[0]; 
+            byte[] buffer = new byte[_BufferSize];
 
-            byte[] buffer = new byte[16 * 1024];
-            using (MemoryStream ms = new MemoryStream())
+            int read = 0;
+            long bytesRemaining = count;
+            MemoryStream ms = new MemoryStream();
+
+            while (bytesRemaining > 0)
             {
-                int read;
+                if (_BufferSize > bytesRemaining) buffer = new byte[bytesRemaining];
 
-                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                read = stream.Read(buffer, 0, buffer.Length);
+                if (read > 0)
                 {
                     ms.Write(buffer, 0, read);
+                    bytesRemaining -= read;
                 }
-
-                return ms.ToArray();
+                else
+                {
+                    throw new IOException("Could not read from supplied stream.");
+                }
             }
-        }
+
+            byte[] data = ms.ToArray();
+            return data;
+        }  
     }
 }

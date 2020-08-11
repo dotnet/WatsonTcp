@@ -63,7 +63,10 @@ namespace WatsonTcp
                 return _IpPort; 
             }
         }
-         
+
+        internal SemaphoreSlim WriteLock = new SemaphoreSlim(1, 1);
+        internal SemaphoreSlim ReadLock = new SemaphoreSlim(1, 1);
+
         internal CancellationTokenSource TokenSource = new CancellationTokenSource();
         internal CancellationToken Token;
          

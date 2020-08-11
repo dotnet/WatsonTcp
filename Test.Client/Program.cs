@@ -52,8 +52,7 @@ namespace TestClient
                         Console.WriteLine("  psk                 set the preshared key");
                         Console.WriteLine("  auth                authenticate using the preshared key");
                         Console.WriteLine("  stats               display client statistics");
-                        Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
-                        Console.WriteLine("  comp                set the compression type, currently: " + client.Compression.ToString());
+                        Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
                         Console.WriteLine("  debug               enable/disable debug (currently " + client.DebugMessages + ")");
                         break;
 
@@ -159,11 +158,7 @@ namespace TestClient
                     case "stats reset":
                         client.Stats.Reset();
                         break;
-
-                    case "comp":
-                        client.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Deflate|Gzip]:", "None", false)));
-                        break;
-
+                         
                     case "debug":
                         client.DebugMessages = !client.DebugMessages;
                         Console.WriteLine("Debug set to: " + client.DebugMessages);

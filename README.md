@@ -10,10 +10,12 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.1.12
+## New in v4.2.0
 
-- Fix for ClientMetadata.Dispose
-- Security fix for JSON serializer
+- Breaking changes
+- Introduced ```WatsonStream``` class to prevent stream consumers from reading into the next message's header
+- ```MaxProxiedStreamSize``` property to dictate whether data is sent to ```StreamReceived``` in a new ```MemoryStream``` or the underlying data stream is sent
+- Minor refactor and removal of compression
 
 ## Test Applications
 
@@ -25,15 +27,31 @@ WatsonTcp supports data exchange with or without SSL.  The server and client cla
 
 ## To Stream or Not To Stream...
 
-WatsonTcp allows you to receive messages using either streams or byte arrays.  The ```MessageReceived``` event uses byte arrays and provides the easiest implementation, but the entire message payload is copied into memory, making it inefficient for larger messages.  For larger message sizes (generally measured in 10s or 100s of megabytes or beyond), it is **strongly** recommended that you use the ```StreamReceived``` event.  Only one of these methods can be assigned; you cannot use both.
+WatsonTcp allows you to receive messages using either byte arrays or streams.  Set ```MessageReceived``` if you wish to consume a byte array, or, set ```StreamReceived``` if you wish to consume a stream. 
 
-When sending messages, the ```Send``` and ```SendAsync``` methods have both byte array and stream variants.  You are free to use whichever, or both, as you choose, regardless of whether you have implemented ```MessageReceived``` or ```StreamReceived```.
+It is important to note the following:
 
-It is important to note that when using ```StreamReceived```, the socket is blocked until you have fully read the stream and control has returned from your consuming application back to WatsonTcp.  That's required, because otherwise, WatsonTcp would begin reading at the wrong place in the stream.  With ```MessageReceived```, WatsonTcp will fire the event and begin reading immediately, since the entirety of the message data has already been read from the stream by WatsonTcp.
+- When using ```MessageReceived```
+  - The message payload is read from the stream and sent to your application
+  - The event is fired asynchronously and Watson can continue reading messages while your application processes
+- When using ```StreamReceived```
+  - If the message payload is smaller than ```MaxProxiedStreamSize```, the data is read into a ```MemoryStream``` and sent to your application asynchronously
+  - If the message payload is larger than ```MaxProxiedStreamSize```, the underlying data stream is sent to your application synchronously, and WatsonTcp will wait until your application responds before continuing to read
+- Only one of ```MessageReceived``` and ```StreamReceived``` can be set
 
-Should you with to include a ```Dictionary<object, object>``` of metadata with any message, use the ```Send``` or ```SendAsync``` method that allows you to pass in metadata.  Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.
+## Including Metadata with a Message
 
-Please see below for examples with byte arrays and with streams.
+Should you with to include metadata with any message, use the ```Send``` or ```SendAsync``` method that allows you to pass in metadata (```Dictionary<object, object>```).  Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.
+ 
+### Local vs External Connections
+
+**IMPORTANT**
+* If you specify ```127.0.0.1``` as the listener IP address in WatsonTcpServer, it will only be able to accept connections from within the local host.  
+* To accept connections from other machines:
+  * Use a specific interface IP address, or
+  * Use ```null```, ```*```, ```+```, or ```0.0.0.0``` for the listener IP address (requires admin privileges to listen on any IP address)
+* Make sure you create a permit rule on your firewall to allow inbound connections on that port
+* If you use a port number under 1024, admin privileges will be required
 
 ## Running under Mono
 
@@ -63,27 +81,15 @@ Special thanks to the following people for their support and contributions to th
 - @AdamFrisby
 - @Job79
 - @Dijkstra-ru
+- @playingoDEERUX
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
 ## Examples
 
-The following examples show a simple client and server example using WatsonTcp without SSL.
-
-### Local vs External Connections
-
-**IMPORTANT**
-* If you specify ```127.0.0.1``` as the listener IP address in WatsonTcpServer, it will only be able to accept connections from within the local host.  
-* To accept connections from other machines:
-  * Use a specific interface IP address, or
-  * Use ```null```, ```*```, ```+```, or ```0.0.0.0``` for the listener IP address (requires admin privileges to listen on any IP address)
-* Make sure you create a permit rule on your firewall to allow inbound connections on that port
-* If you use a port number under 1024, admin privileges will be required
+The following examples show a simple client and server example using WatsonTcp without SSL and consuming messages using byte arrays instead of streams.  For full examples, please refer to the ```Test.*``` projects.  
 
 ### Server
-
-Using byte arrays (```MessageReceived```)
-
 ```
 using WatsonTcp;
 
@@ -142,11 +148,8 @@ static SyncResponse SyncRequestReceived(SyncRequest req)
     return new SyncResponse("Hello back at you!");
 }
 ```
-
-### Client
-
-Using byte arrays (```MessageReceived```)
-
+ 
+### Client 
 ```
 using WatsonTcp;
 
@@ -211,19 +214,13 @@ static SyncResponse SyncRequestReceived(SyncRequest req)
 The examples above can be modified to use SSL as follows.  No other changes are needed.  Ensure that the certificate is exported as a PFX file and is resident in the directory of execution.
 ```
 // server
-WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000, "test.pfx", "password");
-server.ClientConnected += ClientConnected;
-server.ClientDisconnected += ClientDisconnected;
-server.MessageReceived += MessageReceived;
+WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000, "test.pfx", "password"); 
 server.AcceptInvalidCertificates = true;
 server.MutuallyAuthenticate = true;
 server.Start();
 
 // client
-WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000, "test.pfx", "password");
-client.ServerConnected += ServerConnected;
-client.ServerDisconnected += ServerDisconnected;
-client.MessageReceived += MessageReceived;
+WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000, "test.pfx", "password"); 
 client.AcceptInvalidCertificates = true;
 client.MutuallyAuthenticate = true;
 client.Start();
@@ -231,7 +228,7 @@ client.Start();
 
 ## Example with Streams
 
-Refer to the ```TestClientStream``` and ```TestServerStream``` projects for a full example.  
+Refer to the ```Test.ClientStream``` and ```Test.ServerStream``` projects for a full example.  
 ```
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000);
@@ -242,7 +239,24 @@ server.Start();
 
 static void StreamReceived(object sender, StreamReceivedFromClientEventArgs args)
 {
-    // read args.ContentLength bytes from args.DataStream and process
+    long bytesRemaining = args.ContentLength;
+    int bytesRead = 0;
+    byte[] buffer = new byte[65536];
+
+    using (MemoryStream ms = new MemoryStream())
+    {
+        while (bytesRemaining > 0)
+        {
+            bytesRead = args.DataStream.Read(buffer, 0, buffer.Length);
+            if (bytesRead > 0)
+            {
+                ms.Write(buffer, 0, bytesRead);
+                bytesRemaining -= bytesRead;
+            }
+        }
+    }
+
+    Console.WriteLine("Stream received from " + args.IpPort + ": " + Encoding.UTF8.GetString(ms.ToArray())); 
 }
 
 // client
@@ -254,36 +268,27 @@ client.Start();
 
 static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args)
 {
-    // read args.ContentLength bytes from args.DataStream and process
-}
-```
+    long bytesRemaining = args.ContentLength;
+    int bytesRead = 0;
+    byte[] buffer = new byte[65536];
 
-## Compression
-
-Data compression was added in v4.1.0 to reduce bandwidth consumption for data send between client and server (thank you @developervariety for the suggestion).  Compression is applied only to the data and not to the headers or user-supplied metadata, because we wanted to keep framing simple to support external integration with Watson.  Please refer to *FRAMING.md* for details.
-
-Compression is enabled as a property on either client or server, and this will instruct the instance to send message data using the specified compression method.  Compressed messages are automatically decompressed on the receiving side without any configuration required.  
-
-The ```Compression``` property can be set to one of: ```Gzip```, ```Deflate```, ```None```.
-
-```
-using WatsonTcp;
-
-using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 8000))
-{
-    using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 8000))
+    using (MemoryStream ms = new MemoryStream())
     {
-        server.MessageReceived += ServerMessageReceived;
-        server.Compression = CompressionType.Gzip;      // all message data sent from server now Gzip compressed
-        server.Start();
-
-        client.MessageReceived += ClientMessageReceived;
-        client.Compression = CompressionType.None;      // client will not compress data it sends
-        client.Start();
+        while (bytesRemaining > 0)
+        {
+            bytesRead = args.DataStream.Read(buffer, 0, buffer.Length);
+            if (bytesRead > 0)
+            {
+                ms.Write(buffer, 0, bytesRead);
+                bytesRemaining -= bytesRead;
+            }
+        }
     }
+
+    Console.WriteLine("Stream received: " + Encoding.UTF8.GetString(ms.ToArray())); 
 }
 ```
-
+ 
 ## Disconnection Handling
 
 The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically to provide a reference for WatsonTcp to handle a variety of disconnection scenarios.  These include:

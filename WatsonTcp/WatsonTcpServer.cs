@@ -40,6 +40,23 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Maximum content length for streams that are proxied through a MemoryStream.
+        /// If the content length exceeds this value, the underlying DataStream will be passed in the StreamReceived event.
+        /// </summary>
+        public int MaxProxiedStreamSize
+        {
+            get
+            {
+                return _MaxProxiedStreamSize;
+            }
+            set
+            {
+                if (value < 1) throw new ArgumentException("MaxProxiedStreamSize must be greater than zero.");
+                _MaxProxiedStreamSize = value;
+            }
+        }
+
+        /// <summary>
         /// Maximum amount of time to wait before considering a client idle and disconnecting them. 
         /// By default, this value is set to 0, which will never disconnect a client due to inactivity.
         /// The timeout is reset any time a message is received from a client or a message is sent to a client.
@@ -141,10 +158,10 @@ namespace WatsonTcp
         public event EventHandler<MessageReceivedFromClientEventArgs> MessageReceived
         {
             add
-            {
+            { 
                 if (_StreamReceived != null 
                     && _StreamReceived.GetInvocationList().Length > 0) 
-                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set."); 
                 _MessageReceived += value;
             }
             remove
@@ -160,10 +177,10 @@ namespace WatsonTcp
         public event EventHandler<StreamReceivedFromClientEventArgs> StreamReceived
         {
             add
-            {
+            { 
                 if (_MessageReceived != null 
                     && _MessageReceived.GetInvocationList().Length > 0) 
-                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set.");
+                    throw new InvalidOperationException("Only one of 'MessageReceived' and 'StreamReceived' can be set."); 
                 _StreamReceived += value;
             }
             remove
@@ -201,12 +218,7 @@ namespace WatsonTcp
         /// Preshared key that must be consistent between clients and this server.
         /// </summary>
         public string PresharedKey = null;
-
-        /// <summary>
-        /// Type of compression to apply on sent messages.
-        /// </summary>
-        public CompressionType Compression = CompressionType.None;
-
+         
         /// <summary>
         /// Method to invoke when sending a log message.
         /// </summary>
@@ -228,6 +240,7 @@ namespace WatsonTcp
         #region Private-Members
 
         private int _StreamBufferSize = 65536;
+        private int _MaxProxiedStreamSize = 67108864;
         private int _MaxConnections = 4096;
         private int _Connections = 0;
         private bool _IsListening = false;
@@ -255,12 +268,6 @@ namespace WatsonTcp
          
         private readonly object _SyncResponseLock = new object();
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>();
-
-        private readonly object _ClientsSendLock = new object();
-        private List<string> _ClientsSending = new List<string>();
-
-        private readonly object _ClientsReceiveLock = new object();
-        private List<string> _ClientsReceiving = new List<string>();
 
         private Statistics _Stats = new Statistics();
 
@@ -551,7 +558,7 @@ namespace WatsonTcp
             }
 
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(client, msg, contentLength, stream);
         }
 
@@ -570,7 +577,7 @@ namespace WatsonTcp
                 return false;
             }
 
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
             return SendInternal(client, msg, 0, new MemoryStream(new byte[0]));
         }
 
@@ -663,7 +670,7 @@ namespace WatsonTcp
             }
 
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(client, msg, contentLength, stream);
         }
 
@@ -682,7 +689,7 @@ namespace WatsonTcp
                 return false;
             }
 
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (DebugMessages ? Logger : null));
             return await SendInternalAsync(client, msg, 0, new MemoryStream(new byte[0]));
         }
 
@@ -781,7 +788,7 @@ namespace WatsonTcp
             }
             if (stream == null) stream = new MemoryStream(new byte[0]);
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(client, msg, timeoutMs, contentLength, stream);
         }
 
@@ -802,7 +809,7 @@ namespace WatsonTcp
                 throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
             }
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), Compression, (DebugMessages ? Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), (DebugMessages ? Logger : null));
             return SendAndWaitInternal(client, msg, timeoutMs, 0, new MemoryStream(new byte[0]));
         }
 
@@ -1127,7 +1134,7 @@ namespace WatsonTcp
 
                 try
                 {
-                    AcquireSendLock(client.IpPort);  
+                    client.WriteLock.Wait(); 
                     client.TcpClient.Client.Send(tmp, 0, 0);
                     success = true;
                 }
@@ -1148,14 +1155,14 @@ namespace WatsonTcp
                 }
                 finally
                 {
-                    if (client != null) ReleaseSendLock(client.IpPort); 
+                    if (client != null) client.WriteLock.Release();
                 }
 
                 if (success) return true;
 
                 try
                 {
-                    AcquireReceiveLock(client.IpPort);
+                    client.WriteLock.Wait(); 
 
                     if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
                         && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
@@ -1182,7 +1189,7 @@ namespace WatsonTcp
                 }
                 finally
                 {
-                    if (client != null) ReleaseReceiveLock(client.IpPort);
+                    if (client != null) client.WriteLock.Release();
                 }
             }
             else
@@ -1234,7 +1241,7 @@ namespace WatsonTcp
                                         AuthenticationSucceeded?.Invoke(this, new AuthenticationSucceededEventArgs(client.IpPort));
                                         byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
                                         WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-                                        WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
+                                        WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
                                         authMsg.Status = MessageStatus.AuthSuccess;
                                         SendInternal(client, authMsg, 0, null);
                                         continue;
@@ -1245,7 +1252,7 @@ namespace WatsonTcp
                                         byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
                                         AuthenticationFailed?.Invoke(this, new AuthenticationFailedEventArgs(client.IpPort));
                                         WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-                                        WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
+                                        WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
                                         authMsg.Status = MessageStatus.AuthFailure;
                                         SendInternal(client, authMsg, 0, null);
                                         continue;
@@ -1257,7 +1264,7 @@ namespace WatsonTcp
                                     byte[] data = Encoding.UTF8.GetBytes("No authentication material");
                                     AuthenticationFailed?.Invoke(this, new AuthenticationFailedEventArgs(client.IpPort));
                                     WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-                                    WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
+                                    WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
                                     authMsg.Status = MessageStatus.AuthFailure;
                                     SendInternal(client, authMsg, 0, null);
                                     continue;
@@ -1270,7 +1277,7 @@ namespace WatsonTcp
                                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
                                 AuthenticationRequested?.Invoke(this, new AuthenticationRequestedEventArgs(client.IpPort));
                                 WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-                                WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, CompressionType.None, (DebugMessages ? Logger : null));
+                                WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (DebugMessages ? Logger : null));
                                 authMsg.Status = MessageStatus.AuthRequired;
                                 SendInternal(client, authMsg, 0, null);
                                 continue;
@@ -1288,26 +1295,26 @@ namespace WatsonTcp
                         Logger?.Invoke("[WatsonTcpServer] Sent notification of removal to " + client.IpPort);
                         break;
                     }
-
+                     
                     if (msg.SyncRequest)
-                    {
+                    { 
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
-
+                         
                         if (SyncRequestReceived != null)
                         {
                             if (DateTime.Now < expiration)
-                            {
+                            { 
                                 SyncRequest syncReq = new SyncRequest(
                                     client.IpPort,
                                     msg.ConversationGuid,
                                     msg.Expiration.Value,
                                     msg.Metadata,
                                     msgData);
-
+                                 
                                 SyncResponse syncResp = SyncRequestReceived(syncReq);
                                 if (syncResp != null)
-                                {
+                                { 
                                     WatsonCommon.BytesToStream(syncResp.Data, out long contentLength, out Stream stream);
                                     WatsonMessage respMsg = new WatsonMessage(
                                         syncResp.Metadata,
@@ -1317,19 +1324,18 @@ namespace WatsonTcp
                                         true,
                                         msg.Expiration.Value,
                                         msg.ConversationGuid,
-                                        Compression,
                                         (DebugMessages ? Logger : null)); 
                                     SendInternal(client, respMsg, contentLength, stream);
                                 }
                             }
                             else
-                            {
+                            { 
                                 Logger?.Invoke("[WatsonTcpServer] Expired synchronous request received and discarded from " + client.IpPort);
                             }
                         } 
                     }
                     else if (msg.SyncResponse)
-                    {
+                    { 
                         // No need to amend message expiration; it is copied from the request, which was set by this node
                         // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize);
@@ -1348,48 +1354,35 @@ namespace WatsonTcp
                     }
                     else
                     {
-                        byte[] msgData = null;
-                        MemoryStream ms = new MemoryStream();
+                        byte[] msgData = null; 
 
                         if (_MessageReceived != null && _MessageReceived.GetInvocationList().Length > 0)
                         { 
                             msgData = await WatsonCommon.ReadMessageDataAsync(msg, _StreamBufferSize); 
-                            MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msgData); 
-                            _MessageReceived?.Invoke(this, mr); 
+                            MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msgData);
+                            await Task.Run(() => _MessageReceived(this, mr));
                         }
                         else if (_StreamReceived != null && _StreamReceived.GetInvocationList().Length > 0)
                         {
-                            StreamReceivedFromClientEventArgs sr = null; 
-                            if (msg.Compression == CompressionType.None)
+                            StreamReceivedFromClientEventArgs sr = null;
+                            WatsonStream ws = null;
+
+                            if (msg.ContentLength >= _MaxProxiedStreamSize)
                             {
-                                sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
-                                _StreamReceived?.Invoke(this, sr);
-                            }
-                            else if (msg.Compression == CompressionType.Deflate)
-                            {
-                                using (DeflateStream ds = new DeflateStream(msg.DataStream, CompressionMode.Decompress, true))
-                                {
-                                    msgData = WatsonCommon.ReadStreamFully(ds);
-                                    ms = new MemoryStream(msgData);
-                                    ms.Seek(0, SeekOrigin.Begin); 
-                                    sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ms);
-                                    _StreamReceived?.Invoke(this, sr);
-                                }
-                            }
-                            else if (msg.Compression == CompressionType.Gzip)
-                            {
-                                using (GZipStream gs = new GZipStream(msg.DataStream, CompressionMode.Decompress, true))
-                                {
-                                    msgData = WatsonCommon.ReadStreamFully(gs);
-                                    ms = new MemoryStream(msgData);
-                                    ms.Seek(0, SeekOrigin.Begin); 
-                                    sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ms);
-                                    _StreamReceived?.Invoke(this, sr);
-                                }
+                                ws = new WatsonStream(msg.ContentLength, msg.DataStream);
+                                sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ws);
+                                // sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
+                                // must run synchronously, data exists in the underlying stream
+                                _StreamReceived(this, sr); 
                             }
                             else
                             {
-                                throw new InvalidOperationException("Unknown compression type: " + msg.Compression.ToString());
+                                MemoryStream ms = WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _StreamBufferSize);
+                                ws = new WatsonStream(msg.ContentLength, ms); 
+                                sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ws);
+                                // sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ms);
+                                // data has been read, can continue to next message
+                                await Task.Run(() => _StreamReceived(this, sr));
                             } 
                         }
                         else
@@ -1400,8 +1393,8 @@ namespace WatsonTcp
                     }
                      
                     _Stats.ReceivedMessages = _Stats.ReceivedMessages + 1;
-                    _Stats.ReceivedBytes += msg.ContentLength;
-                    UpdateClientLastSeen(client.IpPort);
+                    _Stats.ReceivedBytes += msg.ContentLength; 
+                    UpdateClientLastSeen(client.IpPort); 
                 }
                 catch (ObjectDisposedException)
                 {
@@ -1473,7 +1466,7 @@ namespace WatsonTcp
                 }
             }
 
-            AcquireSendLock(client.IpPort); 
+            client.WriteLock.Wait();
 
             try
             {
@@ -1491,10 +1484,7 @@ namespace WatsonTcp
             }
             finally
             {
-                if (client != null)
-                {
-                    ReleaseSendLock(client.IpPort); 
-                }
+                if (client != null) client.WriteLock.Release();
             }
         }
          
@@ -1511,7 +1501,7 @@ namespace WatsonTcp
                 }
             }
 
-            AcquireSendLock(client.IpPort); 
+            await client.WriteLock.WaitAsync();
 
             try
             {
@@ -1529,7 +1519,7 @@ namespace WatsonTcp
             }
             finally
             {
-                ReleaseSendLock(client.IpPort); 
+                if (client != null) client.WriteLock.Release();
             }
         }
          
@@ -1545,8 +1535,8 @@ namespace WatsonTcp
                     throw new ArgumentException("Cannot read from supplied stream.");
                 }
             }
-
-            AcquireSendLock(client.IpPort); 
+             
+            client.WriteLock.Wait(); 
 
             try
             {
@@ -1563,7 +1553,7 @@ namespace WatsonTcp
             }
             finally
             {
-                ReleaseSendLock(client.IpPort); 
+                if (client != null) client.WriteLock.Release();  
             }
 
             SyncResponse ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
@@ -1591,59 +1581,16 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             int bytesRead = 0;
             byte[] buffer = new byte[_StreamBufferSize];
-
-            if (Compression == CompressionType.None)
+             
+            while (bytesRemaining > 0)
             {
-                while (bytesRemaining > 0)
+                bytesRead = stream.Read(buffer, 0, buffer.Length);
+                if (bytesRead > 0)
                 {
-                    bytesRead = stream.Read(buffer, 0, buffer.Length);
-                    if (bytesRead > 0)
-                    {
-                        client.DataStream.Write(buffer, 0, bytesRead);
-                        bytesRemaining -= bytesRead;
-                    }
-                } 
-            }
-            else if (Compression == CompressionType.Gzip)
-            {
-                using (GZipStream gs = new GZipStream(client.DataStream, CompressionMode.Compress, true))
-                {
-                    while (bytesRemaining > 0)
-                    {
-                        bytesRead = stream.Read(buffer, 0, buffer.Length);
-                        if (bytesRead > 0)
-                        {
-                            gs.Write(buffer, 0, bytesRead);
-                            bytesRemaining -= bytesRead;
-                        }
-                    }
-
-                    gs.Flush();
-                    gs.Close();
+                    client.DataStream.Write(buffer, 0, bytesRead);
+                    bytesRemaining -= bytesRead;
                 }
-            }
-            else if (Compression == CompressionType.Deflate)
-            {
-                using (DeflateStream ds = new DeflateStream(client.DataStream, CompressionMode.Compress, true))
-                {
-                    while (bytesRemaining > 0)
-                    {
-                        bytesRead = stream.Read(buffer, 0, buffer.Length);
-                        if (bytesRead > 0)
-                        {
-                            ds.Write(buffer, 0, bytesRead);
-                            bytesRemaining -= bytesRead;
-                        }
-                    }
-
-                    ds.Flush();
-                    ds.Close();
-                }
-            }
-            else
-            {
-                throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
-            }
+            }  
 
             client.DataStream.Flush();
         }
@@ -1655,59 +1602,16 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             int bytesRead = 0;
             byte[] buffer = new byte[_StreamBufferSize];
-
-            if (Compression == CompressionType.None)
+             
+            while (bytesRemaining > 0)
             {
-                while (bytesRemaining > 0)
+                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (bytesRead > 0)
                 {
-                    bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (bytesRead > 0)
-                    {
-                        await client.DataStream.WriteAsync(buffer, 0, bytesRead);
-                        bytesRemaining -= bytesRead;
-                    }
+                    await client.DataStream.WriteAsync(buffer, 0, bytesRead);
+                    bytesRemaining -= bytesRead;
                 }
-            }
-            else if (Compression == CompressionType.Gzip)
-            {
-                using (GZipStream gs = new GZipStream(client.DataStream, CompressionMode.Compress, true))
-                {
-                    while (bytesRemaining > 0)
-                    {
-                        bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                        if (bytesRead > 0)
-                        {
-                            await gs.WriteAsync(buffer, 0, bytesRead);
-                            bytesRemaining -= bytesRead;
-                        }
-                    }
-
-                    await gs.FlushAsync();
-                    gs.Close();
-                }
-            }
-            else if (Compression == CompressionType.Deflate)
-            {
-                using (DeflateStream ds = new DeflateStream(client.DataStream, CompressionMode.Compress, true))
-                {
-                    while (bytesRemaining > 0)
-                    {
-                        bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                        if (bytesRead > 0)
-                        {
-                            await ds.WriteAsync(buffer, 0, bytesRead);
-                            bytesRemaining -= bytesRead;
-                        }
-                    }
-
-                    await ds.FlushAsync();
-                    ds.Close();
-                }
-            }
-            else
-            {
-                throw new InvalidOperationException("Unknown compression type: " + Compression.ToString());
-            }
+            } 
 
             await client.DataStream.FlushAsync();
         }
@@ -1741,12 +1645,7 @@ namespace WatsonTcp
 
         private void UpdateClientLastSeen(string ipPort)
         {
-            if (_ClientsLastSeen.ContainsKey(ipPort))
-            {
-                DateTime ts;
-                _ClientsLastSeen.TryRemove(ipPort, out ts);
-            }
-
+            if (_ClientsLastSeen.ContainsKey(ipPort)) _ClientsLastSeen.TryRemove(ipPort, out DateTime ts);
             _ClientsLastSeen.TryAdd(ipPort, DateTime.Now);
         }
          
@@ -1801,71 +1700,7 @@ namespace WatsonTcp
             if (ret != null) return ret;
             else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
         }
-
-        private void AcquireSendLock(string ipPort)
-        {
-            bool added = false;
-
-            while (!added)
-            {
-                lock (_ClientsSendLock)
-                {
-                    if (_ClientsSending.Contains(ipPort))
-                    {
-                        Task.Delay(25).Wait();
-                    }
-                    else
-                    {
-                        _ClientsSending.Add(ipPort);
-                        added = true;
-                    }
-                }
-            }
-        }
-
-        private void ReleaseSendLock(string ipPort)
-        {
-            lock (_ClientsSendLock)
-            {
-                if (_ClientsSending.Contains(ipPort))
-                {
-                    _ClientsSending.Remove(ipPort);
-                }
-            }
-        }
-
-        private void AcquireReceiveLock(string ipPort)
-        {
-            bool added = false;
-
-            while (!added)
-            {
-                lock (_ClientsReceiveLock)
-                {
-                    if (_ClientsReceiving.Contains(ipPort))
-                    {
-                        Task.Delay(25).Wait();
-                    }
-                    else
-                    {
-                        _ClientsReceiving.Add(ipPort);
-                        added = true;
-                    }
-                }
-            }
-        }
-
-        private void ReleaseReceiveLock(string ipPort)
-        {
-            lock (_ClientsReceiveLock)
-            {
-                if (_ClientsReceiving.Contains(ipPort))
-                {
-                    _ClientsReceiving.Remove(ipPort);
-                }
-            }
-        }
-
+         
         #endregion
     }
 }

@@ -2,11 +2,18 @@
 
 ## Current Version
 
+v4.2.0
+
+- Breaking changes
+- Introduced ```WatsonStream``` class to prevent stream consumers from reading into the next message's header
+- ```MaxProxiedStreamSize``` property to dictate whether data is sent to ```StreamReceived``` in a new ```MemoryStream``` or the underlying data stream is sent
+- Minor refactor and removal of compression
+
+## Previous Versions
+
 v4.1.12
 
 - Fix for ClientMetadata.Dispose
-
-## Previous Versions
 
 v4.1.11
 

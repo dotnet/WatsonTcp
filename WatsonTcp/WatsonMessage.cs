@@ -99,11 +99,6 @@ namespace WatsonTcp
         /// Indicates the conversation GUID of the message. 
         /// </summary>
         public string ConversationGuid = null;
-
-        /// <summary>
-        /// The type of compression used in the message.
-        /// </summary>
-        public CompressionType Compression = CompressionType.None;
          
         /// <summary>
         /// Stream containing the message data.
@@ -188,8 +183,7 @@ namespace WatsonTcp
         /// <param name="stream">The stream containing the data.</param>
         /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
-        /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
-        /// <param name="compression">The type of compression to use.</param>
+        /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param> 
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
         internal WatsonMessage(
@@ -199,8 +193,7 @@ namespace WatsonTcp
             bool syncRequest, 
             bool syncResponse, 
             DateTime? expiration, 
-            string convGuid, 
-            CompressionType compression, 
+            string convGuid,  
             Action<string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
@@ -218,8 +211,7 @@ namespace WatsonTcp
             SyncRequest = syncRequest;
             SyncResponse = syncResponse;
             Expiration = expiration;
-            ConversationGuid = convGuid;
-            Compression = compression;
+            ConversationGuid = convGuid; 
             if (SyncRequest) SenderTimestamp = DateTime.Now;
 
             _DataStream = stream;
@@ -288,8 +280,7 @@ namespace WatsonTcp
                 SyncResponse = msg.SyncResponse;
                 SenderTimestamp = msg.SenderTimestamp;
                 Expiration = msg.Expiration;
-                ConversationGuid = msg.ConversationGuid;
-                Compression = msg.Compression;
+                ConversationGuid = msg.ConversationGuid; 
 
                 _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(buffer).Trim()); 
 
@@ -334,8 +325,7 @@ namespace WatsonTcp
             ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
             ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
             ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
-            ret += "  Conversation GUID : " + ConversationGuid + Environment.NewLine;
-            ret += "  Compression       : " + Compression.ToString() + Environment.NewLine;
+            ret += "  Conversation      : " + ConversationGuid + Environment.NewLine; 
 
             if (Metadata != null)
             {

@@ -54,6 +54,7 @@ namespace TestClientStream
                         Console.WriteLine("  send md        send message with metadata to server");
                         Console.WriteLine("  sendasync      send message to server asynchronously");
                         Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
+                        Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  status         show if client connected");
                         Console.WriteLine("  dispose        dispose of the connection");
                         Console.WriteLine("  connect        connect to the server if not connected");
@@ -111,6 +112,10 @@ namespace TestClientStream
                         ms = new MemoryStream(data);
                         success = client.SendAsync(metadata, data.Length, ms).Result;
                         Console.WriteLine(success);
+                        break;
+
+                    case "sendandwait":
+                        SendAndWait();
                         break;
 
                     case "status":
@@ -196,6 +201,7 @@ namespace TestClientStream
             client.ServerConnected += ServerConnected;
             client.ServerDisconnected += ServerDisconnected;
             client.StreamReceived += StreamReceived;
+            client.SyncRequestReceived = SyncRequestReceived;
             client.Logger = Logger;
             // client.Debug = true;
             client.Start();
@@ -393,7 +399,31 @@ namespace TestClientStream
                 LogException("StreamReceived", e);
             }
         }
-         
+
+        private static SyncResponse SyncRequestReceived(SyncRequest req)
+        {
+            Console.Write("Message received from " + req.IpPort + ": ");
+            if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
+            else Console.WriteLine("[null]");
+
+            if (req.Metadata != null && req.Metadata.Count > 0)
+            {
+                Console.WriteLine("Metadata:");
+                foreach (KeyValuePair<object, object> curr in req.Metadata)
+                {
+                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                }
+            }
+
+            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
+            retMetadata.Add("foo", "bar");
+            retMetadata.Add("bar", "baz");
+
+            // Uncomment to test timeout
+            // Task.Delay(10000).Wait();
+            return new SyncResponse(req, retMetadata, "Here is your response!");
+        }
+
         private static string AuthenticationRequested()
         {
             Console.WriteLine("");
@@ -422,7 +452,61 @@ namespace TestClientStream
         private static void ServerDisconnected(object sender, EventArgs args)
         {
             Console.WriteLine("Server disconnected");
-        } 
+        }
+
+        private static void SendAndWait()
+        {
+            string userInput = InputString("Data:", null, false);
+            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+            Dictionary<object, object> metadata = new Dictionary<object, object>();
+            metadata.Add("foo", "bar");
+
+            try
+            {
+                SyncResponse resp = client.SendAndWait(metadata, timeoutMs, userInput);
+                if (resp.Metadata != null && resp.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
+        }
+
+        private static void SendAndWaitEmpty()
+        {
+            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+
+            Dictionary<object, object> dict = new Dictionary<object, object>();
+            dict.Add("foo", "bar");
+
+            try
+            {
+                SyncResponse resp = client.SendAndWait(dict, timeoutMs);
+                if (resp.Metadata != null && resp.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
+        }
 
         private static void Logger(string msg)
         {

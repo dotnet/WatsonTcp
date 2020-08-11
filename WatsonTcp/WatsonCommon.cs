@@ -36,7 +36,7 @@ namespace WatsonTcp
 
         internal static byte[] ReadFromStream(Stream stream, long count, int bufferLen)
         {
-            if (count <= 0) return null;
+            if (count <= 0) return new byte[0];
             if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes."); 
             byte[] buffer = new byte[bufferLen];
 
@@ -62,6 +62,36 @@ namespace WatsonTcp
 
             byte[] data = ms.ToArray();
             return data;
+        }
+
+        internal static MemoryStream DataStreamToMemoryStream(long contentLength, Stream stream, int bufferLen)
+        {
+            if (contentLength <= 0) return new MemoryStream(new byte[0]);
+            if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes.");
+            byte[] buffer = new byte[bufferLen];
+
+            int read = 0;
+            long bytesRemaining = contentLength;
+            MemoryStream ms = new MemoryStream();
+
+            while (bytesRemaining > 0)
+            {
+                if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
+
+                read = stream.Read(buffer, 0, buffer.Length);
+                if (read > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                    bytesRemaining -= read;
+                }
+                else
+                {
+                    throw new IOException("Could not read from supplied stream.");
+                }
+            }
+
+            ms.Seek(0, SeekOrigin.Begin);
+            return ms;
         }
 
         internal static async Task<byte[]> ReadFromStreamAsync(Stream stream, long count, int bufferLen)
@@ -98,37 +128,8 @@ namespace WatsonTcp
         internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
-            if (msg.ContentLength == 0) return new byte[0];
-
-            byte[] msgData = null;
-            MemoryStream ms = new MemoryStream();
-
-            if (msg.Compression == CompressionType.None)
-            {
-                msgData = await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen);
-            }
-            else if (msg.Compression == CompressionType.Deflate)
-            {
-                using (DeflateStream ds = new DeflateStream(msg.DataStream, CompressionMode.Decompress, true))
-                {
-                    // msgData = WatsonCommon.ReadFromStream(ds, msg.ContentLength, bufferLen);
-                    msgData = WatsonCommon.ReadStreamFully(ds);
-                }
-            }
-            else if (msg.Compression == CompressionType.Gzip)
-            {
-                using (GZipStream gs = new GZipStream(msg.DataStream, CompressionMode.Decompress, true))
-                {
-                    msgData = WatsonCommon.ReadFromStream(gs, msg.ContentLength, bufferLen);
-                    // msgData = WatsonCommon.ReadStreamFully(gs);
-                }
-            }
-            else
-            {
-                throw new InvalidOperationException("Unknown compression type: " + msg.Compression.ToString());
-            }
-
-            return msgData;
+            if (msg.ContentLength == 0) return new byte[0]; 
+            return await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen); 
         }
 
         internal static byte[] AppendBytes(byte[] head, byte[] tail)

@@ -97,8 +97,7 @@ namespace Test.TimeoutRecovery
                         Console.WriteLine("  remove              disconnect client");
                         Console.WriteLine("  psk                 set preshared key");
                         Console.WriteLine("  stats               display server statistics");
-                        Console.WriteLine("  stats reset         reset statistics other than start time and uptime");
-                        Console.WriteLine("  comp                set the compression type, currently: " + server.Compression.ToString());
+                        Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
                         Console.WriteLine("  debug               enable/disable debug (currently " + server.DebugMessages + ")");
                         break;
 
@@ -196,11 +195,7 @@ namespace Test.TimeoutRecovery
                     case "stats reset":
                         server.Stats.Reset();
                         break;
-
-                    case "comp":
-                        server.Compression = (CompressionType)(Enum.Parse(typeof(CompressionType), InputString("Compression [None|Deflate|Gzip]:", "None", false)));
-                        break;
-
+                         
                     case "debug":
                         server.DebugMessages = !server.DebugMessages;
                         Console.WriteLine("Debug set to: " + server.DebugMessages);
