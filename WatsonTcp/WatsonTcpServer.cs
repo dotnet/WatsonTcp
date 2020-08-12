@@ -948,6 +948,8 @@ namespace WatsonTcp
 
                     TcpClient tcp = await _Listener.AcceptTcpClientAsync();
                     tcp.LingerState.Enabled = false;
+                    byte[] outValue = new byte[10];
+                    tcp.Client.IOControl(IOControlCode.KeepAliveValues, new KeepAliveValues().Values, outValue);
 
                     string clientIp = ((IPEndPoint)tcp.Client.RemoteEndPoint).Address.ToString();
                     if (PermittedIPs.Count > 0 && !PermittedIPs.Contains(clientIp))
@@ -1700,7 +1702,7 @@ namespace WatsonTcp
             if (ret != null) return ret;
             else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
         }
-         
+
         #endregion
     }
 }

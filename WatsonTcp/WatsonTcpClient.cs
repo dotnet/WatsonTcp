@@ -375,6 +375,8 @@ namespace WatsonTcp
                 Logger?.Invoke("[WatsonTcpClient] Connecting to " + _ServerIp + ":" + _ServerPort);
 
                 _Client.LingerState = new LingerOption(true, 0);
+                byte[] outValue = new byte[10];
+                _Client.Client.IOControl(IOControlCode.KeepAliveValues, new KeepAliveValues().Values, outValue);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
                 waitHandle = asyncResult.AsyncWaitHandle;
 
