@@ -23,9 +23,9 @@ namespace TestParallel
             Console.WriteLine("Starting in 3 seconds...");
 
             server = new WatsonTcpServer(null, serverPort);
-            server.ClientConnected += ServerClientConnected;
-            server.ClientDisconnected += ServerClientDisconnected;
-            server.MessageReceived += ServerMsgReceived;
+            server.Events.ClientConnected += ServerClientConnected;
+            server.Events.ClientDisconnected += ServerClientDisconnected;
+            server.Events.MessageReceived += ServerMsgReceived;
             server.Start();
 
             Thread.Sleep(3000);
@@ -155,9 +155,9 @@ namespace TestParallel
         {
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
-                client.ServerConnected += ClientServerConnected;
-                client.ServerDisconnected += ClientServerDisconnected;
-                client.MessageReceived += ClientMsgReceived;
+                client.Events.ServerConnected += ClientServerConnected;
+                client.Events.ServerDisconnected += ClientServerDisconnected;
+                client.Events.MessageReceived += ClientMsgReceived;
                 client.Start();
 
                 for (int i = 0; i < numIterations; i++)

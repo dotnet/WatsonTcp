@@ -53,7 +53,7 @@ namespace TestClient
                         Console.WriteLine("  auth                authenticate using the preshared key");
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
-                        Console.WriteLine("  debug               enable/disable debug (currently " + client.DebugMessages + ")");
+                        Console.WriteLine("  debug               enable/disable debug (currently " + client.Settings.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -132,9 +132,9 @@ namespace TestClient
                         else
                         {
                             client = new WatsonTcpClient(serverIp, serverPort);
-                            client.ServerConnected += ServerConnected;
-                            client.ServerDisconnected += ServerDisconnected;
-                            client.MessageReceived += MessageReceived;
+                            client.Events.ServerConnected += ServerConnected;
+                            client.Events.ServerDisconnected += ServerDisconnected;
+                            client.Events.MessageReceived += MessageReceived;
                             client.Start();
                         }
                         break;
@@ -152,16 +152,16 @@ namespace TestClient
                         break;
 
                     case "stats":
-                        Console.WriteLine(client.Stats.ToString());
+                        Console.WriteLine(client.Statistics.ToString());
                         break;
 
                     case "stats reset":
-                        client.Stats.Reset();
+                        client.Statistics.Reset();
                         break;
                          
                     case "debug":
-                        client.DebugMessages = !client.DebugMessages;
-                        Console.WriteLine("Debug set to: " + client.DebugMessages);
+                        client.Settings.DebugMessages = !client.Settings.DebugMessages;
+                        Console.WriteLine("Debug set to: " + client.Settings.DebugMessages);
                         break;
 
                     default:
@@ -204,19 +204,19 @@ namespace TestClient
             else
             {
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
-                client.AcceptInvalidCertificates = acceptInvalidCerts;
-                client.MutuallyAuthenticate = mutualAuthentication;
+                client.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.Settings.MutuallyAuthenticate = mutualAuthentication;
             }
 
-            client.AuthenticationFailure += AuthenticationFailure;
-            client.AuthenticationRequested = AuthenticationRequested;
-            client.AuthenticationSucceeded += AuthenticationSucceeded;
-            client.ServerConnected += ServerConnected;
-            client.ServerDisconnected += ServerDisconnected;
-            client.MessageReceived += MessageReceived;
-            client.SyncRequestReceived = SyncRequestReceived;
-            client.DebugMessages = debugMessages;
-            client.Logger = Logger;
+            client.Callbacks.AuthenticationRequested = AuthenticationRequested;
+            client.Events.AuthenticationFailure += AuthenticationFailure;
+            client.Events.AuthenticationSucceeded += AuthenticationSucceeded;
+            client.Events.ServerConnected += ServerConnected;
+            client.Events.ServerDisconnected += ServerDisconnected;
+            client.Events.MessageReceived += MessageReceived;
+            client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            client.Settings.DebugMessages = debugMessages;
+            client.Settings.Logger = Logger;
             // client.Start();
             Task startClient = client.StartAsync();
         }

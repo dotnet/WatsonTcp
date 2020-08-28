@@ -337,7 +337,7 @@
             Enable or disable message debugging.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpClient.AuthenticationRequested">
+        <member name="F:WatsonTcp.WatsonTcpClient.Events.AuthenticationRequested">
             <summary>
             Function called when authentication is requested from the server.  Expects the 16-byte preshared key.
             </summary>
@@ -347,29 +347,29 @@
             Event fired when authentication has succeeded.
             </summary>
         </member>
-        <member name="E:WatsonTcp.WatsonTcpClient.AuthenticationFailure">
+        <member name="E:WatsonTcp.WatsonTcpClient.Events.AuthenticationFailure">
             <summary>
             Event fired when authentication has failed.
             </summary>
         </member>
-        <member name="E:WatsonTcp.WatsonTcpClient.MessageReceived">
+        <member name="E:WatsonTcp.WatsonTcpClient.Events.MessageReceived">
             <summary>
             Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'.  
             This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload. 
             </summary>
         </member>
-        <member name="E:WatsonTcp.WatsonTcpClient.StreamReceived">
+        <member name="E:WatsonTcp.WatsonTcpClient.Events.StreamReceived">
             <summary>
             Use of 'StreamReceived' is exclusive and cannot be used with 'MessageReceived'.  
             This callback is called when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
             </summary>
         </member>
-        <member name="E:WatsonTcp.WatsonTcpClient.ServerConnected">
+        <member name="E:WatsonTcp.WatsonTcpClient.Events.ServerConnected">
             <summary>
             Event fired when the client successfully connects to the server.
             </summary>
         </member>
-        <member name="E:WatsonTcp.WatsonTcpClient.ServerDisconnected">
+        <member name="E:WatsonTcp.WatsonTcpClient.Events.ServerDisconnected">
             <summary>
             Event fired when the client disconnects from the server.
             </summary>
@@ -394,7 +394,7 @@
             The number of seconds to wait before timing out a connection attempt.  Default is 5 seconds.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpClient.Logger">
+        <member name="F:WatsonTcp.WatsonTcpClient.Settings.Logger">
             <summary>
             Method to invoke when sending a log message.
             </summary>
@@ -560,7 +560,7 @@
             For instance, if you set this value to 30, the client will be disconnected if the server has not received a message from the client within 30 seconds or if a message has not been sent to the client in 30 seconds.
             </summary>
         </member>
-        <member name="P:WatsonTcp.WatsonTcpServer.MaxConnections">
+        <member name="P:WatsonTcp.WatsonTcpserver.Settings.MaxConnections">
             <summary>
             Specify the maximum number of connections the server will accept.
             </summary>
@@ -591,13 +591,13 @@
             The IP:port of the client is passed in the arguments.
             </summary>
         </member>
-        <member name="E:WatsonTcp.WatsonTcpServer.ClientDisconnected">
+        <member name="E:WatsonTcp.WatsonTcpserver.Events.ClientDisconnected">
             <summary>
             Event to fire when a client disconnects from the server.
             The IP:port is passed in the arguments along with the reason for the disconnection.
             </summary>
         </member>
-        <member name="E:WatsonTcp.WatsonTcpServer.MessageReceived">
+        <member name="E:WatsonTcp.WatsonTcpserver.Events.MessageReceived">
             <summary>
             Use of 'MessageReceived' is exclusive and cannot be used with 'StreamReceived'.  
             This event is fired when a message is received from a client and it is desired that WatsonTcp pass the byte array containing the message payload. 
@@ -609,22 +609,22 @@
             This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServer.AcceptInvalidCertificates">
+        <member name="F:WatsonTcp.WatsonTcpserver.Settings.AcceptInvalidCertificates">
             <summary>
             Enable acceptance of SSL certificates from clients that cannot be validated.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServer.MutuallyAuthenticate">
+        <member name="F:WatsonTcp.WatsonTcpserver.Settings.MutuallyAuthenticate">
             <summary>
             Require mutual authentication between SSL clients and this server.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServer.PresharedKey">
+        <member name="F:WatsonTcp.WatsonTcpserver.Settings.PresharedKey">
             <summary>
             Preshared key that must be consistent between clients and this server.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServer.Logger">
+        <member name="F:WatsonTcp.WatsonTcpserver.Settings.Logger">
             <summary>
             Method to invoke when sending a log message.
             </summary>

@@ -35,7 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.TimeoutRecovery", "Tes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Deadlock", "Test.Deadlock\Test.Deadlock.csproj", "{7A57BE91-1428-45E2-B730-DE6385A59FC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.NonExistentServer", "Test.NonExistentServer\Test.NonExistentServer.csproj", "{6A05ED7D-031F-46C9-9DD8-960B88AEDD24}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.NonExistentServer", "Test.NonExistentServer\Test.NonExistentServer.csproj", "{6A05ED7D-031F-46C9-9DD8-960B88AEDD24}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

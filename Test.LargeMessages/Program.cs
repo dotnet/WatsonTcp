@@ -17,18 +17,18 @@ namespace TestLargeMessages
         static void Main(string[] args)
         {
             server = new WatsonTcpServer("127.0.0.1", 9000);
-            server.ClientConnected += ServerClientConnected;
-            server.ClientDisconnected += ServerClientDisconnected;
-            server.MessageReceived += ServerMessageReceived;
+            server.Events.ClientConnected += ServerClientConnected;
+            server.Events.ClientDisconnected += ServerClientDisconnected;
+            server.Events.MessageReceived += ServerMessageReceived;
             // server.StreamReceived = ServerStreamReceived;
             // server.Debug = true;
             server.Start();
 
             client = new WatsonTcpClient("127.0.0.1", 9000);
-            client.ServerConnected += ServerConnected;
-            client.ServerDisconnected += ServerDisconnected;
-            client.MessageReceived += MessageReceived;
-            // client.StreamReceived = StreamReceived;
+            client.Events.ServerConnected += ServerConnected;
+            client.Events.ServerDisconnected += ServerDisconnected;
+            client.Events.MessageReceived += MessageReceived;
+            // client.Events.StreamReceived = StreamReceived;
             // client.Debug = true;
             client.Start();
 

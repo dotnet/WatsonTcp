@@ -56,27 +56,27 @@ namespace TestMultiThread
             Console.WriteLine("Starting in 3 seconds...");
 
             _Server = new WatsonTcpServer(null, _ServerPort);
-            _Server.ClientConnected += ServerClientConnected;
-            _Server.ClientDisconnected += ServerClientDisconnected;
-            if (!_UseStreams) _Server.MessageReceived += ServerMsgReceived; 
-            else _Server.StreamReceived += ServerStreamReceived; 
-            _Server.SyncRequestReceived = ServerSyncRequestReceived;
-            _Server.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Server.Logger = Console.WriteLine;
-            _Server.DebugMessages = _Debug;
+            _Server.Events.ClientConnected += ServerClientConnected;
+            _Server.Events.ClientDisconnected += ServerClientDisconnected;
+            if (!_UseStreams) _Server.Events.MessageReceived += ServerMsgReceived; 
+            else _Server.Events.StreamReceived += ServerStreamReceived;
+            _Server.Callbacks.SyncRequestReceived = ServerSyncRequestReceived;
+            _Server.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
+            _Server.Settings.Logger = Console.WriteLine;
+            _Server.Settings.DebugMessages = _Debug;
             _Server.Start();
             
             Thread.Sleep(2000);
 
             _Client = new WatsonTcpClient("localhost", _ServerPort);
-            _Client.ServerConnected += ClientServerConnected;
-            _Client.ServerDisconnected += ClientServerDisconnected;
-            if (!_UseStreams) _Client.MessageReceived += ClientMsgReceived;
-            else _Client.StreamReceived += ClientStreamReceived; 
-            _Client.SyncRequestReceived = ClientSyncRequestReceived;
-            _Client.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Client.Logger = Console.WriteLine;
-            _Client.DebugMessages = _Debug;
+            _Client.Events.ServerConnected += ClientServerConnected;
+            _Client.Events.ServerDisconnected += ClientServerDisconnected;
+            if (!_UseStreams) _Client.Events.MessageReceived += ClientMsgReceived;
+            else _Client.Events.StreamReceived += ClientStreamReceived; 
+            _Client.Callbacks.SyncRequestReceived = ClientSyncRequestReceived;
+            _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
+            _Client.Settings.Logger = Console.WriteLine;
+            _Client.Settings.DebugMessages = _Debug;
             _Client.Start();
             
             Thread.Sleep(2000);
@@ -108,25 +108,25 @@ namespace TestMultiThread
             Console.WriteLine("Starting in 3 seconds...");
 
             _Server = new WatsonTcpServer(null, _ServerPort);
-            _Server.ClientConnected += ServerClientConnected;
-            _Server.ClientDisconnected += ServerClientDisconnected;
-            if (!_UseStreams) _Server.MessageReceived += ServerMsgReceived;
-            else _Server.StreamReceived += ServerStreamReceived;
-            _Server.SyncRequestReceived = ServerSyncRequestReceived;
-            _Server.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Server.Logger = Console.WriteLine;
+            _Server.Events.ClientConnected += ServerClientConnected;
+            _Server.Events.ClientDisconnected += ServerClientDisconnected;
+            if (!_UseStreams) _Server.Events.MessageReceived += ServerMsgReceived;
+            else _Server.Events.StreamReceived += ServerStreamReceived;
+            _Server.Callbacks.SyncRequestReceived = ServerSyncRequestReceived;
+            _Server.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
+            _Server.Settings.Logger = Console.WriteLine;
             _Server.Start();
 
             Thread.Sleep(2000);
 
             _Client = new WatsonTcpClient("localhost", _ServerPort);
-            _Client.ServerConnected += ClientServerConnected;
-            _Client.ServerDisconnected += ClientServerDisconnected;
-            if (!_UseStreams) _Client.MessageReceived += ClientMsgReceived;
-            else _Client.StreamReceived += ClientStreamReceived;
-            _Client.SyncRequestReceived = ClientSyncRequestReceived;
-            _Client.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Client.Logger = Console.WriteLine;
+            _Client.Events.ServerConnected += ClientServerConnected;
+            _Client.Events.ServerDisconnected += ClientServerDisconnected;
+            if (!_UseStreams) _Client.Events.MessageReceived += ClientMsgReceived;
+            else _Client.Events.StreamReceived += ClientStreamReceived;
+            _Client.Callbacks.SyncRequestReceived = ClientSyncRequestReceived;
+            _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
+            _Client.Settings.Logger = Console.WriteLine;
             _Client.Start();
 
             while (String.IsNullOrEmpty(_ClientIpPort)) ;

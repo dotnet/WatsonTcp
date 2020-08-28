@@ -12,49 +12,54 @@ namespace WatsonTcp
     public enum MessageStatus
     {
         /// <summary>
-        /// Object
+        /// Normal
         /// </summary>
         [EnumMember(Value = "Normal")] 
         Normal = 0,
         /// <summary>
-        /// Object
+        /// Success
         /// </summary>
         [EnumMember(Value = "Success")] 
         Success = 1,
         /// <summary>
-        /// Object
+        /// Failure
         /// </summary>
         [EnumMember(Value = "Failure")] 
         Failure = 2,
         /// <summary>
-        /// Object
+        /// AuthRequired
         /// </summary>
         [EnumMember(Value = "AuthRequired")] 
         AuthRequired = 3,
         /// <summary>
-        /// Object
+        /// AuthRequested
         /// </summary>
         [EnumMember(Value = "AuthRequested")] 
         AuthRequested = 4,
         /// <summary>
-        /// Object
+        /// AuthSuccess
         /// </summary>
         [EnumMember(Value = "AuthSuccess")] 
         AuthSuccess = 5,
         /// <summary>
-        /// Object
+        /// AuthFailure
         /// </summary>
         [EnumMember(Value = "AuthFailure")] 
         AuthFailure = 6,
         /// <summary>
-        /// Object
+        /// Removed
         /// </summary>
         [EnumMember(Value = "Removed")] 
         Removed = 7,
         /// <summary>
-        /// Object
+        /// Disconnecting
         /// </summary>
-        [EnumMember(Value = "Disconnecting")] 
-        Disconnecting = 8
+        [EnumMember(Value = "Disconnecting")]
+        Disconnecting = 8,
+        /// <summary>
+        /// Heartbeat
+        /// </summary>
+        [EnumMember(Value = "Heartbeat")]
+        Heartbeat = 9
     }
 }

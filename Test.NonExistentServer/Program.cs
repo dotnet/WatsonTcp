@@ -13,9 +13,9 @@ namespace Test.NonExistentServer
             {
                 WatsonTcpClient client = new WatsonTcpClient("10.1.2.3", 1234); // NonExistant Server
 
-                client.ServerConnected += HandleServerConnected;
-                client.ServerDisconnected += HandleServerDisconnected;
-                client.MessageReceived += HandleMessageReceived;
+                client.Events.ServerConnected += HandleServerConnected;
+                client.Events.ServerDisconnected += HandleServerDisconnected;
+                client.Events.MessageReceived += HandleMessageReceived;
 
                 try
                 {

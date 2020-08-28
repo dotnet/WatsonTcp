@@ -23,11 +23,11 @@ namespace Test.WinFormClient
             label1.Text = "";
             
             _Client = new WatsonTcpClient("127.0.0.1", 9000);
-            _Client.ServerConnected += OnServerConnected;
-            _Client.ServerDisconnected += OnServerDisconnected;
-            _Client.AuthenticationFailure += OnAuthenticationFailure;
-            _Client.MessageReceived += MessageReceived;
-            _Client.Logger = Logger;
+            _Client.Events.ServerConnected += OnServerConnected;
+            _Client.Events.ServerDisconnected += OnServerDisconnected;
+            _Client.Events.AuthenticationFailure += OnAuthenticationFailure;
+            _Client.Events.MessageReceived += MessageReceived;
+            _Client.Settings.Logger = Logger;
         }
          
         private void button1_Click(object sender, EventArgs e)

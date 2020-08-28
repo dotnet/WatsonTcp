@@ -17,56 +17,56 @@ namespace Test.Deadlock
         {
             using (server = new WatsonTcpServer(serverHostname, serverPort))
             {
-                server.ClientConnected += (s, e) =>
+                server.Events.ClientConnected += (s, e) =>
                 {
                     Console.WriteLine("Client connected to server: " + e.IpPort);
                     clientIpPort = e.IpPort;
                 };
 
-                server.ClientDisconnected += (s, e) =>
+                server.Events.ClientDisconnected += (s, e) =>
                 {
                     Console.WriteLine("Client disconnected from server: " + e.IpPort);
                     clientIpPort = null;
                 };
 
-                server.MessageReceived += (s, e) =>
+                server.Events.MessageReceived += (s, e) =>
                 {
                     Console.WriteLine("Server received message from client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
                 };
 
-                server.SyncRequestReceived = delegate (SyncRequest req)
+                server.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
                 {
                     Console.WriteLine("Server received sync message from client " + req.IpPort + ": " + Encoding.UTF8.GetString(req.Data));
                     return new SyncResponse(req, "Here's your response from the server!");
                 };
 
-                server.Logger = ServerLogger;
+                server.Settings.Logger = ServerLogger;
                 server.Start();
 
                 using (client = new WatsonTcpClient(serverHostname, serverPort))
                 {
-                    client.ServerConnected += (s, e) =>
+                    client.Events.ServerConnected += (s, e) =>
                     {
                         Console.WriteLine("Client connected to server");
                     };
 
-                    client.ServerDisconnected += (s, e) =>
+                    client.Events.ServerDisconnected += (s, e) =>
                     {
                         Console.WriteLine("Client disconnected from server");
                     };
 
-                    client.MessageReceived += (s, e) =>
+                    client.Events.MessageReceived += (s, e) =>
                     {
                         Console.WriteLine("Client received message from server: " + Encoding.UTF8.GetString(e.Data));
                     };
 
-                    client.SyncRequestReceived = delegate (SyncRequest req)
+                    client.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
                     {
                         Console.WriteLine("Client received sync message from server: " + Encoding.UTF8.GetString(req.Data));
                         return new SyncResponse(req, "Here's your response from the client!");
                     };
 
-                    client.Logger = ClientLogger;
+                    client.Settings.Logger = ClientLogger;
                     client.Start();
 
                     while (true)

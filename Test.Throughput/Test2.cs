@@ -47,7 +47,7 @@ namespace TestThroughput
         {  
             using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 10000))
             {
-                server.MessageReceived += Test2ServerMsgRcv;
+                server.Events.MessageReceived += Test2ServerMsgRcv;
                 server.Start();
                  
                 Stopwatch sw = new Stopwatch();
@@ -119,7 +119,7 @@ namespace TestThroughput
 
                 using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
                 {
-                    client.MessageReceived += Test2ClientMsgRcv;
+                    client.Events.MessageReceived += Test2ClientMsgRcv;
                     client.Start();
 
                     for (int i = 0; i < _NumMessages; i++)

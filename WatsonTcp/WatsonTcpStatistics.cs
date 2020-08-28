@@ -7,7 +7,7 @@ namespace WatsonTcp
     /// <summary>
     /// Watson TCP statistics.
     /// </summary>
-    public class Statistics
+    public class WatsonTcpStatistics
     {
         #region Public-Members
 
@@ -144,9 +144,9 @@ namespace WatsonTcp
         #region Constructors-and-Factories
 
         /// <summary>
-        /// Initialize the statistics object.
+        /// Instantiate the object.
         /// </summary>
-        public Statistics()
+        public WatsonTcpStatistics()
         {
 
         }

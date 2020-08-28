@@ -46,14 +46,14 @@ namespace TestThroughput
             {
                 using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 10000))
                 {
-                    server.MessageReceived += Test1ServerMsgRcv;
+                    server.Events.MessageReceived += Test1ServerMsgRcv;
                     server.Start();
-                    // server.Logger = ServerLogger;
+                    // server.Settings.Logger = ServerLogger;
                     // server.Debug = true; 
 
                     using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
                     {
-                        client.MessageReceived += Test1ClientMsgRcv;
+                        client.Events.MessageReceived += Test1ClientMsgRcv;
                         client.Start();
 
                         _Stopwatch.Start();
@@ -113,7 +113,7 @@ namespace TestThroughput
         {
             try
             {
-                Console.WriteLine("Processing message from client " + args.IpPort + " (" + args.Data.Length + " bytes)");
+                // Console.WriteLine("Processing message from client " + args.IpPort + " (" + args.Data.Length + " bytes)");
                 Interlocked.Add(ref _BytesReceived, args.Data.Length);
                 Interlocked.Decrement(ref _MessagesProcessing);
             }

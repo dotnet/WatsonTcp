@@ -40,18 +40,18 @@ namespace TestServer
                     mutualAuthentication = InputBoolean("Mutually authenticate:", false);
 
                     server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
-                    server.AcceptInvalidCertificates = acceptInvalidCerts;
-                    server.MutuallyAuthenticate = mutualAuthentication;
+                    server.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
+                    server.Settings.MutuallyAuthenticate = mutualAuthentication;
                 }
 
-                server.ClientConnected += ClientConnected;
-                server.ClientDisconnected += ClientDisconnected;
-                server.MessageReceived += MessageReceived;
-                server.SyncRequestReceived = SyncRequestReceived;
-                // server.PresharedKey = "0000000000000000";
+                server.Events.ClientConnected += ClientConnected;
+                server.Events.ClientDisconnected += ClientDisconnected;
+                server.Events.MessageReceived += MessageReceived;
+                server.Callbacks.SyncRequestReceived = SyncRequestReceived;
+                // server.Settings.PresharedKey = "0000000000000000";
                 // server.IdleClientTimeoutSeconds = 10;
-                server.Logger = Logger;
-                server.DebugMessages = debugMessages;
+                server.Settings.Logger = Logger;
+                server.Settings.DebugMessages = debugMessages;
             }
             catch (Exception e)
             {
@@ -92,7 +92,7 @@ namespace TestServer
                         Console.WriteLine("  psk                 set preshared key");
                         Console.WriteLine("  stats               display server statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
-                        Console.WriteLine("  debug               enable/disable debug (currently " + server.DebugMessages + ")");
+                        Console.WriteLine("  debug               enable/disable debug (currently " + server.Settings.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -179,20 +179,20 @@ namespace TestServer
                         break;
 
                     case "psk":
-                        server.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        server.Settings.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "stats":
-                        Console.WriteLine(server.Stats.ToString());
+                        Console.WriteLine(server.Statistics.ToString());
                         break;
 
                     case "stats reset":
-                        server.Stats.Reset();
+                        server.Statistics.Reset();
                         break;
                          
                     case "debug":
-                        server.DebugMessages = !server.DebugMessages;
-                        Console.WriteLine("Debug set to: " + server.DebugMessages);
+                        server.Settings.DebugMessages = !server.Settings.DebugMessages;
+                        Console.WriteLine("Debug set to: " + server.Settings.DebugMessages);
                         break;
                          
                     default:

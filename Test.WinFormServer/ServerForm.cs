@@ -24,11 +24,11 @@ namespace Test.WinFormServer
             label1.Text = "";
 
             _Server = new WatsonTcpServer("127.0.0.1", 9000);
-            // _Server.MaxConnections = 1;
-            _Server.MessageReceived += OnMessageReceived;
-            _Server.ClientConnected += OnClientConnected;
-            _Server.ClientDisconnected += OnClientDisconnected;
-            _Server.Logger = Logger;
+            // _server.Settings.MaxConnections = 1;
+            _Server.Events.MessageReceived += OnMessageReceived;
+            _Server.Events.ClientConnected += OnClientConnected;
+            _Server.Events.ClientDisconnected += OnClientDisconnected;
+            _Server.Settings.Logger = Logger;
             _Server.Start();
 
             Logger("Server started.");

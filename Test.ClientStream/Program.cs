@@ -61,7 +61,7 @@ namespace TestClientStream
                         Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
                         Console.WriteLine("  psk            set the preshared key");
                         Console.WriteLine("  auth           authenticate using the preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + client.DebugMessages + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + client.Settings.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -142,9 +142,9 @@ namespace TestClientStream
                         else
                         {
                             client = new WatsonTcpClient(serverIp, serverPort);
-                            client.ServerConnected += ServerConnected;
-                            client.ServerDisconnected += ServerDisconnected;
-                            client.StreamReceived += StreamReceived;
+                            client.Events.ServerConnected += ServerConnected;
+                            client.Events.ServerDisconnected += ServerDisconnected;
+                            client.Events.StreamReceived += StreamReceived;
                             client.Start();
                         }
                         break;
@@ -152,9 +152,9 @@ namespace TestClientStream
                     case "reconnect":
                         if (client != null) client.Dispose();
                         client = new WatsonTcpClient(serverIp, serverPort);
-                        client.ServerConnected += ServerConnected;
-                        client.ServerDisconnected += ServerDisconnected;
-                        client.StreamReceived += StreamReceived;
+                        client.Events.ServerConnected += ServerConnected;
+                        client.Events.ServerDisconnected += ServerDisconnected;
+                        client.Events.StreamReceived += StreamReceived;
                         client.Start();
                         break;
 
@@ -167,8 +167,8 @@ namespace TestClientStream
                         break;
 
                     case "debug":
-                        client.DebugMessages = !client.DebugMessages;
-                        Console.WriteLine("Debug set to: " + client.DebugMessages);
+                        client.Settings.DebugMessages = !client.Settings.DebugMessages;
+                        Console.WriteLine("Debug set to: " + client.Settings.DebugMessages);
                         break;
 
                     default:
@@ -191,18 +191,18 @@ namespace TestClientStream
                 mutualAuthentication = InputBoolean("Mutually authenticate:", true);
 
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
-                client.AcceptInvalidCertificates = acceptInvalidCerts;
-                client.MutuallyAuthenticate = mutualAuthentication;
+                client.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.Settings.MutuallyAuthenticate = mutualAuthentication;
             }
 
-            client.AuthenticationFailure += AuthenticationFailure;
-            client.AuthenticationRequested = AuthenticationRequested;
-            client.AuthenticationSucceeded += AuthenticationSucceeded;
-            client.ServerConnected += ServerConnected;
-            client.ServerDisconnected += ServerDisconnected;
-            client.StreamReceived += StreamReceived;
-            client.SyncRequestReceived = SyncRequestReceived;
-            client.Logger = Logger;
+            client.Callbacks.AuthenticationRequested = AuthenticationRequested;
+            client.Events.AuthenticationFailure += AuthenticationFailure;
+            client.Events.AuthenticationSucceeded += AuthenticationSucceeded;
+            client.Events.ServerConnected += ServerConnected;
+            client.Events.ServerDisconnected += ServerDisconnected;
+            client.Events.StreamReceived += StreamReceived;
+            client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            client.Settings.Logger = Logger;
             // client.Debug = true;
             client.Start();
         }

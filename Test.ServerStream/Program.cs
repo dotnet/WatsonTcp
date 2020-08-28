@@ -38,15 +38,15 @@ namespace TestServerStream
                 mutualAuthentication = InputBoolean("Mutually authenticate:", true);
 
                 server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
-                server.AcceptInvalidCertificates = acceptInvalidCerts;
-                server.MutuallyAuthenticate = mutualAuthentication;
+                server.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
+                server.Settings.MutuallyAuthenticate = mutualAuthentication;
             }
 
-            server.ClientConnected += ClientConnected;
-            server.ClientDisconnected += ClientDisconnected;
-            server.StreamReceived += StreamReceived;
-            server.SyncRequestReceived = SyncRequestReceived;
-            server.Logger = Logger;
+            server.Events.ClientConnected += ClientConnected;
+            server.Events.ClientDisconnected += ClientDisconnected;
+            server.Events.StreamReceived += StreamReceived;
+            server.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            server.Settings.Logger = Logger;
             // server.Debug = true;
             server.Start();
 
@@ -81,7 +81,7 @@ namespace TestServerStream
                         Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  psk            set preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + server.DebugMessages + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + server.Settings.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -164,12 +164,12 @@ namespace TestServerStream
                         break;
 
                     case "psk":
-                        server.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        server.Settings.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "debug":
-                        server.DebugMessages = !server.DebugMessages;
-                        Console.WriteLine("Debug set to: " + server.DebugMessages);
+                        server.Settings.DebugMessages = !server.Settings.DebugMessages;
+                        Console.WriteLine("Debug set to: " + server.Settings.DebugMessages);
                         break;
 
                     default:
