@@ -221,8 +221,8 @@ namespace TestClient
             client.Settings.Logger = Logger;
 
             client.Keepalive.EnableTcpKeepAlives = true;
-            client.Keepalive.TcpKeepAliveInterval = 5;
-            client.Keepalive.TcpKeepAliveTime = 5;
+            client.Keepalive.TcpKeepAliveInterval = 1;
+            client.Keepalive.TcpKeepAliveTime = 1;
 
             // client.Start();
             Task startClient = client.StartAsync();

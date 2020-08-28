@@ -56,8 +56,8 @@ namespace TestServer
                 server.Settings.DebugMessages = debugMessages;
 
                 server.Keepalive.EnableTcpKeepAlives = true;
-                server.Keepalive.TcpKeepAliveInterval = 5;
-                server.Keepalive.TcpKeepAliveTime = 5; 
+                server.Keepalive.TcpKeepAliveInterval = 1;
+                server.Keepalive.TcpKeepAliveTime = 1; 
             }
             catch (Exception e)
             {
