@@ -208,15 +208,22 @@ namespace TestClient
                 client.Settings.MutuallyAuthenticate = mutualAuthentication;
             }
 
-            client.Callbacks.AuthenticationRequested = AuthenticationRequested;
             client.Events.AuthenticationFailure += AuthenticationFailure;
             client.Events.AuthenticationSucceeded += AuthenticationSucceeded;
             client.Events.ServerConnected += ServerConnected;
             client.Events.ServerDisconnected += ServerDisconnected;
             client.Events.MessageReceived += MessageReceived;
+
             client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            client.Callbacks.AuthenticationRequested = AuthenticationRequested;
+
             client.Settings.DebugMessages = debugMessages;
             client.Settings.Logger = Logger;
+
+            client.Keepalive.EnableTcpKeepAlives = true;
+            client.Keepalive.TcpKeepAliveInterval = 5;
+            client.Keepalive.TcpKeepAliveTime = 5;
+
             // client.Start();
             Task startClient = client.StartAsync();
         }

@@ -47,11 +47,17 @@ namespace TestServer
                 server.Events.ClientConnected += ClientConnected;
                 server.Events.ClientDisconnected += ClientDisconnected;
                 server.Events.MessageReceived += MessageReceived;
+                
                 server.Callbacks.SyncRequestReceived = SyncRequestReceived;
+                
+                // server.Settings.IdleClientTimeoutSeconds = 10;
                 // server.Settings.PresharedKey = "0000000000000000";
-                // server.IdleClientTimeoutSeconds = 10;
                 server.Settings.Logger = Logger;
                 server.Settings.DebugMessages = debugMessages;
+
+                server.Keepalive.EnableTcpKeepAlives = true;
+                server.Keepalive.TcpKeepAliveInterval = 5;
+                server.Keepalive.TcpKeepAliveTime = 5; 
             }
             catch (Exception e)
             {
