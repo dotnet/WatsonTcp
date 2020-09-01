@@ -21,7 +21,6 @@ namespace WatsonTcp
 
         /// <summary>
         /// TCP keepalive interval, i.e. the number of seconds a TCP connection will wait for a keepalive response before sending another keepalive probe.
-        /// After 10 failed keepalive probes, the connection will be terminated.
         /// Default is 5 seconds.  Value must be greater than zero.
         /// </summary>
         public int TcpKeepAliveInterval
@@ -38,8 +37,7 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// TCP keepalive time, i.e. the number of seconds a TCP connection will remain alive/idle before keepalive probes are sent to the remote.
-        /// After 10 failed keepalive probes, the connection will be terminated.
+        /// TCP keepalive time, i.e. the number of seconds a TCP connection will remain alive/idle before keepalive probes are sent to the remote. 
         /// Default is 5 seconds.  Value must be greater than zero.
         /// </summary>
         public int TcpKeepAliveTime
@@ -55,13 +53,30 @@ namespace WatsonTcp
             }
         }
          
+        /// <summary>
+        /// TCP keepalive retry count, i.e. the number of times a TCP probe will be sent in effort to verify the connection.
+        /// After the specified number of probes fail, the connection will be terminated.
+        /// </summary>
+        public int TcpKeepAliveRetryCount
+        {
+            get
+            {
+                return _TcpKeepAliveRetryCount;
+            }
+            set
+            {
+                if (value < 1) throw new ArgumentException("TcpKeepAliveRetryCount must be greater than zero.");
+                _TcpKeepAliveRetryCount = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
 
         private int _TcpKeepAliveInterval = 5;
         private int _TcpKeepAliveTime = 5;
-        // private int _TcpKeepAliveRetryCount = 5;
+        private int _TcpKeepAliveRetryCount = 5;
 
         #endregion
 

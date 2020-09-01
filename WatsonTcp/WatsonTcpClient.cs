@@ -261,10 +261,9 @@ namespace WatsonTcp
             bool connectSuccess = false;
 
             if (!_Events.IsUsingMessages && !_Events.IsUsingStreams) 
-                throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set."); 
+                throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set.");
 
-            if (_Keepalive.EnableTcpKeepAlives) 
-                ServicePointManager.SetTcpKeepAlive(true, _Keepalive.TcpKeepAliveTime, _Keepalive.TcpKeepAliveInterval);  
+            if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
 
             if (_Mode == Mode.Tcp)
             {
@@ -1358,6 +1357,36 @@ namespace WatsonTcp
 
             if (ret != null) return ret;
             else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+        }
+
+        private void EnableKeepalives()
+        {
+#if NETCOREAPP
+
+            _Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+            _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime); 
+            _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
+            _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+
+#elif NETFRAMEWORK 
+
+            byte[] keepAlive = new byte[12];
+
+            // Turn keepalive on
+            Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4);
+
+            // Set TCP keepalive time
+            Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4); 
+
+            // Set TCP keepalive interval
+            Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4); 
+
+            // Set keepalive settings on the underlying Socket
+            _Client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
+
+#elif NETSTANDARD
+
+#endif
         }
 
         #endregion
