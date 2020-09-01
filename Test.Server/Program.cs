@@ -57,7 +57,8 @@ namespace TestServer
 
                 server.Keepalive.EnableTcpKeepAlives = true;
                 server.Keepalive.TcpKeepAliveInterval = 1;
-                server.Keepalive.TcpKeepAliveTime = 1; 
+                server.Keepalive.TcpKeepAliveTime = 1;
+                server.Keepalive.TcpKeepAliveRetryCount = 3;
             }
             catch (Exception e)
             {

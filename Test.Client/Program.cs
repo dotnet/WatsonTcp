@@ -223,6 +223,7 @@ namespace TestClient
             client.Keepalive.EnableTcpKeepAlives = true;
             client.Keepalive.TcpKeepAliveInterval = 1;
             client.Keepalive.TcpKeepAliveTime = 1;
+            client.Keepalive.TcpKeepAliveRetryCount = 3;
 
             // client.Start();
             Task startClient = client.StartAsync();
