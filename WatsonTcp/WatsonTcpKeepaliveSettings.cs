@@ -8,7 +8,9 @@ namespace WatsonTcp
     /// Watson TCP keepalive settings.
     /// Keepalive probes are sent after an idle period defined by TcpKeepAliveTime (seconds).
     /// Should a keepalive response not be received within TcpKeepAliveInterval (seconds), a subsequent keepalive probe will be sent.
-    /// Should 10 keepalive probes fail, the connection will terminate.
+    /// For .NET Framework, should 10 keepalive probes fail, the connection will terminate.
+    /// For .NET Core, should a number of probes fail as specified in TcpKeepAliveRetryCount, the connection will terminate.
+    /// TCP keepalives are not supported in .NET Standard.
     /// </summary>
     public class WatsonTcpKeepaliveSettings
     {
@@ -16,6 +18,7 @@ namespace WatsonTcp
 
         /// <summary>
         /// Enable or disable TCP-based keepalive probes.
+        /// TCP keepalives are only supported in .NET Core and .NET Framework projects.  .NET Standard does not provide facilities to support TCP keepalives.
         /// </summary>
         public bool EnableTcpKeepAlives = true;
 
