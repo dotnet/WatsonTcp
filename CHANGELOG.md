@@ -2,14 +2,21 @@
 
 ## Current Version
 
+v4.3.0
+
+- Breaking changes
+- Retarget to include .NET Core 3.1 (previously .NET Framework 4.6.1 and .NET Standard 2.1 only)
+- Added support for TCP keepalives for .NET Framework and .NET Core (.NET Standard does not have such facilities)
+- Consolidated settings into separate classes
+
+## Previous Versions
+
 v4.2.0
 
 - Breaking changes
 - Introduced ```WatsonStream``` class to prevent stream consumers from reading into the next message's header
 - ```MaxProxiedStreamSize``` property to dictate whether data is sent to ```StreamReceived``` in a new ```MemoryStream``` or the underlying data stream is sent
 - Minor refactor and removal of compression
-
-## Previous Versions
 
 v4.1.12
 

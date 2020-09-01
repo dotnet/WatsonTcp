@@ -10,12 +10,12 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.2.0
-
+## New in v4.3.0
+ 
 - Breaking changes
-- Introduced ```WatsonStream``` class to prevent stream consumers from reading into the next message's header
-- ```MaxProxiedStreamSize``` property to dictate whether data is sent to ```StreamReceived``` in a new ```MemoryStream``` or the underlying data stream is sent
-- Minor refactor and removal of compression
+- Retarget to include .NET Core 3.1 (previously .NET Framework 4.6.1 and .NET Standard 2.1 only)
+- Added support for TCP keepalives for .NET Framework and .NET Core (.NET Standard does not have such facilities)
+- Consolidated settings into separate classes
 
 ## Test Applications
 
@@ -27,17 +27,17 @@ WatsonTcp supports data exchange with or without SSL.  The server and client cla
 
 ## To Stream or Not To Stream...
 
-WatsonTcp allows you to receive messages using either byte arrays or streams.  Set ```MessageReceived``` if you wish to consume a byte array, or, set ```StreamReceived``` if you wish to consume a stream. 
+WatsonTcp allows you to receive messages using either byte arrays or streams.  Set ```Events.MessageReceived``` if you wish to consume a byte array, or, set ```Events.StreamReceived``` if you wish to consume a stream. 
 
 It is important to note the following:
 
-- When using ```MessageReceived```
+- When using ```Events.MessageReceived```
   - The message payload is read from the stream and sent to your application
   - The event is fired asynchronously and Watson can continue reading messages while your application processes
-- When using ```StreamReceived```
-  - If the message payload is smaller than ```MaxProxiedStreamSize```, the data is read into a ```MemoryStream``` and sent to your application asynchronously
-  - If the message payload is larger than ```MaxProxiedStreamSize```, the underlying data stream is sent to your application synchronously, and WatsonTcp will wait until your application responds before continuing to read
-- Only one of ```MessageReceived``` and ```StreamReceived``` can be set
+- When using ```Events.StreamReceived```
+  - If the message payload is smaller than ```Settings.MaxProxiedStreamSize```, the data is read into a ```MemoryStream``` and sent to your application asynchronously
+  - If the message payload is larger than ```Settings.MaxProxiedStreamSize```, the underlying data stream is sent to your application synchronously, and WatsonTcp will wait until your application responds before continuing to read
+- Only one of ```Events.MessageReceived``` and ```Events.StreamReceived``` should be set; ```Events.MessageReceived``` will be used if both are set
 
 ## Including Metadata with a Message
 
@@ -67,21 +67,9 @@ mono --server myapp.exe
 
 Special thanks to the following people for their support and contributions to this project!
 
-- @brudo
-- @MrMikeJJ
-- @mikkleini
-- @pha3z
-- @crushedice
-- @marek-petak
-- @ozrecsec
-- @developervariety
-- @NormenSchwettmann
-- @karstennilsen
-- @motridox
-- @AdamFrisby
-- @Job79
-- @Dijkstra-ru
-- @playingoDEERUX
+@brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
+@NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
+@DuAell @syntacs
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
@@ -96,10 +84,10 @@ using WatsonTcp;
 static void Main(string[] args)
 {
     WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 9000);
-    server.ClientConnected += ClientConnected;
-    server.ClientDisconnected += ClientDisconnected;
-    server.MessageReceived += MessageReceived; 
-    server.SyncRequestReceived = SyncRequestReceived;
+    server.Events.ClientConnected += ClientConnected;
+    server.Events.ClientDisconnected += ClientDisconnected;
+    server.Events.MessageReceived += MessageReceived; 
+    server.Callbacks.SyncRequestReceived = SyncRequestReceived;
     server.Start();
 
     // list clients
@@ -156,10 +144,10 @@ using WatsonTcp;
 static void Main(string[] args)
 {
     WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
-    client.ServerConnected += ServerConnected;
-    client.ServerDisconnected += ServerDisconnected;
-    client.MessageReceived += MessageReceived; 
-    client.SyncRequestReceived = SyncRequestReceived;
+    client.Events.ServerConnected += ServerConnected;
+    client.Events.ServerDisconnected += ServerDisconnected;
+    client.Events.MessageReceived += MessageReceived; 
+    client.Callbacks.SyncRequestReceived = SyncRequestReceived;
     client.Start();
 
     // check connectivity
@@ -215,14 +203,14 @@ The examples above can be modified to use SSL as follows.  No other changes are 
 ```
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000, "test.pfx", "password"); 
-server.AcceptInvalidCertificates = true;
-server.MutuallyAuthenticate = true;
+server.Settings.AcceptInvalidCertificates = true;
+server.Settings.MutuallyAuthenticate = true;
 server.Start();
 
 // client
 WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000, "test.pfx", "password"); 
-client.AcceptInvalidCertificates = true;
-client.MutuallyAuthenticate = true;
+client.Settings.AcceptInvalidCertificates = true;
+client.Settings.MutuallyAuthenticate = true;
 client.Start();
 ```
 
@@ -232,9 +220,9 @@ Refer to the ```Test.ClientStream``` and ```Test.ServerStream``` projects for a 
 ```
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000);
-server.ClientConnected += ClientConnected;
-server.ClientDisconnected += ClientDisconnected;
-server.StreamReceived += StreamReceived; 
+server.Events.ClientConnected += ClientConnected;
+server.Events.ClientDisconnected += ClientDisconnected;
+server.Events.StreamReceived += StreamReceived; 
 server.Start();
 
 static void StreamReceived(object sender, StreamReceivedFromClientEventArgs args)
@@ -261,9 +249,9 @@ static void StreamReceived(object sender, StreamReceivedFromClientEventArgs args
 
 // client
 WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
-client.ServerConnected += ServerConnected;
-client.ServerDisconnected += ServerDisconnected;
-client.StreamReceived += StreamReceived; 
+client.Events.ServerConnected += ServerConnected;
+client.Events.ServerDisconnected += ServerDisconnected;
+client.Events.StreamReceived += StreamReceived; 
 client.Start();
 
 static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args)
@@ -291,7 +279,7 @@ static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args
  
 ## Disconnection Handling
 
-The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically to provide a reference for WatsonTcp to handle a variety of disconnection scenarios.  These include:
+The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically to provide a reference for WatsonTcp to handle a variety of disconnection scenarios.  The disconnection tests for which WatsonTcp is evaluated include:
 
 | Test case | Description | Pass/Fail |
 |---|---|---|
@@ -300,6 +288,23 @@ The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically
 | Server-side termination | Abrupt termination due to process abort or CTRL-C | PASS |
 | Client-side dispose | Graceful termination of a client connection | PASS |
 | Client-side termination | Abrupt termination due to a process abort or CTRL-C | PASS |
+| Network interface down | Network interface disabled or cable removed | Partial (see below) |
+
+Additionally, as of v4.3.0, support for TCP keepalives has been added to WatsonTcp, primarily to address the issue of a network interface being shut down, the cable unplugged, or the media otherwise becoming unavailable.  It is important to note that keepalives are supported in .NET Core and .NET Framework, but NOT .NET Standard.  As of this release, .NET Standard provides no facilities for TCP keepalives.
+
+TCP keepalives are enabled by default.
+```
+server.Keepalive.EnableTcpKeepAlives = true;
+server.Keepalive.TcpKeepAliveInterval = 5;      // seconds to wait before sending subsequent keepalive
+server.Keepalive.TcpKeepAliveTime = 5;          // seconds to wait before sending a keepalive
+server.Keepalive.TcpKeepAliveRetryCount = 5;    // number of failed keepalive probes before terminating connection
+```
+
+Some important notes about TCP keepalives:
+
+- Keepalives only work in .NET Core and .NET Framework
+- Keepalives can be enabled on either client or server, but generally only work on server (being investigated)
+- ```Keepalive.TcpKeepAliveRetryCount``` is only applicable to .NET Core; for .NET Framework, this value is forced to 10
 
 ## Disconnecting Idle Clients
 

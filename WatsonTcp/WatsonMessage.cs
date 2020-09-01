@@ -290,17 +290,17 @@ namespace WatsonTcp
             }
             catch (IOException)
             {
-                _Logger?.Invoke(_Header + "BuildStream IOexception, disconnect assumed");
+                _Logger?.Invoke(_Header + "BuildStream IOexception, disconnect detected");
                 return false;
             }
             catch (SocketException)
             {
-                _Logger?.Invoke(_Header + "BuildStream SocketException, disconnect assumed");
+                _Logger?.Invoke(_Header + "BuildStream SocketException, disconnect detected");
                 return false;
             }
             catch (ObjectDisposedException)
             {
-                _Logger?.Invoke(_Header + "BuildStream ObjectDisposedException, disconnect assumed");
+                _Logger?.Invoke(_Header + "BuildStream ObjectDisposedException, disconnect detected");
                 return false;
             }
             catch (Exception e)
