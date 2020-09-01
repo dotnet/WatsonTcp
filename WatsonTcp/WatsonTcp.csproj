@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageReleaseNotes>Consolidated settings, added keepalives</PackageReleaseNotes>
+    <PackageReleaseNotes>Consolidated settings, added keepalives, retarget to include .NET Core 3.1</PackageReleaseNotes>
     <PackageIconUrl>https://raw.githubusercontent.com/jchristn/watsontcp/master/assets/watson.ico</PackageIconUrl>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>
