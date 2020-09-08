@@ -34,8 +34,8 @@ namespace WatsonTcp
             }
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(Settings));
-                _Settings = value;
+                if (value == null) _Settings = new WatsonTcpServerSettings();
+                else _Settings = value;
             }
         }
          
