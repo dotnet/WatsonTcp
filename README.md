@@ -69,7 +69,7 @@ Special thanks to the following people for their support and contributions to th
 
 @brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
-@DuAell @syntacs
+@DuAell @syntacs @zsolt777
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 

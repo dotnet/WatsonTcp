@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace WatsonTcp
 {
@@ -185,6 +186,26 @@ namespace WatsonTcp
             _ReceivedMessages = 0;
             _SentBytes = 0;
             _SentMessages = 0;
+        }
+
+        internal void IncrementReceivedMessages()
+        {
+            _ReceivedMessages = Interlocked.Increment(ref _ReceivedMessages);
+        }
+
+        internal void IncrementSentMessages()
+        {
+            _SentMessages = Interlocked.Increment(ref _SentMessages);
+        }
+
+        internal void AddReceivedBytes(long bytes)
+        {
+            _ReceivedBytes = Interlocked.Add(ref _ReceivedBytes, bytes);
+        }
+
+        internal void AddSentBytes(long bytes)
+        {
+            _SentBytes = Interlocked.Add(ref _SentBytes, bytes);
         }
 
         #endregion

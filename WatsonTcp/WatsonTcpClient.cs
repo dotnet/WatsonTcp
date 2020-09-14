@@ -1033,9 +1033,9 @@ namespace WatsonTcp
                             break;
                         }
                     }
-                     
-                    _Statistics.ReceivedMessages = _Statistics.ReceivedMessages + 1;
-                    _Statistics.ReceivedBytes += msg.ContentLength; 
+
+                    _Statistics.IncrementReceivedMessages();
+                    _Statistics.AddReceivedBytes(msg.ContentLength);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -1105,8 +1105,8 @@ namespace WatsonTcp
                     _WriteLock.Release();
                 }
 
-                _Statistics.SentMessages += 1;
-                _Statistics.SentBytes += contentLength;
+                _Statistics.IncrementSentMessages();
+                _Statistics.AddSentBytes(contentLength);
                 return true;
             }
             catch (Exception e)
@@ -1165,8 +1165,8 @@ namespace WatsonTcp
                     _WriteLock.Release();
                 }
 
-                _Statistics.SentMessages += 1;
-                _Statistics.SentBytes += contentLength;
+                _Statistics.IncrementSentMessages();
+                _Statistics.AddSentBytes(contentLength);
                 return true;
             }
             catch (Exception e)
@@ -1224,8 +1224,8 @@ namespace WatsonTcp
                     _WriteLock.Release(); 
                 }
 
-                _Statistics.SentMessages += 1;
-                _Statistics.SentBytes += contentLength; 
+                _Statistics.IncrementSentMessages();
+                _Statistics.AddSentBytes(contentLength);
             }
             catch (Exception e)
             {

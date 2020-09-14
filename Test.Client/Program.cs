@@ -8,16 +8,16 @@ namespace TestClient
 {
     internal class TestClient
     {
-        private static string serverIp = "";
-        private static int serverPort = 0;
-        private static bool useSsl = false;
-        private static string certFile = "";
-        private static string certPass = "";
-        private static bool debugMessages = true;
-        private static bool acceptInvalidCerts = true;
-        private static bool mutualAuthentication = true;
-        private static WatsonTcpClient client = null;
-        private static string presharedKey = null;
+        private static string _ServerIp = "";
+        private static int _ServerPort = 0;
+        private static bool _Ssl = false;
+        private static string _CertFile = "";
+        private static string _CertPass = "";
+        private static bool _DebugMessages = true;
+        private static bool _AcceptInvalidCerts = true;
+        private static bool _MutualAuth = true;
+        private static WatsonTcpClient _Client = null;
+        private static string _PresharedKey = null;
         
         private static void Main(string[] args)
         {
@@ -53,7 +53,7 @@ namespace TestClient
                         Console.WriteLine("  auth                authenticate using the preshared key");
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
-                        Console.WriteLine("  debug               enable/disable debug (currently " + client.Settings.DebugMessages + ")");
+                        Console.WriteLine("  debug               enable/disable debug (currently " + _Client.Settings.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -66,31 +66,31 @@ namespace TestClient
 
                     case "send":
                         userInput = InputString("Data:", null, false);
-                        if (!client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
+                        if (!_Client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
                     case "send md":
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        if (!client.Send(metadata, Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
+                        if (!_Client.Send(metadata, Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
                     case "send md large":
                         metadata = new Dictionary<object, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i, i);
-                        if (!client.Send(metadata, "Hello!")) Console.WriteLine("Failed");
+                        if (!_Client.Send(metadata, "Hello!")) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
                         userInput = InputString("Data:", null, false);
-                        success = client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
+                        success = _Client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync md":
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        success = client.SendAsync(metadata, Encoding.UTF8.GetBytes(userInput)).Result;
+                        success = _Client.SendAsync(metadata, Encoding.UTF8.GetBytes(userInput)).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
@@ -100,7 +100,7 @@ namespace TestClient
 
                     case "sendempty":
                         metadata = InputDictionary();
-                        success = client.Send(metadata);
+                        success = _Client.Send(metadata);
                         if (!success) Console.WriteLine("Failed");
                         break;
 
@@ -109,33 +109,33 @@ namespace TestClient
                         break;
 
                     case "status":
-                        if (client == null)
+                        if (_Client == null)
                         {
                             Console.WriteLine("Connected: False (null)");
                         }
                         else
                         {
-                            Console.WriteLine("Connected: " + client.Connected);
+                            Console.WriteLine("Connected: " + _Client.Connected);
                         }
 
                         break;
 
                     case "dispose":
-                        client.Dispose();
+                        _Client.Dispose();
                         break;
 
                     case "connect":
-                        if (client != null && client.Connected)
+                        if (_Client != null && _Client.Connected)
                         {
                             Console.WriteLine("Already connected");
                         }
                         else
                         {
-                            client = new WatsonTcpClient(serverIp, serverPort);
-                            client.Events.ServerConnected += ServerConnected;
-                            client.Events.ServerDisconnected += ServerDisconnected;
-                            client.Events.MessageReceived += MessageReceived;
-                            client.Start();
+                            _Client = new WatsonTcpClient(_ServerIp, _ServerPort);
+                            _Client.Events.ServerConnected += ServerConnected;
+                            _Client.Events.ServerDisconnected += ServerDisconnected;
+                            _Client.Events.MessageReceived += MessageReceived;
+                            _Client.Start();
                         }
                         break;
 
@@ -144,24 +144,24 @@ namespace TestClient
                         break;
 
                     case "psk":
-                        presharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        _PresharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "auth":
-                        client.Authenticate(presharedKey);
+                        _Client.Authenticate(_PresharedKey);
                         break;
 
                     case "stats":
-                        Console.WriteLine(client.Statistics.ToString());
+                        Console.WriteLine(_Client.Statistics.ToString());
                         break;
 
                     case "stats reset":
-                        client.Statistics.Reset();
+                        _Client.Statistics.Reset();
                         break;
                          
                     case "debug":
-                        client.Settings.DebugMessages = !client.Settings.DebugMessages;
-                        Console.WriteLine("Debug set to: " + client.Settings.DebugMessages);
+                        _Client.Settings.DebugMessages = !_Client.Settings.DebugMessages;
+                        Console.WriteLine("Debug set to: " + _Client.Settings.DebugMessages);
                         break;
 
                     default:
@@ -172,22 +172,22 @@ namespace TestClient
 
         private static void InitializeClient()
         {
-            serverIp = InputString("Server IP:", "127.0.0.1", false);
-            serverPort = InputInteger("Server port:", 9000, true, false);
-            useSsl = InputBoolean("Use SSL:", false);
+            _ServerIp = InputString("Server IP:", "127.0.0.1", false);
+            _ServerPort = InputInteger("Server port:", 9000, true, false);
+            _Ssl = InputBoolean("Use SSL:", false);
              
-            if (useSsl)
+            if (_Ssl)
             {
                 bool supplyCert = InputBoolean("Supply SSL certificate:", false);
 
                 if (supplyCert)
                 {
-                    certFile = InputString("Certificate file:", "test.pfx", false);
-                    certPass = InputString("Certificate password:", "password", false);
+                    _CertFile = InputString("Certificate file:", "test.pfx", false);
+                    _CertPass = InputString("Certificate password:", "password", false);
                 }
 
-                acceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
-                mutualAuthentication = InputBoolean("Mutually authenticate:", false); 
+                _AcceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
+                _MutualAuth = InputBoolean("Mutually authenticate:", false); 
             }
 
             ConnectClient();
@@ -195,38 +195,38 @@ namespace TestClient
 
         private static void ConnectClient()
         { 
-            if (client != null) client.Dispose();
+            if (_Client != null) _Client.Dispose();
 
-            if (!useSsl)
+            if (!_Ssl)
             {
-                client = new WatsonTcpClient(serverIp, serverPort);
+                _Client = new WatsonTcpClient(_ServerIp, _ServerPort);
             }
             else
             {
-                client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
-                client.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
-                client.Settings.MutuallyAuthenticate = mutualAuthentication;
+                _Client = new WatsonTcpClient(_ServerIp, _ServerPort, _CertFile, _CertPass);
+                _Client.Settings.AcceptInvalidCertificates = _AcceptInvalidCerts;
+                _Client.Settings.MutuallyAuthenticate = _MutualAuth;
             }
 
-            client.Events.AuthenticationFailure += AuthenticationFailure;
-            client.Events.AuthenticationSucceeded += AuthenticationSucceeded;
-            client.Events.ServerConnected += ServerConnected;
-            client.Events.ServerDisconnected += ServerDisconnected;
-            client.Events.MessageReceived += MessageReceived;
+            _Client.Events.AuthenticationFailure += AuthenticationFailure;
+            _Client.Events.AuthenticationSucceeded += AuthenticationSucceeded;
+            _Client.Events.ServerConnected += ServerConnected;
+            _Client.Events.ServerDisconnected += ServerDisconnected;
+            _Client.Events.MessageReceived += MessageReceived;
 
-            client.Callbacks.SyncRequestReceived = SyncRequestReceived;
-            client.Callbacks.AuthenticationRequested = AuthenticationRequested;
+            _Client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            _Client.Callbacks.AuthenticationRequested = AuthenticationRequested;
 
-            client.Settings.DebugMessages = debugMessages;
-            client.Settings.Logger = Logger;
+            _Client.Settings.DebugMessages = _DebugMessages;
+            _Client.Settings.Logger = Logger;
 
-            client.Keepalive.EnableTcpKeepAlives = true;
-            client.Keepalive.TcpKeepAliveInterval = 1;
-            client.Keepalive.TcpKeepAliveTime = 1;
-            client.Keepalive.TcpKeepAliveRetryCount = 3;
+            _Client.Keepalive.EnableTcpKeepAlives = true;
+            _Client.Keepalive.TcpKeepAliveInterval = 1;
+            _Client.Keepalive.TcpKeepAliveTime = 1;
+            _Client.Keepalive.TcpKeepAliveRetryCount = 3;
 
             // client.Start();
-            Task startClient = client.StartAsync();
+            Task startClient = _Client.StartAsync();
         }
 
         private static bool InputBoolean(string question, bool yesDefault)
@@ -365,8 +365,8 @@ namespace TestClient
             Console.WriteLine("");
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(presharedKey)) presharedKey = InputString("Preshared key:", "1234567812345678", false);
-            return presharedKey;
+            if (String.IsNullOrEmpty(_PresharedKey)) _PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+            return _PresharedKey;
         }
          
         private static void AuthenticationSucceeded(object sender, EventArgs args) 
@@ -438,7 +438,7 @@ namespace TestClient
 
             try
             {
-                SyncResponse resp = client.SendAndWait(metadata, timeoutMs, userInput);
+                SyncResponse resp = _Client.SendAndWait(metadata, timeoutMs, userInput);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -465,7 +465,7 @@ namespace TestClient
 
             try
             {
-                SyncResponse resp = client.SendAndWait(dict, timeoutMs);
+                SyncResponse resp = _Client.SendAndWait(dict, timeoutMs);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

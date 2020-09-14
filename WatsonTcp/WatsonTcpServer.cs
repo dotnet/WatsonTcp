@@ -1268,9 +1268,9 @@ namespace WatsonTcp
                             break;
                         }
                     }
-                     
-                    _Statistics.ReceivedMessages = _Statistics.ReceivedMessages + 1;
-                    _Statistics.ReceivedBytes += msg.ContentLength; 
+
+                    _Statistics.IncrementReceivedMessages();
+                    _Statistics.AddReceivedBytes(msg.ContentLength);
                     UpdateClientLastSeen(client.IpPort); 
                 }
                 catch (ObjectDisposedException)
@@ -1332,10 +1332,10 @@ namespace WatsonTcp
             try
             {
                 SendHeaders(client, msg);
-                SendDataStream(client, contentLength, stream); 
+                SendDataStream(client, contentLength, stream);
 
-                _Statistics.SentMessages += 1;
-                _Statistics.SentBytes += contentLength;
+                _Statistics.IncrementSentMessages();
+                _Statistics.AddSentBytes(contentLength);
                 return true;
             }
             catch (Exception e)
@@ -1369,8 +1369,8 @@ namespace WatsonTcp
                 await SendHeadersAsync(client, msg);
                 await SendDataStreamAsync(client, contentLength, stream);
 
-                _Statistics.SentMessages += 1;
-                _Statistics.SentBytes += contentLength;
+                _Statistics.IncrementSentMessages();
+                _Statistics.AddSentBytes(contentLength);
                 return true;
             }
             catch (Exception e)
@@ -1404,8 +1404,8 @@ namespace WatsonTcp
                 SendHeaders(client, msg);
                 SendDataStream(client, contentLength, stream);
 
-                _Statistics.SentMessages += 1;
-                _Statistics.SentBytes += contentLength; 
+                _Statistics.IncrementSentMessages();
+                _Statistics.AddSentBytes(contentLength);
             }
             catch (Exception e)
             {
@@ -1507,8 +1507,7 @@ namespace WatsonTcp
 
         private void UpdateClientLastSeen(string ipPort)
         {
-            if (_ClientsLastSeen.ContainsKey(ipPort)) _ClientsLastSeen.TryRemove(ipPort, out DateTime ts);
-            _ClientsLastSeen.TryAdd(ipPort, DateTime.Now);
+            _ClientsLastSeen.AddOrUpdate(ipPort, DateTime.Now, (key, value) => DateTime.Now);
         }
          
         private async Task MonitorForExpiredSyncResponses()
