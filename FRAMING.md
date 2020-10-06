@@ -38,7 +38,7 @@ Authorization: hello@world.com[\r\n]
 
 ## WatsonTcp
 ```
-{ "ContentLength": 1234, ... other fields ... }[\r\n]
+{"len":1234,"s":"Normal",...other fields...}[\r\n]
 [\r\n]
 [data]
 ```
@@ -64,8 +64,8 @@ While this framing model was bandwidth efficient (fewer bytes consumed on the ne
 If you're building an application that will need to integrate with WatsonTcp, let me know!  Here are some basic guidelines to follow that should allow for a successful integration:
 
 - Maintain a persistent TCP connection with WatsonTcp
-- Create a header JSON object of the form: ```{"Status":"Normal","SyncRequest":false,"SyncResponse":false,"ContentLength":4,"Metadata":{}}``` where the ```ContentLength``` is the number of data bytes
-- Note that ```Metadata``` is a ```Dictionary<object, object>```, so you can place anything you want/need in there
+- Create a header JSON object of the form: ```{"len":n,"s":"Normal"}``` where the ```len``` is the number of data bytes and ```s``` is the status of ```Normal```
+- Include any other pertinent parameters as found in the ```WatsonMessage``` class
 - Do NOT use pretty serialization of the header object (this introduces additional ```\r\n``` into the data)
 - Encode the header object to bytes and send it, followed by ```\r\n\r\n```
 - Send the data

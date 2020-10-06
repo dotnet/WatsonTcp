@@ -1177,7 +1177,7 @@ namespace WatsonTcp
                         break;
                     }
                      
-                    if (msg.SyncRequest)
+                    if (msg.SyncRequest != null && msg.SyncRequest.Value)
                     { 
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize);
@@ -1212,7 +1212,7 @@ namespace WatsonTcp
                             _Settings.Logger?.Invoke(_Header + "Expired synchronous request received and discarded from " + client.IpPort);
                         } 
                     }
-                    else if (msg.SyncResponse)
+                    else if (msg.SyncResponse != null && msg.SyncResponse.Value)
                     { 
                         // No need to amend message expiration; it is copied from the request, which was set by this node
                         // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 

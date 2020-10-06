@@ -2,14 +2,21 @@
 
 ## Current Version
 
+v4.4.0
+
+- Breaking changes; header name fields have been reduced
+- Performance improvements
+- Elimination of sending unnecessary headers
+- Thank you @broms95!
+
+## Previous Versions
+
 v4.3.0
 
 - Breaking changes
 - Retarget to include .NET Core 3.1 (previously .NET Framework 4.6.1 and .NET Standard 2.1 only)
 - Added support for TCP keepalives for .NET Framework and .NET Core (.NET Standard does not have such facilities)
 - Consolidated settings into separate classes
-
-## Previous Versions
 
 v4.2.0
 

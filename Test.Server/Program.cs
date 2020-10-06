@@ -140,8 +140,7 @@ namespace TestServer
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        if (!_Server.Send(ipPort, metadata, userInput)) Console.WriteLine("Failed");
-                        Console.WriteLine(success);
+                        if (!_Server.Send(ipPort, metadata, userInput)) Console.WriteLine("Failed"); 
                         break;
 
                     case "send md large":

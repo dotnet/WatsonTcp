@@ -6,17 +6,18 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-**IMPORTANT** WatsonTcp provides framing to ensure message-level delivery which also dictates that you must use WatsonTcp for both the server and the client.  If you need to integrate with a TCP client or server that isn't using WatsonTcp, please check out my other projects:
+**IMPORTANT** WatsonTcp provides framing to ensure message-level delivery which also dictates that you **must use WatsonTcp for both the server and the client**.  If you need to integrate with a TCP client or server that isn't using WatsonTcp, please check out my other projects:
+
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.3.0
+## New in v4.4.0
+  
+- Breaking changes; header name fields have been reduced
+- Performance improvements
+- Elimination of sending unnecessary headers
+- Thank you @broms95!
  
-- Breaking changes
-- Retarget to include .NET Core 3.1 (previously .NET Framework 4.6.1 and .NET Standard 2.1 only)
-- Added support for TCP keepalives for .NET Framework and .NET Core (.NET Standard does not have such facilities)
-- Consolidated settings into separate classes
-
 ## Test Applications
 
 Test projects for both client and server are included which will help you understand and exercise the class library.
@@ -69,7 +70,7 @@ Special thanks to the following people for their support and contributions to th
 
 @brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
-@DuAell @syntacs @zsolt777
+@DuAell @syntacs @zsolt777 @broms95
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 

@@ -131,7 +131,7 @@ namespace WatsonTcp
             if (msg.ContentLength == 0) return new byte[0]; 
             return await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen); 
         }
-
+         
         internal static byte[] AppendBytes(byte[] head, byte[] tail)
         {
             byte[] arrayCombined = new byte[head.Length + tail.Length];

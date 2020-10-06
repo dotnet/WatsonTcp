@@ -21,11 +21,13 @@ namespace WatsonTcp
         /// <summary>
         /// Length of the data.
         /// </summary>
+        [JsonProperty("len")]
         public long ContentLength { get; set; }
          
         /// <summary>
         /// Preshared key for connection authentication.
         /// </summary>
+        [JsonProperty("psk")]
         public byte[] PresharedKey
         {
             get
@@ -51,11 +53,13 @@ namespace WatsonTcp
         /// <summary>
         /// Status of the message.   
         /// </summary>
+        [JsonProperty("s")]
         public MessageStatus Status = MessageStatus.Normal;
           
         /// <summary>
         /// Metadata dictionary; contains user-supplied metadata.
         /// </summary>
+        [JsonProperty("md")]
         public Dictionary<object, object> Metadata
         {
             get
@@ -64,40 +68,38 @@ namespace WatsonTcp
             }
             set
             {
-                if (value == null || value.Count < 1)
-                {
-                    _Metadata = new Dictionary<object, object>(); 
-                }
-                else
-                {
-                    _Metadata = value; 
-                }
+                _Metadata = value;
             }
         }
 
         /// <summary>
         /// Indicates if the message is a synchronous request.
         /// </summary>
-        public bool SyncRequest = false;
+        [JsonProperty("sreq")]
+        public bool? SyncRequest = null;
 
         /// <summary>
         /// Indicates if the message is a synchronous response.
         /// </summary>
-        public bool SyncResponse = false;
+        [JsonProperty("sresp")]
+        public bool? SyncResponse = null;
 
         /// <summary>
         /// Indicates the current time as perceived by the sender; useful for determining expiration windows.
         /// </summary>
+        [JsonProperty("sts")]
         public DateTime? SenderTimestamp = null;
 
         /// <summary>
         /// Indicates an expiration time in UTC; only applicable to synchronous requests.
         /// </summary>
+        [JsonProperty("exp")]
         public DateTime? Expiration = null;
 
         /// <summary>
         /// Indicates the conversation GUID of the message. 
         /// </summary>
+        [JsonProperty("guid")]
         public string ConversationGuid = null;
          
         /// <summary>
@@ -158,9 +160,9 @@ namespace WatsonTcp
         //                                12345678901234567890123456789012
         private string _DateTimeFormat = "yyyy-MM-dd HH:mm:ss.fffzzz"; // 32 bytes
 
-        private int _ReadStreamBuffer = 65536; 
-        private byte[] _PresharedKey; 
-        private Dictionary<object, object> _Metadata = new Dictionary<object, object>(); 
+        private int _ReadStreamBuffer = 65536;
+        private byte[] _PresharedKey = null;
+        private Dictionary<object, object> _Metadata = null;
         private Stream _DataStream = null;
 
         #endregion
@@ -208,11 +210,11 @@ namespace WatsonTcp
             Status = MessageStatus.Normal; 
             ContentLength = contentLength;
             Metadata = metadata;
-            SyncRequest = syncRequest;
-            SyncResponse = syncResponse;
+            if (syncRequest) SyncRequest = true;
+            if (syncResponse) SyncResponse = true;
             Expiration = expiration;
             ConversationGuid = convGuid; 
-            if (SyncRequest) SenderTimestamp = DateTime.Now;
+            if (SyncRequest != null && SyncRequest.Value) SenderTimestamp = DateTime.Now;
 
             _DataStream = stream;
             _Logger = logger; 
@@ -248,30 +250,29 @@ namespace WatsonTcp
             {
                 #region Read-Headers
 
-                byte[] buffer = new byte[0];
+                // {"len":0,"s":"Normal"}\r\n\r\n
+                byte[] headerBytes = new byte[24];
+                await _DataStream.ReadAsync(headerBytes, 0, 24);
+
+                byte[] headerBuffer = new byte[1];
 
                 while (true)
                 {
-                    byte[] data = await WatsonCommon.ReadFromStreamAsync(_DataStream, 1, _ReadStreamBuffer);
-                    if (data != null && data.Length == 1)
+                    byte[] endCheck = headerBytes.Skip(headerBytes.Length - 4).Take(4).ToArray();
+                    if ((int)endCheck[3] == 10
+                        && (int)endCheck[2] == 13
+                        && (int)endCheck[1] == 10
+                        && (int)endCheck[0] == 13)
                     {
-                        buffer = WatsonCommon.AppendBytes(buffer, data);
-                        if (buffer.Length >= 4)
-                        {
-                            byte[] endCheck = buffer.Skip(buffer.Length - 4).Take(4).ToArray();
-                            if ((int)endCheck[3] == 10
-                                && (int)endCheck[2] == 13
-                                && (int)endCheck[1] == 10
-                                && (int)endCheck[0] == 13) 
-                            {
-                                _Logger?.Invoke(_Header + "ReadHeaders found header demarcation");
-                                break;
-                            }
-                        }
+                        _Logger?.Invoke(_Header + "ReadHeaders found header demarcation");
+                        break;
                     }
+
+                    await _DataStream.ReadAsync(headerBuffer, 0, 1);
+                    headerBytes = WatsonCommon.AppendBytes(headerBytes, headerBuffer); 
                 }
 
-                WatsonMessage msg = SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(buffer));
+                WatsonMessage msg = SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(headerBytes));
                 ContentLength = msg.ContentLength;
                 PresharedKey = msg.PresharedKey;
                 Status = msg.Status;
@@ -282,7 +283,7 @@ namespace WatsonTcp
                 Expiration = msg.Expiration;
                 ConversationGuid = msg.ConversationGuid; 
 
-                _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(buffer).Trim()); 
+                _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(headerBytes).Trim()); 
 
                 #endregion 
 
