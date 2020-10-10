@@ -978,12 +978,17 @@
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.Start">
             <summary>
-            Start the server.
+            Start accepting connections.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.StartAsync">
             <summary>
-            Start the server.
+            Start accepting connections.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.Stop">
+            <summary>
+            Stop accepting connections.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.String)">

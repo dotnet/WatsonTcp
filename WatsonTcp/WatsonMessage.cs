@@ -264,7 +264,7 @@ namespace WatsonTcp
                         && (int)endCheck[1] == 10
                         && (int)endCheck[0] == 13)
                     {
-                        _Logger?.Invoke(_Header + "ReadHeaders found header demarcation");
+                        _Logger?.Invoke(_Header + "found header demarcation");
                         break;
                     }
 
@@ -283,7 +283,7 @@ namespace WatsonTcp
                 Expiration = msg.Expiration;
                 ConversationGuid = msg.ConversationGuid; 
 
-                _Logger?.Invoke(_Header + "BuildFromStream header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(headerBytes).Trim()); 
+                _Logger?.Invoke(_Header + "header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(headerBytes).Trim()); 
 
                 #endregion 
 
@@ -291,22 +291,22 @@ namespace WatsonTcp
             }
             catch (IOException)
             {
-                _Logger?.Invoke(_Header + "BuildStream IOexception, disconnect detected");
+                _Logger?.Invoke(_Header + "IOexception, disconnect detected");
                 return false;
             }
             catch (SocketException)
             {
-                _Logger?.Invoke(_Header + "BuildStream SocketException, disconnect detected");
+                _Logger?.Invoke(_Header + "SocketException, disconnect detected");
                 return false;
             }
             catch (ObjectDisposedException)
             {
-                _Logger?.Invoke(_Header + "BuildStream ObjectDisposedException, disconnect detected");
+                _Logger?.Invoke(_Header + "ObjectDisposedException, disconnect detected");
                 return false;
             }
             catch (Exception e)
             {
-                _Logger?.Invoke(_Header + "BuildStream exception: " +
+                _Logger?.Invoke(_Header + "exception: " +
                     Environment.NewLine +
                     SerializationHelper.SerializeJson(e, true) +
                     Environment.NewLine);

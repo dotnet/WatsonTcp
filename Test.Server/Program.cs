@@ -86,6 +86,8 @@ namespace TestServer
                         Console.WriteLine("  ?                   help (this menu)");
                         Console.WriteLine("  q                   quit");
                         Console.WriteLine("  cls                 clear screen");
+                        Console.WriteLine("  start               start listening for connections (listening: " + (_Server != null ? _Server.IsListening.ToString() : "false") + ")");
+                        Console.WriteLine("  stop                stop listening for connections  (listening: " + (_Server != null ? _Server.IsListening.ToString() : "false") + ")");
                         Console.WriteLine("  list                list clients");
                         Console.WriteLine("  dispose             dispose of the connection");
                         Console.WriteLine("  send                send message to client");
@@ -108,6 +110,14 @@ namespace TestServer
 
                     case "cls":
                         Console.Clear();
+                        break;
+
+                    case "start":
+                        _Server.Start();
+                        break;
+
+                    case "stop":
+                        _Server.Stop();
                         break;
 
                     case "list":

@@ -270,7 +270,7 @@ namespace WatsonTcp
             {
                 #region TCP
 
-                _Settings.Logger?.Invoke(_Header + "Connecting to " + _ServerIp + ":" + _ServerPort);
+                _Settings.Logger?.Invoke(_Header + "connecting to " + _ServerIp + ":" + _ServerPort);
 
                 _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
@@ -310,7 +310,7 @@ namespace WatsonTcp
             {
                 #region SSL
 
-                _Settings.Logger?.Invoke(_Header + "Connecting with SSL to " + _ServerIp + ":" + _ServerPort);
+                _Settings.Logger?.Invoke(_Header + "connecting with SSL to " + _ServerIp + ":" + _ServerPort);
 
                 _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
@@ -377,7 +377,7 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
              
-            _Settings.Logger?.Invoke(_Header + "Connected to server, starting data receiver");
+            _Settings.Logger?.Invoke(_Header + "connected to server, starting data receiver");
             Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
 
             _Events.HandleServerConnected(this, EventArgs.Empty);
@@ -405,7 +405,7 @@ namespace WatsonTcp
             {
                 #region TCP
 
-                _Settings.Logger?.Invoke(_Header + "Connecting to " + _ServerIp + ":" + _ServerPort);
+                _Settings.Logger?.Invoke(_Header + "connecting to " + _ServerIp + ":" + _ServerPort);
 
                 _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
@@ -445,7 +445,7 @@ namespace WatsonTcp
             {
                 #region SSL
 
-                _Settings.Logger?.Invoke(_Header + "Connecting with SSL to " + _ServerIp + ":" + _ServerPort);
+                _Settings.Logger?.Invoke(_Header + "connecting with SSL to " + _ServerIp + ":" + _ServerPort);
 
                 _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
@@ -512,7 +512,7 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
-            _Settings.Logger?.Invoke(_Header + "Connected to server, starting data receiver");
+            _Settings.Logger?.Invoke(_Header + "connected to server, starting data receiver");
             Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
             
             _Events.HandleServerConnected(this, EventArgs.Empty);
@@ -821,7 +821,7 @@ namespace WatsonTcp
         {
             if (disposing)
             {
-                _Settings.Logger?.Invoke(_Header + "Disposing"); 
+                _Settings.Logger?.Invoke(_Header + "disposing"); 
 
                 if (Connected)
                 {
@@ -868,7 +868,7 @@ namespace WatsonTcp
                 
                 _DataStream = null; 
                 Connected = false;
-                _Settings.Logger?.Invoke(_Header + "Dispose complete");
+                _Settings.Logger?.Invoke(_Header + "disposed");
             }
         }
 
@@ -892,7 +892,7 @@ namespace WatsonTcp
                         || !_Client.Connected
                         || _Token.IsCancellationRequested)
                     {
-                        _Settings.Logger?.Invoke(_Header + "Disconnect detected");
+                        _Settings.Logger?.Invoke(_Header + "disconnect detected");
                         break;
                     }
 
@@ -901,7 +901,7 @@ namespace WatsonTcp
                     bool buildSuccess = await msg.BuildFromStream();
                     if (!buildSuccess)
                     {
-                        _Settings.Logger?.Invoke(_Header + "Message build failed due to disconnect");
+                        _Settings.Logger?.Invoke(_Header + "message build failed due to disconnect");
                         break;
                     }
 
@@ -913,30 +913,30 @@ namespace WatsonTcp
 
                     if (msg.Status == MessageStatus.Removed)
                     {
-                        _Settings.Logger?.Invoke(_Header + "Disconnect due to server-side removal");
+                        _Settings.Logger?.Invoke(_Header + "disconnect due to server-side removal");
                         break;
                     }
                     else if (msg.Status == MessageStatus.Disconnecting)
                     {
-                        _Settings.Logger?.Invoke(_Header + "Disconnect due to server shutdown");
+                        _Settings.Logger?.Invoke(_Header + "disconnect due to server shutdown");
                         break;
                     }
                     else if (msg.Status == MessageStatus.AuthSuccess)
                     {
-                        _Settings.Logger?.Invoke(_Header + "Authentication successful");
+                        _Settings.Logger?.Invoke(_Header + "authentication successful");
                         _Events.HandleAuthenticationSucceeded(this, EventArgs.Empty);
                         continue;
                     }
                     else if (msg.Status == MessageStatus.AuthFailure)
                     {
-                        _Settings.Logger?.Invoke(_Header + "Authentication failed");
+                        _Settings.Logger?.Invoke(_Header + "authentication failed");
                         _Events.HandleAuthenticationFailure(this, EventArgs.Empty);
                         continue;
                     }
 
                     if (msg.Status == MessageStatus.AuthRequired)
                     {
-                        _Settings.Logger?.Invoke(_Header + "Authentication required by server; please authenticate using pre-shared key"); 
+                        _Settings.Logger?.Invoke(_Header + "authentication required by server; please authenticate using pre-shared key"); 
                         string psk = _Callbacks.HandleAuthenticationRequested();
                         if (!String.IsNullOrEmpty(psk)) Authenticate(psk);
                         continue;
@@ -974,7 +974,7 @@ namespace WatsonTcp
                         }
                         else
                         { 
-                            _Settings.Logger?.Invoke(_Header + "Expired synchronous request received and discarded");
+                            _Settings.Logger?.Invoke(_Header + "expired synchronous request received and discarded");
                         } 
                     }
                     else if (msg.SyncResponse != null && msg.SyncResponse.Value)
@@ -992,7 +992,7 @@ namespace WatsonTcp
                         }
                         else
                         {
-                            _Settings.Logger?.Invoke(_Header + "Expired synchronous response received and discarded");
+                            _Settings.Logger?.Invoke(_Header + "expired synchronous response received and discarded");
                         }
                     }
                     else
@@ -1030,7 +1030,7 @@ namespace WatsonTcp
                         }
                         else
                         {
-                            _Settings.Logger?.Invoke(_Header + "Event handler not set for either MessageReceived or StreamReceived");
+                            _Settings.Logger?.Invoke(_Header + "event handler not set for either MessageReceived or StreamReceived");
                             break;
                         }
                     }
@@ -1040,18 +1040,17 @@ namespace WatsonTcp
                 }
                 catch (ObjectDisposedException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "Disconnected due to disposal");
+                    _Settings.Logger?.Invoke(_Header + "disconnected due to disposal");
                     break;
                 }
                 catch (OperationCanceledException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "Cancellation requested");
+                    _Settings.Logger?.Invoke(_Header + "cancellation requested");
                     break;
                 }
                 catch (Exception e)
                 {
-                    _Settings.Logger?.Invoke(
-                        "[WatsonTcpClient] Data receiver exception: " +
+                    _Settings.Logger?.Invoke(_Header + "data receiver exception: " +
                         Environment.NewLine +
                         e.ToString() +
                         Environment.NewLine); 
@@ -1065,7 +1064,7 @@ namespace WatsonTcp
 
             Connected = false;
 
-            _Settings.Logger?.Invoke(_Header + "Data receiver terminated");
+            _Settings.Logger?.Invoke(_Header + "data receiver terminated");
             _Events.HandleServerDisconnected(this, EventArgs.Empty);
             Dispose();
         }
@@ -1112,8 +1111,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(
-                    "[WatsonTcpClient] Message write exception: " +
+                _Settings.Logger?.Invoke(_Header + "message write exception: " +
                     Environment.NewLine +
                     e.ToString() +
                     Environment.NewLine);
@@ -1172,8 +1170,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(
-                    "[WatsonTcpClient] Message write exception: " +
+                _Settings.Logger?.Invoke(_Header + "message write exception: " + 
                     Environment.NewLine +
                     e.ToString() +
                     Environment.NewLine);
@@ -1230,8 +1227,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(
-                    "[WatsonTcpClient] Message write exception: " +
+                _Settings.Logger?.Invoke(_Header + "message write exception: " +
                     Environment.NewLine +
                     e.ToString() +
                     Environment.NewLine);
@@ -1326,7 +1322,7 @@ namespace WatsonTcp
 
                         foreach (KeyValuePair<string, SyncResponse> curr in expired)
                         {
-                            _Settings.Logger?.Invoke(_Header + "MonitorForExpiredSyncResponses expiring response " + curr.Key.ToString());
+                            _Settings.Logger?.Invoke(_Header + "expiring response " + curr.Key.ToString());
                             _SyncResponses.Remove(curr.Key);
                         }
                     }
@@ -1393,7 +1389,7 @@ namespace WatsonTcp
             }
             catch (Exception)
             {
-                _Settings.Logger?.Invoke(_Header + "Keepalives not supported on this platform, disabled");
+                _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
             }
         }
 
