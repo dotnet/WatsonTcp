@@ -918,7 +918,7 @@ namespace WatsonTcp
                 }
                 catch (ObjectDisposedException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "listener closed");
+                    _Settings.Logger?.Invoke(_Header + "listener disposed");
                 }
                 catch (Exception e)
                 {

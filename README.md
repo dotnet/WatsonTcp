@@ -79,7 +79,7 @@ If you'd like to contribute, please jump right into the source code and create a
 The following examples show a simple client and server example using WatsonTcp without SSL and consuming messages using byte arrays instead of streams.  For full examples, please refer to the ```Test.*``` projects.  
 
 ### Server
-```
+```csharp
 using WatsonTcp;
 
 static void Main(string[] args)
@@ -139,7 +139,7 @@ static SyncResponse SyncRequestReceived(SyncRequest req)
 ```
  
 ### Client 
-```
+```csharp
 using WatsonTcp;
 
 static void Main(string[] args)
@@ -201,7 +201,7 @@ static SyncResponse SyncRequestReceived(SyncRequest req)
 ## Example with SSL
 
 The examples above can be modified to use SSL as follows.  No other changes are needed.  Ensure that the certificate is exported as a PFX file and is resident in the directory of execution.
-```
+```csharp
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000, "test.pfx", "password"); 
 server.Settings.AcceptInvalidCertificates = true;
@@ -218,7 +218,7 @@ client.Start();
 ## Example with Streams
 
 Refer to the ```Test.ClientStream``` and ```Test.ServerStream``` projects for a full example.  
-```
+```csharp
 // server
 WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000);
 server.Events.ClientConnected += ClientConnected;
@@ -294,7 +294,7 @@ The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically
 Additionally, as of v4.3.0, support for TCP keepalives has been added to WatsonTcp, primarily to address the issue of a network interface being shut down, the cable unplugged, or the media otherwise becoming unavailable.  It is important to note that keepalives are supported in .NET Core and .NET Framework, but NOT .NET Standard.  As of this release, .NET Standard provides no facilities for TCP keepalives.
 
 TCP keepalives are enabled by default.
-```
+```csharp
 server.Keepalive.EnableTcpKeepAlives = true;
 server.Keepalive.TcpKeepAliveInterval = 5;      // seconds to wait before sending subsequent keepalive
 server.Keepalive.TcpKeepAliveTime = 5;          // seconds to wait before sending a keepalive
