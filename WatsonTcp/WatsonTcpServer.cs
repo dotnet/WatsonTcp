@@ -374,7 +374,7 @@ namespace WatsonTcp
                 _Listener.Stop();
                 _TokenSource.Cancel();
 
-                _Settings?.Logger.Invoke(_Header + "stopped");
+                _Settings.Logger?.Invoke(_Header + "stopped");
             }
             catch (Exception e)
             {
