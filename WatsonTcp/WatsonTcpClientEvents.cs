@@ -43,6 +43,11 @@ namespace WatsonTcp
         /// </summary>
         public event EventHandler ServerDisconnected = delegate { };
 
+        /// <summary>
+        /// This event is fired when an exception is encountered.
+        /// </summary>
+        public event EventHandler<ExceptionEventArgs> ExceptionEncountered = delegate { };
+
         #endregion
 
         #region Internal-Members
@@ -117,6 +122,11 @@ namespace WatsonTcp
         internal void HandleServerDisconnected(object sender, EventArgs args)
         {
             ServerDisconnected?.Invoke(sender, args);
+        }
+
+        internal void HandleExceptionEncountered(object sender, ExceptionEventArgs args)
+        {
+            ExceptionEncountered?.Invoke(sender, args);
         }
 
         #endregion

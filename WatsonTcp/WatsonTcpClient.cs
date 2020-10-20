@@ -295,8 +295,9 @@ namespace WatsonTcp
 
                     Connected = true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
                 finally
@@ -361,8 +362,9 @@ namespace WatsonTcp
                     _DataStream = _SslStream;
                     Connected = true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
                 finally
@@ -430,8 +432,9 @@ namespace WatsonTcp
 
                     Connected = true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
                 finally
@@ -496,8 +499,9 @@ namespace WatsonTcp
                     _DataStream = _SslStream;
                     Connected = true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
                 finally
@@ -821,54 +825,62 @@ namespace WatsonTcp
         {
             if (disposing)
             {
-                _Settings.Logger?.Invoke(_Header + "disposing"); 
-
-                if (Connected)
+                try
                 {
-                    WatsonMessage msg = new WatsonMessage();
-                    msg.Status = MessageStatus.Disconnecting; 
-                    SendInternal(msg, 0, null);
-                }
+                    _Settings.Logger?.Invoke(_Header + "disposing");
 
-                if (_TokenSource != null)
-                {
-                    if (!_TokenSource.IsCancellationRequested) _TokenSource.Cancel();
-                    _TokenSource.Dispose();
-                    _TokenSource = null;
-                }
+                    if (Connected)
+                    {
+                        WatsonMessage msg = new WatsonMessage();
+                        msg.Status = MessageStatus.Disconnecting;
+                        SendInternal(msg, 0, null);
+                    }
 
-                if (_WriteLock != null)
-                {
-                    _WriteLock.Dispose();
-                    _WriteLock = null;
-                }
+                    if (_TokenSource != null)
+                    {
+                        if (!_TokenSource.IsCancellationRequested) _TokenSource.Cancel();
+                        _TokenSource.Dispose();
+                        _TokenSource = null;
+                    }
 
-                if (_ReadLock != null)
-                {
-                    _ReadLock.Dispose();
-                    _ReadLock = null;
-                }
+                    if (_WriteLock != null)
+                    {
+                        _WriteLock.Dispose();
+                        _WriteLock = null;
+                    }
 
-                if (_SslStream != null)
-                {
-                    _SslStream.Close(); 
-                }
+                    if (_ReadLock != null)
+                    {
+                        _ReadLock.Dispose();
+                        _ReadLock = null;
+                    }
 
-                if (_TcpStream != null)
-                {
-                    _TcpStream.Close(); 
-                }
+                    if (_SslStream != null)
+                    {
+                        _SslStream.Close();
+                    }
 
-                if (_Client != null)
-                {
-                    _Client.Close();
-                    _Client.Dispose();
-                    _Client = null;
+                    if (_TcpStream != null)
+                    {
+                        _TcpStream.Close();
+                    }
+
+                    if (_Client != null)
+                    {
+                        _Client.Close();
+                        _Client.Dispose();
+                        _Client = null;
+                    }
+
+                    _DataStream = null;
+                    Connected = false;
+                    _Settings.Logger?.Invoke(_Header + "disposed");
                 }
-                
-                _DataStream = null; 
-                Connected = false;
-                _Settings.Logger?.Invoke(_Header + "disposed");
+                catch (Exception e)
+                {
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    throw;
+                }
             }
         }
 
@@ -1050,10 +1062,13 @@ namespace WatsonTcp
                 }
                 catch (Exception e)
                 {
-                    _Settings.Logger?.Invoke(_Header + "data receiver exception: " +
+                    _Settings.Logger?.Invoke(
+                        _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ":" +
                         Environment.NewLine +
-                        e.ToString() +
-                        Environment.NewLine); 
+                        SerializationHelper.SerializeJson(e, true) +
+                        Environment.NewLine);
+
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
                 } 
                 finally
@@ -1064,7 +1079,7 @@ namespace WatsonTcp
 
             Connected = false;
 
-            _Settings.Logger?.Invoke(_Header + "data receiver terminated");
+            _Settings.Logger?.Invoke(_Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
             _Events.HandleServerDisconnected(this, EventArgs.Empty);
             Dispose();
         }
@@ -1111,11 +1126,13 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(_Header + "message write exception: " +
+                _Settings.Logger?.Invoke(
+                    _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ":" +
                     Environment.NewLine +
-                    e.ToString() +
-                    Environment.NewLine);
+                    SerializationHelper.SerializeJson(e, true));
 
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                 
                 disconnectDetected = true;
                 return false;
             }

@@ -358,7 +358,7 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
-            return AcceptConnections();
+            return AcceptConnections(); 
         }
 
         /// <summary>
@@ -368,11 +368,19 @@ namespace WatsonTcp
         {
             if (!_IsListening) throw new InvalidOperationException("WatsonTcpServer is not running.");
 
-            _IsListening = false;
-            _Listener.Stop();
-            _TokenSource.Cancel();
+            try
+            {
+                _IsListening = false;
+                _Listener.Stop();
+                _TokenSource.Cancel();
 
-            _Settings?.Logger.Invoke(_Header + "stopped");
+                _Settings?.Logger.Invoke(_Header + "stopped");
+            }
+            catch (Exception e)
+            {
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                throw;
+            }
         }
 
         /// <summary>
@@ -750,18 +758,8 @@ namespace WatsonTcp
                 _Settings.Logger?.Invoke(_Header + "unable to find client " + ipPort);
             }
             else
-            {
-                byte[] data = null;
-
-                if (_ClientsTimedout.ContainsKey(ipPort))
-                {
-                    data = Encoding.UTF8.GetBytes("Removed from server due to timeout.");
-                }
-                else
-                {
-                    data = Encoding.UTF8.GetBytes("Removed from server.");
-                    _ClientsKicked.TryAdd(ipPort, DateTime.Now); 
-                }
+            { 
+                if (!_ClientsTimedout.ContainsKey(ipPort)) _ClientsKicked.TryAdd(ipPort, DateTime.Now); 
 
                 WatsonMessage removeMsg = new WatsonMessage();
                 removeMsg.Status = MessageStatus.Removed; 
@@ -784,38 +782,46 @@ namespace WatsonTcp
         {
             if (disposing)
             {
-                _Settings.Logger?.Invoke(_Header + "disposing");
-
-                if (_TokenSource != null)
+                try
                 {
-                    if (!_TokenSource.IsCancellationRequested) _TokenSource.Cancel();
-                    _TokenSource.Dispose();
-                    _TokenSource = null;
-                }
+                    _Settings.Logger?.Invoke(_Header + "disposing");
 
-                if (_Listener != null && _Listener.Server != null)
-                {
-                    _Listener.Server.Close();
-                    _Listener.Server.Dispose();
-                    _Listener = null;
-                }
-
-                if (_Clients != null && _Clients.Count > 0)
-                {
-                    WatsonMessage discMsg = new WatsonMessage();
-                    discMsg.Status = MessageStatus.Disconnecting; 
-
-                    foreach (KeyValuePair<string, ClientMetadata> currMetadata in _Clients)
+                    if (_TokenSource != null)
                     {
-                        SendInternal(currMetadata.Value, discMsg, 0, null);
-                        currMetadata.Value.Dispose();
+                        if (!_TokenSource.IsCancellationRequested) _TokenSource.Cancel();
+                        _TokenSource.Dispose();
+                        _TokenSource = null;
                     }
 
-                    _Clients = null;
-                    _UnauthenticatedClients = null;
-                }
+                    if (_Listener != null && _Listener.Server != null)
+                    {
+                        _Listener.Server.Close();
+                        _Listener.Server.Dispose();
+                        _Listener = null;
+                    }
 
-                _Settings.Logger?.Invoke(_Header + "disposed");
+                    if (_Clients != null && _Clients.Count > 0)
+                    {
+                        WatsonMessage discMsg = new WatsonMessage();
+                        discMsg.Status = MessageStatus.Disconnecting;
+
+                        foreach (KeyValuePair<string, ClientMetadata> currMetadata in _Clients)
+                        {
+                            SendInternal(currMetadata.Value, discMsg, 0, null);
+                            currMetadata.Value.Dispose();
+                        }
+
+                        _Clients = null;
+                        _UnauthenticatedClients = null;
+                    }
+
+                    _Settings.Logger?.Invoke(_Header + "disposed");
+                }
+                catch (Exception e)
+                {
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    throw;
+                }
             }
         }
          
@@ -840,6 +846,7 @@ namespace WatsonTcp
 
                     if (!_IsListening && (_Connections >= _Settings.MaxConnections))
                     {
+                        Task.Delay(100).Wait();
                         continue;
                     }
                     else if (!_IsListening)
@@ -870,7 +877,7 @@ namespace WatsonTcp
 
                     #region Check-for-Maximum-Connections
 
-                    _Connections++; 
+                    Interlocked.Increment(ref _Connections);
                     if (_Connections >= _Settings.MaxConnections)
                     {
                         _Settings.Logger?.Invoke(_Header + "maximum connections " + _Settings.MaxConnections + " met or exceeded (currently " + _Connections + " connections), pausing listener");
@@ -922,8 +929,16 @@ namespace WatsonTcp
                 }
                 catch (Exception e)
                 {
-                    _Settings.Logger?.Invoke(_Header + "exception for " + ipPort + ": " + e.Message);
+                    _Settings.Logger?.Invoke(
+                        _Header + "listener exception: " +
+                        Environment.NewLine +
+                        SerializationHelper.SerializeJson(e, true) +
+                        Environment.NewLine);
+
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 }
+
+                _Settings.Logger?.Invoke(_Header + "listener stopped");
             }
         }
 
@@ -937,7 +952,7 @@ namespace WatsonTcp
                 {
                     _Settings.Logger?.Invoke(_Header + "stream from " + client.IpPort + " not encrypted");
                     client.Dispose();
-                    _Connections--;
+                    Interlocked.Decrement(ref _Connections);
                     return false;
                 }
 
@@ -945,50 +960,31 @@ namespace WatsonTcp
                 {
                     _Settings.Logger?.Invoke(_Header + "stream from " + client.IpPort + " not authenticated");
                     client.Dispose();
-                    _Connections--;
+                    Interlocked.Decrement(ref _Connections);
                     return false;
                 }
 
                 if (_Settings.MutuallyAuthenticate && !client.SslStream.IsMutuallyAuthenticated)
                 {
                     _Settings.Logger?.Invoke(_Header + "stream from " + client.IpPort + " failed mutual authentication");
-                    client.Dispose();
-                    _Connections--;
+                    client.Dispose(); 
+                    Interlocked.Decrement(ref _Connections);
                     return false;
                 }
             }
-            catch (IOException ex)
+            catch (Exception e)
             {
-                // Some type of problem initiating the SSL connection
-                switch (ex.Message)
-                {
-                    case "Authentication failed because the remote party has closed the transport stream.":
-                    case "Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host.":
-                        _Settings.Logger?.Invoke(_Header + "connection closed by " + client.IpPort + " during SSL negotiation");
-                        break;
+                _Settings.Logger?.Invoke(
+                    _Header + "disconnected during SSL/TLS establishment: " +
+                    Environment.NewLine +
+                    SerializationHelper.SerializeJson(e, true));
 
-                    case "The handshake failed due to an unexpected packet format.":
-                        _Settings.Logger?.Invoke(_Header + "disconnected " + client.IpPort + " due to invalid handshake");
-                        break;
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
 
-                    default:
-                        _Settings.Logger?.Invoke(_Header + "disconnected " + client.IpPort + " due to TLS exception: " +
-                            Environment.NewLine +
-                            SerializationHelper.SerializeJson(ex, true));
-                        break;
-                }
-
-                client.Dispose();
-                _Connections--;
+                client.Dispose(); 
+                Interlocked.Decrement(ref _Connections);
                 return false;
-            }
-            catch (Exception ex)
-            {
-                _Settings.Logger?.Invoke(_Header + "exception on " + client.IpPort + " during TLS negotiation: " + Environment.NewLine + ex.ToString());
-                client.Dispose();
-                _Connections--;
-                return false;
-            }
+            } 
 
             return true;
         }
@@ -1029,69 +1025,70 @@ namespace WatsonTcp
 
         private bool IsConnected(ClientMetadata client)
         {
-            if (client.TcpClient.Connected)
+            if (client != null && client.TcpClient != null)
             {
-                byte[] tmp = new byte[1];
-                bool success = false; 
+                if (client.TcpClient.Connected)
+                {
+                    byte[] tmp = new byte[1];
+                    bool success = false;
 
-                try
-                {
-                    client.WriteLock.Wait(); 
-                    client.TcpClient.Client.Send(tmp, 0, 0);
-                    success = true;
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-                catch (IOException)
-                {
-                }
-                catch (SocketException se)
-                {
-                    if (se.NativeErrorCode.Equals(10035)) success = true;
-                }
-                catch (Exception e)
-                {
-                    _Settings.Logger?.Invoke(_Header + "exception while testing connection to " + client.IpPort + " using send: " + e.Message);
-                    success = false;
-                }
-                finally
-                {
-                    if (client != null) client.WriteLock.Release();
-                }
-
-                if (success) return true;
-
-                try
-                {
-                    client.WriteLock.Wait(); 
-
-                    if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
-                        && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
+                    try
                     {
-                        byte[] buffer = new byte[1];
-                        if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                        client.WriteLock.Wait();
+                        client.TcpClient.Client.Send(tmp, 0, 0);
+                        success = true;
+                    }
+                    catch (SocketException se)
+                    {
+                        if (se.NativeErrorCode.Equals(10035)) success = true;
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    finally
+                    {
+                        if (client != null)
                         {
-                            return false;
+                            client.WriteLock.Release();
+                        }
+                    }
+
+                    if (success) return true;
+
+                    try
+                    {
+                        client.WriteLock.Wait();
+
+                        if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
+                            && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
+                        {
+                            byte[] buffer = new byte[1];
+                            if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
+                            {
+                                return false;
+                            }
+                            else
+                            {
+                                return true;
+                            }
                         }
                         else
                         {
-                            return true;
+                            return false;
                         }
                     }
-                    else
+                    catch (Exception)
                     {
                         return false;
                     }
+                    finally
+                    {
+                        if (client != null) client.WriteLock.Release();
+                    }
                 }
-                catch (Exception e)
+                else
                 {
-                    _Settings.Logger?.Invoke(_Header + "exception while testing connection to " + client.IpPort + " using poll/peek: " + e.Message);;
                     return false;
-                }
-                finally
-                {
-                    if (client != null) client.WriteLock.Release();
                 }
             }
             else
@@ -1293,11 +1290,12 @@ namespace WatsonTcp
 
                     _Statistics.IncrementReceivedMessages();
                     _Statistics.AddReceivedBytes(msg.ContentLength);
+
                     UpdateClientLastSeen(client.IpPort); 
                 }
                 catch (ObjectDisposedException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "client " + client.IpPort + " disconnected due to disposal");
+                    _Settings.Logger?.Invoke(_Header + "client " + client.IpPort + " disposed");
                     break;
                 }
                 catch (OperationCanceledException)
@@ -1308,10 +1306,12 @@ namespace WatsonTcp
                 catch (Exception e)
                 { 
                     _Settings.Logger?.Invoke(
-                        "[WatsonTcpServer] Data receiver exception for " + client.IpPort + ":" +
+                        _Header + "data receiver exception for " + client.IpPort + ":" +
                         Environment.NewLine +
                         SerializationHelper.SerializeJson(e, true) +
                         Environment.NewLine);
+
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
                 }
             }
@@ -1330,8 +1330,8 @@ namespace WatsonTcp
             _ClientsKicked.TryRemove(client.IpPort, out removedTs);
             _ClientsTimedout.TryRemove(client.IpPort, out removedTs); 
             _UnauthenticatedClients.TryRemove(client.IpPort, out removedTs);
-            _Connections--;
-             
+            Interlocked.Decrement(ref _Connections);
+
             _Settings.Logger?.Invoke(_Header + "disposing data receiver for " + client.IpPort);
             client.Dispose();  
         }
@@ -1362,7 +1362,12 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(_Header + "failed to write message to " + client.IpPort + " due to exception: " + e.Message);
+                _Settings.Logger?.Invoke(
+                    _Header + "failed to write message to " + client.IpPort + ": " +
+                    Environment.NewLine +
+                    SerializationHelper.SerializeJson(e, true));
+
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 return false;
             }
             finally
@@ -1397,7 +1402,12 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(_Header + "failed to write message to " + client.IpPort + " due to exception: " + e.Message);
+                _Settings.Logger?.Invoke(
+                    _Header + "failed to write message to " + client.IpPort + ": " +
+                    Environment.NewLine +
+                    SerializationHelper.SerializeJson(e, true));
+
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 return false;
             }
             finally
@@ -1431,7 +1441,12 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(_Header + "failed to write message to " + client.IpPort + " due to exception: " + e.Message);
+                _Settings.Logger?.Invoke(
+                    _Header + "failed to write message to " + client.IpPort + " due to exception: " + 
+                    Environment.NewLine +
+                    SerializationHelper.SerializeJson(e, true));
+
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 throw;
             }
             finally

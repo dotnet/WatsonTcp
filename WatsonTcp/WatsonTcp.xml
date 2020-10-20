@@ -84,6 +84,21 @@
             Client connection timed out; server did not receive data within the timeout window.
             </summary>
         </member>
+        <member name="T:WatsonTcp.ExceptionEventArgs">
+            <summary>
+            Event arguments for when an exception is encountered. 
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ExceptionEventArgs.Exception">
+            <summary>
+            Exception.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ExceptionEventArgs.Json">
+            <summary>
+            JSON representation of the exception.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.MessageReceivedFromClientEventArgs">
             <summary>
             Event arguments for when a message is received from a client.
@@ -800,6 +815,11 @@
             Event fired when the client disconnects from the server.
             </summary>
         </member>
+        <member name="E:WatsonTcp.WatsonTcpClientEvents.ExceptionEncountered">
+            <summary>
+            This event is fired when an exception is encountered.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpClientEvents.#ctor">
             <summary>
             Instantiate the object.
@@ -1262,6 +1282,21 @@
             <summary> 
             This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
             If MessageReceived is set, StreamReceived will not be used.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpServerEvents.ServerStarted">
+            <summary>
+            This event is fired when the server is started.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpServerEvents.ServerStopped">
+            <summary>
+            This event is fired when the server is stopped.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpServerEvents.ExceptionEncountered">
+            <summary>
+            This event is fired when an exception is encountered.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServerEvents.#ctor">

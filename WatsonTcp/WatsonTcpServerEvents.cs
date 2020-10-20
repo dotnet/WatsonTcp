@@ -50,6 +50,21 @@ namespace WatsonTcp
         /// </summary>
         public event EventHandler<StreamReceivedFromClientEventArgs> StreamReceived = delegate { };
 
+        /// <summary>
+        /// This event is fired when the server is started.
+        /// </summary>
+        public event EventHandler ServerStarted = delegate { };
+
+        /// <summary>
+        /// This event is fired when the server is stopped.
+        /// </summary>
+        public event EventHandler ServerStopped = delegate { };
+
+        /// <summary>
+        /// This event is fired when an exception is encountered.
+        /// </summary>
+        public event EventHandler<ExceptionEventArgs> ExceptionEncountered = delegate { };
+
         #endregion
 
         #region Internal-Members
@@ -129,6 +144,21 @@ namespace WatsonTcp
         internal void HandleStreamReceived(object sender, StreamReceivedFromClientEventArgs args)
         {
             StreamReceived?.Invoke(sender, args);
+        }
+
+        internal void HandleServerStarted(object sender, EventArgs args)
+        {
+            ServerStarted?.Invoke(sender, args);
+        }
+
+        internal void HandleServerStopped(object sender, EventArgs args)
+        {
+            ServerStopped?.Invoke(sender, args);
+        }
+
+        internal void HandleExceptionEncountered(object sender, ExceptionEventArgs args)
+        {
+            ExceptionEncountered?.Invoke(sender, args);
         }
 
         #endregion
