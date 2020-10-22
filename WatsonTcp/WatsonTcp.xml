@@ -386,7 +386,7 @@
             Message headers in byte-array form ready to send.
             </summary>
         </member>
-        <member name="P:WatsonTcp.WatsonMessage.ReadStreamBuffer">
+        <member name="P:WatsonTcp.WatsonMessage.BufferSize">
             <summary>
             Size of buffer to use while reading message payload.  Default is 64KB.
             </summary>

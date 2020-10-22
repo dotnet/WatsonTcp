@@ -137,7 +137,7 @@ namespace WatsonTcp
         /// <summary>
         /// Size of buffer to use while reading message payload.  Default is 64KB.
         /// </summary>
-        internal int ReadStreamBuffer
+        internal int BufferSize
         {
             get
             {
@@ -149,7 +149,7 @@ namespace WatsonTcp
                 _ReadStreamBuffer = value;
             }
         }
-         
+
         #endregion
 
         #region Private-Members
@@ -246,14 +246,14 @@ namespace WatsonTcp
         /// <returns>True if successful.</returns>
         internal async Task<bool> BuildFromStream()
         {
+            // {"len":0,"s":"Normal"}\r\n\r\n
+            byte[] headerBytes = new byte[24];
+
             try
             {
                 #region Read-Headers
 
-                // {"len":0,"s":"Normal"}\r\n\r\n
-                byte[] headerBytes = new byte[24];
-                await _DataStream.ReadAsync(headerBytes, 0, 24);
-
+                await _DataStream.ReadAsync(headerBytes, 0, 24); 
                 byte[] headerBuffer = new byte[1];
 
                 while (true)
@@ -288,27 +288,14 @@ namespace WatsonTcp
                 #endregion 
 
                 return true;
-            }
-            catch (IOException)
-            {
-                _Logger?.Invoke(_Header + "IOexception, disconnect detected");
-                return false;
-            }
-            catch (SocketException)
-            {
-                _Logger?.Invoke(_Header + "SocketException, disconnect detected");
-                return false;
-            }
-            catch (ObjectDisposedException)
-            {
-                _Logger?.Invoke(_Header + "ObjectDisposedException, disconnect detected");
-                return false;
-            }
+            } 
             catch (Exception e)
             {
-                _Logger?.Invoke(_Header + "exception: " +
+                _Logger?.Invoke(_Header + "exception encountered: " +
                     Environment.NewLine +
-                    SerializationHelper.SerializeJson(e, true) +
+                    "Header bytes: " + BitConverter.ToString(headerBytes).Replace("-", String.Empty) +
+                    Environment.NewLine +
+                    "Exception: " + SerializationHelper.SerializeJson(e, true) +
                     Environment.NewLine);
                 return false;
             }
