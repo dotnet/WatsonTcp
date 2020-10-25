@@ -92,6 +92,15 @@ namespace WatsonTcp
         /// </summary>
         public void Dispose()
         {
+            if (TokenSource != null)
+            {
+                if (!TokenSource.IsCancellationRequested)
+                {
+                    TokenSource.Cancel();
+                    TokenSource.Dispose();
+                }
+            }
+
             if (_SslStream != null)
             {
                 _SslStream.Close(); 
@@ -102,13 +111,6 @@ namespace WatsonTcp
                 _NetworkStream.Close(); 
             }
 
-            if (TokenSource != null)
-            {
-                if (!TokenSource.IsCancellationRequested) TokenSource.Cancel();
-                TokenSource.Dispose();
-                TokenSource = null;
-            }
-             
             if (_TcpClient != null)
             {
                 _TcpClient.Close();

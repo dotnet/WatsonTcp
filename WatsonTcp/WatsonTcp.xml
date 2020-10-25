@@ -416,7 +416,7 @@
             <param name="stream">Stream.</param>
             <param name="logger">Logger method.</param>
         </member>
-        <member name="M:WatsonTcp.WatsonMessage.BuildFromStream">
+        <member name="M:WatsonTcp.WatsonMessage.BuildFromStream(System.Threading.CancellationToken)">
             <summary>
             Build the Message object from data that awaits in a NetworkStream or SslStream.
             </summary>

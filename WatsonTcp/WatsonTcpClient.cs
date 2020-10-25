@@ -838,21 +838,22 @@ namespace WatsonTcp
 
                     if (_TokenSource != null)
                     {
-                        if (!_TokenSource.IsCancellationRequested) _TokenSource.Cancel();
-                        _TokenSource.Dispose();
-                        _TokenSource = null;
+                        // stop the data receiver
+                        if (!_TokenSource.IsCancellationRequested)
+                        {
+                            _TokenSource.Cancel();
+                            _TokenSource.Dispose();
+                        }
                     }
 
                     if (_WriteLock != null)
                     {
-                        _WriteLock.Dispose();
-                        _WriteLock = null;
+                        _WriteLock.Dispose(); 
                     }
 
                     if (_ReadLock != null)
                     {
-                        _ReadLock.Dispose();
-                        _ReadLock = null;
+                        _ReadLock.Dispose(); 
                     }
 
                     if (_SslStream != null)
@@ -868,12 +869,11 @@ namespace WatsonTcp
                     if (_Client != null)
                     {
                         _Client.Close();
-                        _Client.Dispose();
-                        _Client = null;
+                        _Client.Dispose(); 
                     }
-
-                    _DataStream = null;
+                     
                     Connected = false;
+
                     _Settings.Logger?.Invoke(_Header + "disposed");
                 }
                 catch (Exception e)
@@ -910,10 +910,10 @@ namespace WatsonTcp
 
                     readLocked = await _ReadLock.WaitAsync(1);
                     WatsonMessage msg = new WatsonMessage(_DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
-                    bool buildSuccess = await msg.BuildFromStream();
+                    bool buildSuccess = await msg.BuildFromStream(_Token);
                     if (!buildSuccess)
                     {
-                        _Settings.Logger?.Invoke(_Header + "message build failed due to disconnect");
+                        _Settings.Logger?.Invoke(_Header + "disconnect detected");
                         break;
                     }
 
@@ -1073,7 +1073,7 @@ namespace WatsonTcp
                 } 
                 finally
                 {
-                    if (readLocked) _ReadLock.Release();
+                    if (readLocked && _ReadLock != null) _ReadLock.Release();
                 }
             }
 

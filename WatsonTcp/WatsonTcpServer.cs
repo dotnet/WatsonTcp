@@ -186,11 +186,6 @@ namespace WatsonTcp
             }
 
             _ListenerPort = listenerPort; 
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort); 
-            _Token = _TokenSource.Token;
-
-            Task.Run(() => MonitorForIdleClients(), _Token); 
-            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
         }
 
         /// <summary>
@@ -235,12 +230,7 @@ namespace WatsonTcp
                 _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
             }
 
-            _ListenerPort = listenerPort;
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort); 
-            _Token = _TokenSource.Token;
-
-            Task.Run(() => MonitorForIdleClients(), _Token); 
-            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
+            _ListenerPort = listenerPort; 
         }
 
         /// <summary>
@@ -275,12 +265,7 @@ namespace WatsonTcp
                 _ListenerIp = listenerIp;
             }
 
-            _ListenerPort = listenerPort;
-            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
-            _Token = _TokenSource.Token;
-
-            Task.Run(() => MonitorForIdleClients(), _Token);
-            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
+            _ListenerPort = listenerPort; 
         }
 
         #endregion
@@ -302,10 +287,11 @@ namespace WatsonTcp
         public void Start()
         {
             if (_IsListening) throw new InvalidOperationException("WatsonTcpServer is already running.");
-
+             
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
             _Statistics = new WatsonTcpStatistics();
+            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
             if (!_Events.IsUsingMessages && !_Events.IsUsingStreams)
                 throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set.");
@@ -326,6 +312,8 @@ namespace WatsonTcp
             }
 
             Task.Run(() => AcceptConnections(), _Token); // sets _IsListening
+            Task.Run(() => MonitorForIdleClients(), _Token);
+            Task.Run(() => MonitorForExpiredSyncResponses(), _Token); 
         }
 
         /// <summary>
@@ -338,6 +326,7 @@ namespace WatsonTcp
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
             _Statistics = new WatsonTcpStatistics();
+            _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
             if (!_Events.IsUsingMessages && !_Events.IsUsingStreams)
                 throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set.");
@@ -358,6 +347,8 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
+            Task.Run(() => MonitorForIdleClients(), _Token);
+            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
             return AcceptConnections(); 
         }
 
@@ -788,16 +779,19 @@ namespace WatsonTcp
 
                     if (_TokenSource != null)
                     {
-                        if (!_TokenSource.IsCancellationRequested) _TokenSource.Cancel();
-                        _TokenSource.Dispose();
-                        _TokenSource = null;
+                        // shut off the data receiver
+                        if (!_TokenSource.IsCancellationRequested)
+                        {
+                            _TokenSource.Cancel();
+                            _TokenSource.Dispose();
+                        }
                     }
 
                     if (_Listener != null && _Listener.Server != null)
                     {
+                        // stop accepting new connections
                         _Listener.Server.Close();
-                        _Listener.Server.Dispose();
-                        _Listener = null;
+                        _Listener.Server.Dispose(); 
                     }
 
                     if (_Clients != null && _Clients.Count > 0)
@@ -805,16 +799,17 @@ namespace WatsonTcp
                         WatsonMessage discMsg = new WatsonMessage();
                         discMsg.Status = MessageStatus.Disconnecting;
 
-                        foreach (KeyValuePair<string, ClientMetadata> currMetadata in _Clients)
+                        foreach (KeyValuePair<string, ClientMetadata> currClient in _Clients)
                         {
-                            SendInternal(currMetadata.Value, discMsg, 0, null);
-                            currMetadata.Value.Dispose();
+                            SendInternal(currClient.Value, discMsg, 0, null);
+                            currClient.Value.Dispose();
                         }
 
                         _Clients = null;
                         _UnauthenticatedClients = null;
                     }
 
+                    _IsListening = false;
                     _Settings.Logger?.Invoke(_Header + "disposed");
                 }
                 catch (Exception e)
@@ -891,7 +886,7 @@ namespace WatsonTcp
 
                     if (_Mode == Mode.Tcp)
                     { 
-                        Task unawaited = Task.Run(() => FinalizeConnection(client), _Token); 
+                        Task unawaited = Task.Run(() => FinalizeConnection(client), client.Token); 
                     }
                     else if (_Mode == Mode.Ssl)
                     { 
@@ -912,7 +907,7 @@ namespace WatsonTcp
                                 FinalizeConnection(client);
                             }
 
-                        }, _Token); 
+                        }, client.Token); 
                     }
                     else
                     {
@@ -926,6 +921,7 @@ namespace WatsonTcp
                 catch (ObjectDisposedException)
                 {
                     _Settings.Logger?.Invoke(_Header + "listener disposed");
+                    break;
                 }
                 catch (Exception e)
                 {
@@ -936,10 +932,11 @@ namespace WatsonTcp
                         Environment.NewLine);
 
                     _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    break;
                 }
-
-                _Settings.Logger?.Invoke(_Header + "listener stopped");
             }
+
+            _Settings.Logger?.Invoke(_Header + "listener stopped");
         }
 
         private async Task<bool> StartTls(ClientMetadata client)
@@ -1016,7 +1013,7 @@ namespace WatsonTcp
             #region Start-Data-Receiver
 
             _Settings.Logger?.Invoke(_Header + "starting data receiver for " + client.IpPort);
-            Task.Run(async () => await DataReceiver(client, client.Token));
+            Task.Run(async () => await DataReceiver(client), client.Token);
 
             _Events.HandleClientConnected(this, new ClientConnectedEventArgs(client.IpPort)); 
 
@@ -1097,21 +1094,21 @@ namespace WatsonTcp
             }
         }
 
-        private async Task DataReceiver(ClientMetadata client, CancellationToken token)
+        private async Task DataReceiver(ClientMetadata client)
         { 
             while (true)
             {
                 try
                 {
-                    token.ThrowIfCancellationRequested();
+                    client.Token.ThrowIfCancellationRequested();
 
                     if (!IsConnected(client)) break;
 
                     WatsonMessage msg = new WatsonMessage(client.DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
-                    bool buildSuccess = await msg.BuildFromStream();
+                    bool buildSuccess = await msg.BuildFromStream(client.Token);
                     if (!buildSuccess)
                     {
-                        _Settings.Logger?.Invoke(_Header + "message build failed due to disconnect for client " + client.IpPort);
+                        _Settings.Logger?.Invoke(_Header + "disconnect detected for client " + client.IpPort);
                         break;
                     }
 
@@ -1295,7 +1292,7 @@ namespace WatsonTcp
                 }
                 catch (ObjectDisposedException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "client " + client.IpPort + " disposed");
+                    _Settings.Logger?.Invoke(_Header + "client " + client.IpPort + " disconnected due to disposal");
                     break;
                 }
                 catch (OperationCanceledException)

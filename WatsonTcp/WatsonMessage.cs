@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
@@ -244,7 +245,7 @@ namespace WatsonTcp
         /// Build the Message object from data that awaits in a NetworkStream or SslStream.
         /// </summary>
         /// <returns>True if successful.</returns>
-        internal async Task<bool> BuildFromStream()
+        internal async Task<bool> BuildFromStream(CancellationToken token)
         {
             // {"len":0,"s":"Normal"}\r\n\r\n
             byte[] headerBytes = new byte[24];
@@ -253,7 +254,7 @@ namespace WatsonTcp
             {
                 #region Read-Headers
 
-                await _DataStream.ReadAsync(headerBytes, 0, 24); 
+                await _DataStream.ReadAsync(headerBytes, 0, 24, token); 
                 byte[] headerBuffer = new byte[1];
 
                 while (true)
@@ -268,7 +269,7 @@ namespace WatsonTcp
                         break;
                     }
 
-                    await _DataStream.ReadAsync(headerBuffer, 0, 1);
+                    await _DataStream.ReadAsync(headerBuffer, 0, 1, token);
                     headerBytes = WatsonCommon.AppendBytes(headerBytes, headerBuffer); 
                 }
 
@@ -288,7 +289,22 @@ namespace WatsonTcp
                 #endregion 
 
                 return true;
-            } 
+            }
+            catch (OperationCanceledException)
+            {
+                _Logger?.Invoke(_Header + "message read canceled");
+                return false;
+            }
+            catch (ObjectDisposedException)
+            {
+                _Logger?.Invoke(_Header + "message read canceled");
+                return false;
+            }
+            catch (IOException)
+            {
+                _Logger?.Invoke(_Header + "non-graceful termination by peer");
+                return false;
+            }
             catch (Exception e)
             {
                 _Logger?.Invoke(_Header + "exception encountered: " +
