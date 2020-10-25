@@ -222,7 +222,7 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Read from a stream and construct a message.  Call Build() to populate.
+        /// Read from a stream and construct a message.  Call BuildFromStream() to populate.
         /// </summary>
         /// <param name="stream">Stream.</param>
         /// <param name="logger">Logger method.</param>
@@ -297,7 +297,7 @@ namespace WatsonTcp
             }
             catch (ObjectDisposedException)
             {
-                _Logger?.Invoke(_Header + "message read canceled");
+                _Logger?.Invoke(_Header + "socket disposed");
                 return false;
             }
             catch (IOException)

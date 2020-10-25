@@ -287,7 +287,13 @@ namespace WatsonTcp
         public void Start()
         {
             if (_IsListening) throw new InvalidOperationException("WatsonTcpServer is already running.");
-             
+
+            if (_UnauthenticatedClients == null) _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
+            if (_Clients == null) _Clients = new ConcurrentDictionary<string, ClientMetadata>();
+            if (_ClientsLastSeen == null) _ClientsLastSeen = new ConcurrentDictionary<string, DateTime>();
+            if (_ClientsKicked == null) _ClientsKicked = new ConcurrentDictionary<string, DateTime>();
+            if (_ClientsTimedout == null) _ClientsTimedout = new ConcurrentDictionary<string, DateTime>();
+
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
             _Statistics = new WatsonTcpStatistics();
@@ -322,6 +328,12 @@ namespace WatsonTcp
         public Task StartAsync()
         {
             if (_IsListening) throw new InvalidOperationException("WatsonTcpServer is already running.");
+
+            if (_UnauthenticatedClients == null) _UnauthenticatedClients = new ConcurrentDictionary<string, DateTime>();
+            if (_Clients == null) _Clients = new ConcurrentDictionary<string, ClientMetadata>();
+            if (_ClientsLastSeen == null) _ClientsLastSeen = new ConcurrentDictionary<string, DateTime>();
+            if (_ClientsKicked == null) _ClientsKicked = new ConcurrentDictionary<string, DateTime>();
+            if (_ClientsTimedout == null) _ClientsTimedout = new ConcurrentDictionary<string, DateTime>();
 
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
@@ -782,16 +794,10 @@ namespace WatsonTcp
                         // shut off the data receiver
                         if (!_TokenSource.IsCancellationRequested)
                         {
+                            _Settings.Logger?.Invoke(_Header + "canceling tasks");
                             _TokenSource.Cancel();
-                            _TokenSource.Dispose();
+                            // _TokenSource.Dispose();
                         }
-                    }
-
-                    if (_Listener != null && _Listener.Server != null)
-                    {
-                        // stop accepting new connections
-                        _Listener.Server.Close();
-                        _Listener.Server.Dispose(); 
                     }
 
                     if (_Clients != null && _Clients.Count > 0)
@@ -809,7 +815,16 @@ namespace WatsonTcp
                         _UnauthenticatedClients = null;
                     }
 
+                    if (_Listener != null && _Listener.Server != null)
+                    {
+                        // stop accepting new connections
+                        _Listener.Stop();
+                        _Listener.Server.Close();
+                        _Listener.Server.Dispose();
+                    }
+
                     _IsListening = false;
+
                     _Settings.Logger?.Invoke(_Header + "disposed");
                 }
                 catch (Exception e)
@@ -828,10 +843,12 @@ namespace WatsonTcp
 
         private async Task AcceptConnections()
         {
+            #region Accept-Connections
+
             _IsListening = true;
             _Listener.Start();
 
-            while (!_Token.IsCancellationRequested)
+            while (true)
             {
                 string ipPort = String.Empty;
 
@@ -885,11 +902,11 @@ namespace WatsonTcp
                     #region Initialize-Client-and-Finalize-Connection
 
                     if (_Mode == Mode.Tcp)
-                    { 
-                        Task unawaited = Task.Run(() => FinalizeConnection(client), client.Token); 
+                    {
+                        Task unawaited = Task.Run(() => FinalizeConnection(client), client.Token);
                     }
                     else if (_Mode == Mode.Ssl)
-                    { 
+                    {
                         if (_Settings.AcceptInvalidCertificates)
                         {
                             client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
@@ -907,7 +924,7 @@ namespace WatsonTcp
                                 FinalizeConnection(client);
                             }
 
-                        }, client.Token); 
+                        }, client.Token);
                     }
                     else
                     {
@@ -916,11 +933,11 @@ namespace WatsonTcp
 
                     _Settings.Logger?.Invoke(_Header + "accepted connection from " + client.IpPort);
 
-                    #endregion 
+                    #endregion
                 }
                 catch (ObjectDisposedException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "listener disposed");
+                    _Settings.Logger?.Invoke(_Header + "listener stopped");
                     break;
                 }
                 catch (Exception e)
@@ -936,7 +953,7 @@ namespace WatsonTcp
                 }
             }
 
-            _Settings.Logger?.Invoke(_Header + "listener stopped");
+            #endregion 
         }
 
         private async Task<bool> StartTls(ClientMetadata client)
@@ -987,12 +1004,12 @@ namespace WatsonTcp
         }
 
         private void FinalizeConnection(ClientMetadata client)
-        {
+        { 
             #region Add-to-Client-List
-             
+
             _Clients.TryAdd(client.IpPort, client);
             _ClientsLastSeen.TryAdd(client.IpPort, DateTime.Now);
-             
+
             #endregion
 
             #region Request-Authentication
@@ -1004,7 +1021,7 @@ namespace WatsonTcp
 
                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
                 WatsonMessage authMsg = new WatsonMessage();
-                authMsg.Status = MessageStatus.AuthRequired; 
+                authMsg.Status = MessageStatus.AuthRequired;
                 SendInternal(client, authMsg, 0, null);
             }
 
@@ -1015,9 +1032,9 @@ namespace WatsonTcp
             _Settings.Logger?.Invoke(_Header + "starting data receiver for " + client.IpPort);
             Task.Run(async () => await DataReceiver(client), client.Token);
 
-            _Events.HandleClientConnected(this, new ClientConnectedEventArgs(client.IpPort)); 
+            _Events.HandleClientConnected(this, new ClientConnectedEventArgs(client.IpPort));
 
-            #endregion
+            #endregion 
         }
 
         private bool IsConnected(ClientMetadata client)

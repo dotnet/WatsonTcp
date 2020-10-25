@@ -411,7 +411,7 @@
         </member>
         <member name="M:WatsonTcp.WatsonMessage.#ctor(System.IO.Stream,System.Action{System.String})">
             <summary>
-            Read from a stream and construct a message.  Call Build() to populate.
+            Read from a stream and construct a message.  Call BuildFromStream() to populate.
             </summary>
             <param name="stream">Stream.</param>
             <param name="logger">Logger method.</param>
