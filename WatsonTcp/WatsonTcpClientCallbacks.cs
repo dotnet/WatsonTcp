@@ -60,21 +60,45 @@ namespace WatsonTcp
         internal string HandleAuthenticationRequested()
         {
             string ret = null;
-            if (AuthenticationRequested != null) ret = AuthenticationRequested();
+
+            if (AuthenticationRequested != null)
+            {
+                try
+                {
+                    ret = AuthenticationRequested();
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+
             return ret;
         }
 
         internal SyncResponse HandleSyncRequestReceived(SyncRequest req)
         {
             SyncResponse ret = null;
-            if (SyncRequestReceived != null) ret = SyncRequestReceived(req);
+
+            if (SyncRequestReceived != null)
+            {
+                try
+                {
+                    ret = SyncRequestReceived(req);
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+
             return ret;
         }
 
         #endregion
 
         #region Private-Methods
-
+         
         #endregion
     }
 }

@@ -69,12 +69,13 @@ namespace TestServerStream
                 switch (userInput)
                 {
                     case "?":
+                        bool listening = (_Server != null ? _Server.IsListening : false);
                         Console.WriteLine("Available commands:");
                         Console.WriteLine("  ?              help (this menu)");
                         Console.WriteLine("  q              quit");
                         Console.WriteLine("  cls            clear screen");
-                        Console.WriteLine("  start          start listening for connections (listening: " + (_Server != null ? _Server.IsListening.ToString() : "false") + ")");
-                        Console.WriteLine("  stop           stop listening for connections  (listening: " + (_Server != null ? _Server.IsListening.ToString() : "false") + ")");
+                        Console.WriteLine("  start          start listening for connections (listening: " + listening.ToString() + ")");
+                        Console.WriteLine("  stop           stop listening for connections  (listening: " + listening.ToString() + ")");
                         Console.WriteLine("  list           list clients");
                         Console.WriteLine("  send           send message to client");
                         Console.WriteLine("  send md        send message with metadata to client");
@@ -82,8 +83,9 @@ namespace TestServerStream
                         Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
                         Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  remove         disconnect client");
+                        Console.WriteLine("  remove all     disconnect all clients");
                         Console.WriteLine("  psk            set preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + _Server.Settings.DebugMessages + ")");
+                        Console.WriteLine("  debug          enable/disable debug");
                         break;
 
                     case "q":
@@ -171,6 +173,10 @@ namespace TestServerStream
                     case "remove":
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         _Server.DisconnectClient(ipPort);
+                        break;
+
+                    case "remove all":
+                        _Server.DisconnectClients();
                         break;
 
                     case "psk":

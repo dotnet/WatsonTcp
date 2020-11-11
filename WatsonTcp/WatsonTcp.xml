@@ -558,24 +558,22 @@
             <param name="serverIp">The IP address or hostname of the server.</param>
             <param name="serverPort">The TCP port on which the server is listening.</param>
             <param name="cert">The SSL certificate</param>
-            <exception cref="T:System.ArgumentNullException"></exception>
-            <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Dispose">
-            <summary>
-            Tear down the client and dispose of background workers.
+            <summary>        
+            Disconnect the client and dispose of background workers.
+            Do not reuse the object after disposal.
             </summary>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Start">
+        <member name="M:WatsonTcp.WatsonTcpClient.Connect">
             <summary>
-            Start the client and establish a connection to the server.
+            Connect to the server.
             </summary>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.StartAsync">
+        <member name="M:WatsonTcp.WatsonTcpClient.Disconnect">
             <summary>
-            Start the client and establish a connection to the server.
+            Disconnect from the server.
             </summary>
-            <returns>Task.</returns>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Authenticate(System.String)">
             <summary>
@@ -754,7 +752,8 @@
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Dispose(System.Boolean)">
             <summary>
-            Tear down the client and dispose of background workers.
+            Disconnect the client and dispose of background workers.
+            Do not reuse the object after disposal.
             </summary>
             <param name="disposing">Indicate if resources should be disposed.</param>
         </member>
@@ -994,14 +993,10 @@
         <member name="M:WatsonTcp.WatsonTcpServer.Dispose">
             <summary>
             Tear down the server and dispose of background workers.
+            Do not reuse the object after disposal.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.Start">
-            <summary>
-            Start accepting connections.
-            </summary>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.StartAsync">
             <summary>
             Start accepting connections.
             </summary>
@@ -1219,9 +1214,15 @@
             </summary>
             <param name="ipPort">IP:port of the client.</param>
         </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.DisconnectClients">
+            <summary>
+            Disconnects all connected clients.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpServer.Dispose(System.Boolean)">
             <summary>
             Tear down the server and dispose of background workers.
+            Do not reuse the object after disposal.
             </summary>
             <param name="disposing">Indicate if resources should be disposed.</param>
         </member>

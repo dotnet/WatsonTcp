@@ -56,9 +56,8 @@ namespace Test.MaxConnections
                 Console.WriteLine(e.ToString());
                 return;
             }
-
-            // server.Start();
-            Task serverStart = server.StartAsync();
+             
+            server.Start();
 
             bool runForever = true;
             while (runForever)

@@ -55,7 +55,19 @@ namespace WatsonTcp
         internal SyncResponse HandleSyncRequestReceived(SyncRequest req)
         {
             SyncResponse ret = null;
-            if (SyncRequestReceived != null) ret = SyncRequestReceived(req);
+
+            if (SyncRequestReceived != null)
+            {
+                try
+                {
+                    ret = SyncRequestReceived(req);
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+
             return ret;
         }
 

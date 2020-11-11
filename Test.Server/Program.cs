@@ -65,9 +65,8 @@ namespace TestServer
                 Console.WriteLine(e.ToString());
                 return;
             }
-
-            // server.Start();
-            Task serverStart = _Server.StartAsync();
+             
+            _Server.Start();
 
             bool runForever = true;
             List<string> clients;
@@ -82,14 +81,15 @@ namespace TestServer
                 switch (userInput)
                 {
                     case "?":
+                        bool listening = (_Server != null ? _Server.IsListening : false);
                         Console.WriteLine("Available commands:");
                         Console.WriteLine("  ?                   help (this menu)");
                         Console.WriteLine("  q                   quit");
                         Console.WriteLine("  cls                 clear screen");
-                        Console.WriteLine("  start               start listening for connections (listening: " + (_Server != null ? _Server.IsListening.ToString() : "false") + ")");
-                        Console.WriteLine("  stop                stop listening for connections  (listening: " + (_Server != null ? _Server.IsListening.ToString() : "false") + ")");
+                        Console.WriteLine("  start               start listening for connections (listening: " + listening.ToString() + ")");
+                        Console.WriteLine("  stop                stop listening for connections  (listening: " + listening.ToString() + ")");
                         Console.WriteLine("  list                list clients");
-                        Console.WriteLine("  dispose             dispose of the connection");
+                        Console.WriteLine("  dispose             dispose of the server");
                         Console.WriteLine("  send                send message to client");
                         Console.WriteLine("  send md             send message with metadata to client");
                         Console.WriteLine("  sendasync           send message to a client asynchronously");
@@ -98,10 +98,11 @@ namespace TestServer
                         Console.WriteLine("  sendempty           send empty message with metadata");
                         Console.WriteLine("  sendandwait empty   send empty message with metadata and wait for a response");
                         Console.WriteLine("  remove              disconnect client");
+                        Console.WriteLine("  remove all          disconnect all clients");
                         Console.WriteLine("  psk                 set preshared key");
                         Console.WriteLine("  stats               display server statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
-                        Console.WriteLine("  debug               enable/disable debug (currently " + _Server.Settings.DebugMessages + ")");
+                        Console.WriteLine("  debug               enable/disable debug");
                         break;
 
                     case "q":
@@ -192,6 +193,10 @@ namespace TestServer
                     case "remove":
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         _Server.DisconnectClient(ipPort);
+                        break;
+
+                    case "remove all":
+                        _Server.DisconnectClients();
                         break;
 
                     case "psk":

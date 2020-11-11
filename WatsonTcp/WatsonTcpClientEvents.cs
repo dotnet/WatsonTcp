@@ -96,42 +96,58 @@ namespace WatsonTcp
 
         internal void HandleAuthenticationSucceeded(object sender, EventArgs args)
         {
-            AuthenticationSucceeded?.Invoke(sender, args);
+            WrappedEventHandler(() => ServerConnected?.Invoke(sender, args), "ServerConnected", sender); 
         }
 
         internal void HandleAuthenticationFailure(object sender, EventArgs args)
         {
-            AuthenticationFailure?.Invoke(sender, args);
+            WrappedEventHandler(() => AuthenticationFailure?.Invoke(sender, args), "AuthenticationFailure", sender);
         }
 
         internal void HandleMessageReceived(object sender, MessageReceivedFromServerEventArgs args)
         {
-            MessageReceived?.Invoke(sender, args);
+            WrappedEventHandler(() => MessageReceived?.Invoke(sender, args), "MessageReceived", sender);
         }
 
         internal void HandleStreamReceived(object sender, StreamReceivedFromServerEventArgs args)
         {
-            StreamReceived?.Invoke(sender, args);
+            WrappedEventHandler(() => StreamReceived?.Invoke(sender, args), "StreamReceived", sender);
         }
 
         internal void HandleServerConnected(object sender, EventArgs args)
         {
-            ServerConnected?.Invoke(sender, args);
+            WrappedEventHandler(() => ServerConnected?.Invoke(sender, args), "ServerConnected", sender);
         }
 
         internal void HandleServerDisconnected(object sender, EventArgs args)
         {
-            ServerDisconnected?.Invoke(sender, args);
+            WrappedEventHandler(() => ServerDisconnected?.Invoke(sender, args), "ServerDisconnected", sender);
         }
 
         internal void HandleExceptionEncountered(object sender, ExceptionEventArgs args)
         {
-            ExceptionEncountered?.Invoke(sender, args);
+            WrappedEventHandler(() => ExceptionEncountered?.Invoke(sender, args), "ExceptionEncountered", sender);
         }
 
         #endregion
 
         #region Private-Methods
+
+        internal void WrappedEventHandler(Action action, string handler, object sender)
+        {
+            if (action == null) return;
+
+            Action<string> logger = ((WatsonTcpClient)sender).Settings.Logger;
+
+            try
+            {
+                action.Invoke();
+            }
+            catch (Exception e)
+            {
+                logger?.Invoke("Event handler exception in " + handler + ": " + Environment.NewLine + SerializationHelper.SerializeJson(e, true));
+            }
+        }
 
         #endregion
     }

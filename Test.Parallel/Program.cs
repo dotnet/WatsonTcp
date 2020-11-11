@@ -158,7 +158,7 @@ namespace TestParallel
                 client.Events.ServerConnected += ClientServerConnected;
                 client.Events.ServerDisconnected += ClientServerDisconnected;
                 client.Events.MessageReceived += ClientMsgReceived;
-                client.Start();
+                client.Connect();
 
                 for (int i = 0; i < numIterations; i++)
                 {

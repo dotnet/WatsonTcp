@@ -165,7 +165,7 @@ namespace TestMultiClient
                 client.Events.ServerConnected += ClientServerConnected;
                 client.Events.ServerDisconnected += ClientServerDisconnected;
                 client.Events.MessageReceived += ClientMsgReceived;
-                client.Start();
+                client.Connect();
 
                 while (!clientsStarted)
                 {

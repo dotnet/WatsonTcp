@@ -46,14 +46,14 @@ namespace TestClient
                         Console.WriteLine("  sendempty           send empty message with metadata");
                         Console.WriteLine("  sendandwait empty   send empty message with metadata and wait for a response");
                         Console.WriteLine("  status              show if client connected");
-                        Console.WriteLine("  dispose             dispose of the connection");
-                        Console.WriteLine("  connect             connect to the server if not connected");
-                        Console.WriteLine("  reconnect           disconnect if connected, then reconnect");
+                        Console.WriteLine("  dispose             dispose of the client");
+                        Console.WriteLine("  connect             connect to the server");
+                        Console.WriteLine("  disconnect          disconnect from the server"); 
                         Console.WriteLine("  psk                 set the preshared key");
                         Console.WriteLine("  auth                authenticate using the preshared key");
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
-                        Console.WriteLine("  debug               enable/disable debug (currently " + _Client.Settings.DebugMessages + ")");
+                        Console.WriteLine("  debug               enable/disable debug");
                         break;
 
                     case "q":
@@ -124,25 +124,14 @@ namespace TestClient
                         _Client.Dispose();
                         break;
 
-                    case "connect":
-                        if (_Client != null && _Client.Connected)
-                        {
-                            Console.WriteLine("Already connected");
-                        }
-                        else
-                        {
-                            _Client = new WatsonTcpClient(_ServerIp, _ServerPort);
-                            _Client.Events.ServerConnected += ServerConnected;
-                            _Client.Events.ServerDisconnected += ServerDisconnected;
-                            _Client.Events.MessageReceived += MessageReceived;
-                            _Client.Start();
-                        }
+                    case "connect": 
+                        _Client.Connect(); 
                         break;
 
-                    case "reconnect":
-                        ConnectClient();
+                    case "disconnect":
+                        _Client.Disconnect();
                         break;
-
+                         
                     case "psk":
                         _PresharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
@@ -225,8 +214,7 @@ namespace TestClient
             _Client.Keepalive.TcpKeepAliveTime = 1;
             _Client.Keepalive.TcpKeepAliveRetryCount = 3;
 
-            // client.Start();
-            Task startClient = _Client.StartAsync();
+            _Client.Connect();
         }
 
         private static bool InputBoolean(string question, bool yesDefault)

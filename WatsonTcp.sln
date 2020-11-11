@@ -37,6 +37,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Deadlock", "Test.Deadl
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.NonExistentServer", "Test.NonExistentServer\Test.NonExistentServer.csproj", "{6A05ED7D-031F-46C9-9DD8-960B88AEDD24}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Metadata", "Test.Metadata\Test.Metadata.csproj", "{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,10 @@ Global
 		{6A05ED7D-031F-46C9-9DD8-960B88AEDD24}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A05ED7D-031F-46C9-9DD8-960B88AEDD24}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A05ED7D-031F-46C9-9DD8-960B88AEDD24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

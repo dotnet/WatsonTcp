@@ -67,7 +67,7 @@ namespace Test.Deadlock
                     };
 
                     client.Settings.Logger = ClientLogger;
-                    client.Start();
+                    client.Connect();
 
                     while (true)
                     {

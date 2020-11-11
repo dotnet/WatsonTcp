@@ -32,7 +32,7 @@ namespace Test.WinFormClient
          
         private void button1_Click(object sender, EventArgs e)
         {
-            _Client.Start();
+            _Client.Connect();
         }
          
         private void OnAuthenticationFailure(object sender, EventArgs e)

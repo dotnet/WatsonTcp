@@ -13,7 +13,7 @@ namespace Test.FastDisconnect
             {
                 _Client = new WatsonTcpClient("127.0.0.1", 9000);
                 _Client.Events.MessageReceived += MessageReceived;
-                _Client.Start();
+                _Client.Connect();
                 _Client.Send("Hello!");
                 _Client.Dispose();
             }

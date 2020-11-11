@@ -133,6 +133,8 @@ namespace WatsonTcp
 
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
+        private Task _DataReceiver = null;
+        private Task _MonitorSyncResponses = null;
 
         private readonly object _SyncResponseLock = new object();
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>(); 
@@ -151,14 +153,11 @@ namespace WatsonTcp
             int serverPort)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
-            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
-             
-            _Token = _TokenSource.Token;
+            if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
+              
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
-            _ServerPort = serverPort;
-             
-            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
+            _ServerPort = serverPort; 
         }
 
         /// <summary>
@@ -175,9 +174,8 @@ namespace WatsonTcp
             string pfxCertPass)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
-            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
-             
-            _Token = _TokenSource.Token;
+            if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
+              
             _Mode = Mode.Ssl;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
@@ -201,9 +199,7 @@ namespace WatsonTcp
             else
             {
                 _SslCertificateCollection = new X509Certificate2Collection();
-            }
-             
-            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
+            } 
         }
 
         /// <summary>
@@ -212,18 +208,15 @@ namespace WatsonTcp
         /// <param name="serverIp">The IP address or hostname of the server.</param>
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="cert">The SSL certificate</param>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public WatsonTcpClient(
             string serverIp, 
             int serverPort, 
             X509Certificate2 cert)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
-            if (serverPort < 1) throw new ArgumentOutOfRangeException(nameof(serverPort));
+            if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (cert == null) throw new ArgumentNullException(nameof(cert));
-
-            _Token = _TokenSource.Token;
+             
             _Mode = Mode.Ssl;
             _SslCertificate = cert;
             _ServerIp = serverIp;
@@ -233,16 +226,15 @@ namespace WatsonTcp
             {
                 _SslCertificate
             };
-
-            Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
         }
 
         #endregion
 
         #region Public-Methods
 
-        /// <summary>
-        /// Tear down the client and dispose of background workers.
+        /// <summary>        
+        /// Disconnect the client and dispose of background workers.
+        /// Do not reuse the object after disposal.
         /// </summary>
         public void Dispose()
         {
@@ -251,12 +243,15 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Start the client and establish a connection to the server.
+        /// Connect to the server.
         /// </summary>
-        public void Start()
+        public void Connect()
         {
+            if (Connected) throw new InvalidOperationException("Already connected to the server.");
+
             _Client = new TcpClient();
             _Statistics = new WatsonTcpStatistics();
+
             IAsyncResult asyncResult = null;
             WaitHandle waitHandle = null;
             bool connectSuccess = false;
@@ -333,12 +328,10 @@ namespace WatsonTcp
 
                     if (_Settings.AcceptInvalidCertificates)
                     {
-                        // accept invalid certs
-                        _SslStream = new SslStream(_Client.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                        _SslStream = new SslStream(_Client.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate)); 
                     }
                     else
-                    {
-                        // do not accept invalid SSL certificates
+                    { 
                         _SslStream = new SslStream(_Client.GetStream(), false);
                     }
 
@@ -360,6 +353,7 @@ namespace WatsonTcp
                     }
 
                     _DataStream = _SslStream;
+
                     Connected = true;
                 }
                 catch (Exception e)
@@ -377,150 +371,61 @@ namespace WatsonTcp
             else
             {
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+            }
+
+            _TokenSource = new CancellationTokenSource();
+            _Token = _TokenSource.Token;
+
+            _DataReceiver = Task.Run(() => DataReceiver(), _Token);
+            _MonitorSyncResponses = Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
+            _Events.HandleServerConnected(this, EventArgs.Empty);
+            _Settings.Logger?.Invoke(_Header + "connected");
+        }
+         
+        /// <summary>
+        /// Disconnect from the server.
+        /// </summary>
+        public void Disconnect()
+        {
+            if (!Connected) throw new InvalidOperationException("Nonnected to the server.");
+
+            _Settings.Logger?.Invoke(_Header + "disconnecting");
+
+            if (Connected)
+            {
+                WatsonMessage msg = new WatsonMessage();
+                msg.Status = MessageStatus.Disconnecting;
+                SendInternal(msg, 0, null);
+            }
+
+            if (_TokenSource != null)
+            {
+                // stop the data receiver
+                if (!_TokenSource.IsCancellationRequested)
+                {
+                    _TokenSource.Cancel();
+                    _TokenSource.Dispose();
+                }
             }
              
-            _Settings.Logger?.Invoke(_Header + "connected to server, starting data receiver");
-            Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
-
-            _Events.HandleServerConnected(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// Start the client and establish a connection to the server.
-        /// </summary>
-        /// <returns>Task.</returns>
-        public Task StartAsync()
-        {
-            _Client = new TcpClient();
-            _Statistics = new WatsonTcpStatistics();
-            IAsyncResult asyncResult = null;
-            WaitHandle waitHandle = null;
-            bool connectSuccess = false;
-
-            if (!_Events.IsUsingMessages && !_Events.IsUsingStreams)
-                throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set.");
-
-            if (_Keepalive.EnableTcpKeepAlives)
-                ServicePointManager.SetTcpKeepAlive(true, _Keepalive.TcpKeepAliveTime, _Keepalive.TcpKeepAliveInterval);
- 
-            if (_Mode == Mode.Tcp)
+            if (_SslStream != null)
             {
-                #region TCP
-
-                _Settings.Logger?.Invoke(_Header + "connecting to " + _ServerIp + ":" + _ServerPort);
-
-                _Client.LingerState = new LingerOption(true, 0);
-                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
-                waitHandle = asyncResult.AsyncWaitHandle;
-
-                try
-                {
-                    connectSuccess = waitHandle.WaitOne(TimeSpan.FromSeconds(_Settings.ConnectTimeoutSeconds), false);
-                    if (!connectSuccess)
-                    {
-                        _Client.Close();
-                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                    }
-
-                    _Client.EndConnect(asyncResult);
-
-                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
-                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
-                    _TcpStream = _Client.GetStream();
-                    _DataStream = _TcpStream;
-                    _SslStream = null;
-
-                    Connected = true;
-                }
-                catch (Exception e)
-                {
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                    throw;
-                }
-                finally
-                {
-                    waitHandle.Close();
-                }
-
-                #endregion TCP
-            }
-            else if (_Mode == Mode.Ssl)
-            {
-                #region SSL
-
-                _Settings.Logger?.Invoke(_Header + "connecting with SSL to " + _ServerIp + ":" + _ServerPort);
-
-                _Client.LingerState = new LingerOption(true, 0);
-                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
-                waitHandle = asyncResult.AsyncWaitHandle;
-
-                try
-                {
-                    connectSuccess = waitHandle.WaitOne(TimeSpan.FromSeconds(_Settings.ConnectTimeoutSeconds), false);
-                    if (!connectSuccess)
-                    {
-                        _Client.Close();
-                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                    }
-
-                    _Client.EndConnect(asyncResult);
-
-                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
-                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
-
-                    if (_Settings.AcceptInvalidCertificates)
-                    {
-                        // accept invalid certs
-                        _SslStream = new SslStream(_Client.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate));
-                    }
-                    else
-                    {
-                        // do not accept invalid SSL certificates
-                        _SslStream = new SslStream(_Client.GetStream(), false);
-                    }
-
-                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !_Settings.AcceptInvalidCertificates);
-
-                    if (!_SslStream.IsEncrypted)
-                    {
-                        throw new AuthenticationException("Stream is not encrypted");
-                    }
-
-                    if (!_SslStream.IsAuthenticated)
-                    {
-                        throw new AuthenticationException("Stream is not authenticated");
-                    }
-
-                    if (_Settings.MutuallyAuthenticate && !_SslStream.IsMutuallyAuthenticated)
-                    {
-                        throw new AuthenticationException("Mutual authentication failed");
-                    }
-
-                    _DataStream = _SslStream;
-                    Connected = true;
-                }
-                catch (Exception e)
-                {
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                    throw;
-                }
-                finally
-                {
-                    waitHandle.Close();
-                }
-
-                #endregion SSL
-            }
-            else
-            {
-                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                _SslStream.Close();
             }
 
-            _Settings.Logger?.Invoke(_Header + "connected to server, starting data receiver");
-            Task dataReceiver = Task.Run(() => DataReceiver(), _Token);
-            
-            _Events.HandleServerConnected(this, EventArgs.Empty);
-            return dataReceiver;
+            if (_TcpStream != null)
+            {
+                _TcpStream.Close();
+            }
+
+            if (_Client != null)
+            {
+                _Client.Close();
+            }
+
+            Connected = false;
+
+            _Settings.Logger?.Invoke(_Header + "disconnected");
         }
 
         /// <summary>
@@ -818,97 +723,84 @@ namespace WatsonTcp
         #region Private-Methods
 
         /// <summary>
-        /// Tear down the client and dispose of background workers.
+        /// Disconnect the client and dispose of background workers.
+        /// Do not reuse the object after disposal.
         /// </summary>
         /// <param name="disposing">Indicate if resources should be disposed.</param>
         protected virtual void Dispose(bool disposing)
-        {
+        { 
             if (disposing)
             {
-                try
+                _Settings.Logger?.Invoke(_Header + "disposing");
+
+                if (Connected) Disconnect();
+
+                if (_WriteLock != null)
                 {
-                    _Settings.Logger?.Invoke(_Header + "disposing");
-
-                    if (Connected)
-                    {
-                        WatsonMessage msg = new WatsonMessage();
-                        msg.Status = MessageStatus.Disconnecting;
-                        SendInternal(msg, 0, null);
-                    }
-
-                    if (_TokenSource != null)
-                    {
-                        // stop the data receiver
-                        if (!_TokenSource.IsCancellationRequested)
-                        {
-                            _TokenSource.Cancel();
-                            _TokenSource.Dispose();
-                        }
-                    }
-
-                    if (_WriteLock != null)
-                    {
-                        _WriteLock.Dispose(); 
-                    }
-
-                    if (_ReadLock != null)
-                    {
-                        _ReadLock.Dispose(); 
-                    }
-
-                    if (_SslStream != null)
-                    {
-                        _SslStream.Close();
-                    }
-
-                    if (_TcpStream != null)
-                    {
-                        _TcpStream.Close();
-                    }
-
-                    if (_Client != null)
-                    {
-                        _Client.Close();
-                        _Client.Dispose(); 
-                    }
-                     
-                    Connected = false;
-
-                    _Settings.Logger?.Invoke(_Header + "disposed");
+                    _WriteLock.Dispose();
                 }
-                catch (Exception e)
+
+                if (_ReadLock != null)
                 {
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                    throw;
+                    _ReadLock.Dispose();
                 }
-            }
+
+                _Settings = null;
+                _Events = null;
+                _Callbacks = null;
+                _Statistics = null;
+                _Keepalive = null;
+
+                _SourceIp = null;
+                _ServerIp = null;
+
+                _Client = null;
+                _DataStream = null;
+                _TcpStream = null;
+                _SslStream = null;
+
+                _SslCertificate = null;
+                _SslCertificateCollection = null;
+                _WriteLock = null;
+                _ReadLock = null;
+
+                _DataReceiver = null;
+                _MonitorSyncResponses = null; 
+            } 
         }
 
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            // return true; // Allow untrusted certificates.
             return _Settings.AcceptInvalidCertificates;
         }
          
         private async Task DataReceiver()
         {  
-            while (true)
+            while (!_Token.IsCancellationRequested)
             {
                 bool readLocked = false;
                  
                 try
                 {
-                    _Token.ThrowIfCancellationRequested();
-                     
-                    if (_Client == null 
-                        || !_Client.Connected
-                        || _Token.IsCancellationRequested)
+                    #region Check-for-Connection
+
+                    if (_Client == null || !_Client.Connected || _Token.IsCancellationRequested)
                     {
                         _Settings.Logger?.Invoke(_Header + "disconnect detected");
                         break;
                     }
 
+                    #endregion
+
+                    #region Read-Message
+
                     readLocked = await _ReadLock.WaitAsync(1);
+                    if (!readLocked)
+                    {
+                        Task.Delay(30).Wait();
+                        continue;
+                    }
+                     
                     WatsonMessage msg = new WatsonMessage(_DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
                     bool buildSuccess = await msg.BuildFromStream(_Token);
                     if (!buildSuccess)
@@ -922,6 +814,10 @@ namespace WatsonTcp
                         await Task.Delay(30);
                         continue;
                     }
+
+                    #endregion
+
+                    #region Process-by-Status
 
                     if (msg.Status == MessageStatus.Removed)
                     {
@@ -945,15 +841,18 @@ namespace WatsonTcp
                         _Events.HandleAuthenticationFailure(this, EventArgs.Empty);
                         continue;
                     }
-
-                    if (msg.Status == MessageStatus.AuthRequired)
+                    else if (msg.Status == MessageStatus.AuthRequired)
                     {
                         _Settings.Logger?.Invoke(_Header + "authentication required by server; please authenticate using pre-shared key"); 
                         string psk = _Callbacks.HandleAuthenticationRequested();
                         if (!String.IsNullOrEmpty(psk)) Authenticate(psk);
                         continue;
                     }
-                     
+
+                    #endregion
+
+                    #region Process-Message
+
                     if (msg.SyncRequest != null && msg.SyncRequest.Value)
                     { 
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
@@ -1047,17 +946,21 @@ namespace WatsonTcp
                         }
                     }
 
+                    #endregion
+
                     _Statistics.IncrementReceivedMessages();
                     _Statistics.AddReceivedBytes(msg.ContentLength);
                 }
                 catch (ObjectDisposedException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "disconnected due to disposal");
+                    break;
+                }
+                catch (TaskCanceledException)
+                {
                     break;
                 }
                 catch (OperationCanceledException)
                 {
-                    _Settings.Logger?.Invoke(_Header + "cancellation requested");
                     break;
                 }
                 catch (Exception e)
@@ -1081,7 +984,6 @@ namespace WatsonTcp
 
             _Settings.Logger?.Invoke(_Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
             _Events.HandleServerDisconnected(this, EventArgs.Empty);
-            Dispose();
         }
 
         private bool SendInternal(WatsonMessage msg, long contentLength, Stream stream)
@@ -1089,14 +991,11 @@ namespace WatsonTcp
             if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (!Connected) return false;
 
-            if (contentLength > 0)
+            if (contentLength > 0 && (stream == null || !stream.CanRead))
             {
-                if (stream == null || !stream.CanRead)
-                {
-                    throw new ArgumentException("Cannot read from supplied stream.");
-                }
+                throw new ArgumentException("Cannot read from supplied stream.");
             }
-             
+
             bool disconnectDetected = false;
 
             try
@@ -1151,12 +1050,9 @@ namespace WatsonTcp
             if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (!Connected) return false;
             
-            if (contentLength > 0)
+            if (contentLength > 0  && (stream == null || !stream.CanRead))
             {
-                if (stream == null || !stream.CanRead)
-                {
-                    throw new ArgumentException("Cannot read from supplied stream.");
-                }
+                throw new ArgumentException("Cannot read from supplied stream.");
             }
 
             bool disconnectDetected = false;
@@ -1208,13 +1104,11 @@ namespace WatsonTcp
         private SyncResponse SendAndWaitInternal(WatsonMessage msg, int timeoutMs, long contentLength, Stream stream)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg)); 
-            if (!Connected) throw new InvalidOperationException("Client is not connected to the server."); 
-            if (contentLength > 0)
+            if (!Connected) throw new InvalidOperationException("Client is not connected to the server.");
+
+            if (contentLength > 0 && (stream == null || !stream.CanRead))
             {
-                if (stream == null || !stream.CanRead)
-                {
-                    throw new ArgumentException("Cannot read from supplied stream.");
-                }
+                throw new ArgumentException("Cannot read from supplied stream.");
             }
 
             bool disconnectDetected = false;
@@ -1386,18 +1280,10 @@ namespace WatsonTcp
 
 #elif NETFRAMEWORK
 
-                byte[] keepAlive = new byte[12];
-
-                // Turn keepalive on
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4);
-
-                // Set TCP keepalive time
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4); 
-
-                // Set TCP keepalive interval
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4); 
-
-                // Set keepalive settings on the underlying Socket
+                byte[] keepAlive = new byte[12]; 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
                 _Client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
 
 #elif NETSTANDARD

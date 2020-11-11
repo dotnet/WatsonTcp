@@ -20,7 +20,7 @@ namespace Test.NonExistentServer
                 try
                 {
                     Console.WriteLine("Starting Client");
-                    client.Start();
+                    client.Connect();
                 }
                 catch (Exception ex)
                 {

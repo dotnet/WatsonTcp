@@ -77,7 +77,7 @@ namespace TestMultiThread
             _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Client.Settings.Logger = Console.WriteLine;
             _Client.Settings.DebugMessages = _Debug;
-            _Client.Start();
+            _Client.Connect();
             
             Thread.Sleep(2000);
 
@@ -127,7 +127,7 @@ namespace TestMultiThread
             _Client.Callbacks.SyncRequestReceived = ClientSyncRequestReceived;
             _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Client.Settings.Logger = Console.WriteLine;
-            _Client.Start();
+            _Client.Connect();
 
             while (String.IsNullOrEmpty(_ClientIpPort)) ;
 

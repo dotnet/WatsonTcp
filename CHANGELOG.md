@@ -2,14 +2,20 @@
 
 ## Current Version
 
+v4.5.0.1
+
+- Excellent changes and recommendations led by @syntacs for reliability
+- Better coordination between Dispose and server Stop and client Disconnect
+- Exception handling in server and client event handlers as well as callbacks
+
+## Previous Versions
+
 v4.4.0
 
 - Breaking changes; header name fields have been reduced
 - Performance improvements
 - Elimination of sending unnecessary headers
 - Thank you @broms95!
-
-## Previous Versions
 
 v4.3.0
 

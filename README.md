@@ -11,13 +11,12 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.4.0
-  
-- Breaking changes; header name fields have been reduced
-- Performance improvements
-- Elimination of sending unnecessary headers
-- Thank you @broms95!
- 
+## New in v4.5.0
+
+- Excellent changes and recommendations led by @syntacs for reliability
+- Better coordination between Dispose and server Stop and client Disconnect
+- Exception handling in server and client event handlers as well as callbacks
+
 ## Test Applications
 
 Test projects for both client and server are included which will help you understand and exercise the class library.
@@ -44,6 +43,14 @@ It is important to note the following:
 
 Should you with to include metadata with any message, use the ```Send``` or ```SendAsync``` method that allows you to pass in metadata (```Dictionary<object, object>```).  Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.
  
+Note: if you use a class instance as either the key or value, you'll need to deserialize on the receiving end from JSON.  
+```
+object myVal = args.Metadata["myKey"];
+MyClass instance = myVal.ToObject<MyClass>();
+```
+
+This is not necessary if you are using simple types (int, string, etc).  Simply cast to the simple type.
+
 ### Local vs External Connections
 
 **IMPORTANT**
@@ -70,7 +77,7 @@ Special thanks to the following people for their support and contributions to th
 
 @brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
-@DuAell @syntacs @zsolt777 @broms95 @Antwns
+@DuAell @syntacs @zsolt777 @broms95 @Antwns @syntacs
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 

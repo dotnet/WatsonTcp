@@ -120,7 +120,7 @@ namespace TestThroughput
                 using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
                 {
                     client.Events.MessageReceived += Test2ClientMsgRcv;
-                    client.Start();
+                    client.Connect();
 
                     for (int i = 0; i < _NumMessages; i++)
                     {

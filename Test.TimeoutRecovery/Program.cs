@@ -58,9 +58,8 @@ namespace Test.TimeoutRecovery
                 Console.WriteLine(e.ToString());
                 return;
             }
-
-            // server.Start();
-            Task serverStart = server.StartAsync();
+             
+            server.Start();
 
             bool runForever = true;
             List<string> clients;

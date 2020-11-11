@@ -56,12 +56,12 @@ namespace TestClientStream
                         Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
                         Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  status         show if client connected");
-                        Console.WriteLine("  dispose        dispose of the connection");
-                        Console.WriteLine("  connect        connect to the server if not connected");
-                        Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
+                        Console.WriteLine("  dispose        dispose of the client");
+                        Console.WriteLine("  connect        connect to the server");
+                        Console.WriteLine("  disconnect     disconnect from the server");
                         Console.WriteLine("  psk            set the preshared key");
                         Console.WriteLine("  auth           authenticate using the preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + client.Settings.DebugMessages + ")");
+                        Console.WriteLine("  debug          enable/disable debug");
                         break;
 
                     case "q":
@@ -134,28 +134,12 @@ namespace TestClientStream
                         client.Dispose();
                         break;
 
-                    case "connect":
-                        if (client != null && client.Connected)
-                        {
-                            Console.WriteLine("Already connected");
-                        }
-                        else
-                        {
-                            client = new WatsonTcpClient(serverIp, serverPort);
-                            client.Events.ServerConnected += ServerConnected;
-                            client.Events.ServerDisconnected += ServerDisconnected;
-                            client.Events.StreamReceived += StreamReceived;
-                            client.Start();
-                        }
+                    case "connect": 
+                        client.Connect(); 
                         break;
 
-                    case "reconnect":
-                        if (client != null) client.Dispose();
-                        client = new WatsonTcpClient(serverIp, serverPort);
-                        client.Events.ServerConnected += ServerConnected;
-                        client.Events.ServerDisconnected += ServerDisconnected;
-                        client.Events.StreamReceived += StreamReceived;
-                        client.Start();
+                    case "disconnect":
+                        client.Disconnect();
                         break;
 
                     case "psk":
@@ -204,7 +188,7 @@ namespace TestClientStream
             client.Callbacks.SyncRequestReceived = SyncRequestReceived;
             client.Settings.Logger = Logger;
             // client.Debug = true;
-            client.Start();
+            client.Connect();
         }
 
         private static bool InputBoolean(string question, bool yesDefault)

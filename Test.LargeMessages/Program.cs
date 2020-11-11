@@ -30,7 +30,7 @@ namespace TestLargeMessages
             client.Events.MessageReceived += MessageReceived;
             // client.Events.StreamReceived = StreamReceived;
             // client.Debug = true;
-            client.Start();
+            client.Connect();
 
             int msgSize = (1024 * 128);
             Console.Write("Message size (default 128KB): ");
