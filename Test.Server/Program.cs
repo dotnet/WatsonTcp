@@ -47,7 +47,9 @@ namespace TestServer
                 _Server.Events.ClientConnected += ClientConnected;
                 _Server.Events.ClientDisconnected += ClientDisconnected;
                 _Server.Events.MessageReceived += MessageReceived;
-                
+                _Server.Events.ServerStarted += ServerStarted;
+                _Server.Events.ServerStopped += ServerStopped;
+
                 _Server.Callbacks.SyncRequestReceived = SyncRequestReceived;
                 
                 // _Server.Settings.IdleClientTimeoutSeconds = 10;
@@ -380,7 +382,17 @@ namespace TestServer
                 }
             }
         }
-         
+
+        private static void ServerStarted(object sender, EventArgs args)
+        {
+            Console.WriteLine("Server started");
+        }
+
+        private static void ServerStopped(object sender, EventArgs args)
+        {
+            Console.WriteLine("Server stopped");
+        }
+
         private static SyncResponse SyncRequestReceived(SyncRequest req)
         {
             Console.Write("Synchronous request received from " + req.IpPort + ": ");

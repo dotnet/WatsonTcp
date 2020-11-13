@@ -169,7 +169,7 @@ namespace WatsonTcp
         {
             if (action == null) return;
 
-            Action<string> logger = ((WatsonTcpClient)sender).Settings.Logger;
+            Action<string> logger = ((WatsonTcpServer)sender).Settings.Logger;
 
             try
             {
