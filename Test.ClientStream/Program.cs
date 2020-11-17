@@ -89,7 +89,7 @@ namespace TestClientStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = client.Send(metadata, data.Length, ms);
+                        success = client.Send(data.Length, ms, metadata);
                         Console.WriteLine(success);
                         break;
 
@@ -110,7 +110,7 @@ namespace TestClientStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = client.SendAsync(metadata, data.Length, ms).Result;
+                        success = client.SendAsync(data.Length, ms, metadata).Result;
                         Console.WriteLine(success);
                         break;
 
@@ -447,7 +447,7 @@ namespace TestClientStream
 
             try
             {
-                SyncResponse resp = client.SendAndWait(metadata, timeoutMs, userInput);
+                SyncResponse resp = client.SendAndWait(timeoutMs, userInput, metadata);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -474,7 +474,7 @@ namespace TestClientStream
 
             try
             {
-                SyncResponse resp = client.SendAndWait(dict, timeoutMs);
+                SyncResponse resp = client.SendAndWait(timeoutMs, "");
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

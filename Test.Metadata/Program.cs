@@ -26,7 +26,7 @@ namespace Test.Metadata
                         Person p = new Person("hello", "world", i);
                         Dictionary<object, object> md = new Dictionary<object, object>();
                         md.Add("person", p);
-                        client.Send(md, ("Message " + i));
+                        client.Send(("Message " + i), md);
                         Task.Delay(1000).Wait();
                     }
                 }

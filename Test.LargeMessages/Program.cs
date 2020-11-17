@@ -65,7 +65,7 @@ namespace TestLargeMessages
                 string randomString = RandomString(msgSize);
                 string md5 = Md5(randomString);
                 Console.WriteLine("Server sending " + msgSize + " bytes: MD5 " + md5);
-                server.Send(ipPort, Encoding.UTF8.GetBytes(randomString));
+                server.Send(ipPort, randomString);
             }
 
             Console.WriteLine("");

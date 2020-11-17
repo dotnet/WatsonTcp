@@ -2,13 +2,20 @@
 
 ## Current Version
 
+v4.6.0.0
+
+- More changes based on suggestions from @syntacs and @MartyIX
+- Consolidated ```Send``` constructors with optional params to reduce complexity
+- Optional ```CancellationToken``` parameters for async ```Send``` methods
+- Use of ```ConfigureAwait``` for better reliability
+
+## Previous Versions
+
 v4.5.0.1
 
 - Excellent changes and recommendations led by @syntacs for reliability
 - Better coordination between Dispose and server Stop and client Disconnect
 - Exception handling in server and client event handlers as well as callbacks
-
-## Previous Versions
 
 v4.4.0
 

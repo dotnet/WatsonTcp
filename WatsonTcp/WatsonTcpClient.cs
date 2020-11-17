@@ -442,259 +442,132 @@ namespace WatsonTcp
             msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey); 
             SendInternal(msg, 0, null);
         }
-
-        /// <summary>
-        /// Send data to the server.
-        /// </summary>
-        /// <param name="data">String containing data.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string data)
-        {
-            if (String.IsNullOrEmpty(data)) return Send(null, new byte[0]);
-            else return Send(null, Encoding.UTF8.GetBytes(data));
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the server.
         /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="data">String containing data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(Dictionary<object, object> metadata, string data)
+        public bool Send(string data, Dictionary<object, object> metadata = null)
         {
-            if (String.IsNullOrEmpty(data)) return Send(null, new byte[0]);
-            else return Send(metadata, Encoding.UTF8.GetBytes(data));
+            if (String.IsNullOrEmpty(data)) return Send(new byte[0], null);
+            else return Send(Encoding.UTF8.GetBytes(data), metadata);
         }
-
-        /// <summary>
-        /// Send data to the server.
-        /// </summary>
-        /// <param name="data">Byte array containing data.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(byte[] data)
-        {
-            if (data == null) data = new byte[0];
-            return Send(null, data);
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the server.
         /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="data">Byte array containing data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(Dictionary<object, object> metadata, byte[] data)
+        public bool Send(byte[] data, Dictionary<object, object> metadata = null)
         {
             if (data == null) data = new byte[0];
             WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return Send(metadata, contentLength, stream);
-        }
-
-        /// <summary>
-        /// Send data to the server using a stream.
-        /// </summary>
-        /// <param name="contentLength">The number of bytes in the stream.</param>
-        /// <param name="stream">The stream containing the data.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(long contentLength, Stream stream)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (stream == null) stream = new MemoryStream(new byte[0]);
-            return Send(null, contentLength, stream);
+            return Send(contentLength, stream, metadata);
         }
 
         /// <summary>
         /// Send data and metadata to the server using a stream.
         /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="contentLength">The number of bytes in the stream.</param>
         /// <param name="stream">The stream containing the data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(Dictionary<object, object> metadata, long contentLength, Stream stream)
+        public bool Send(long contentLength, Stream stream, Dictionary<object, object> metadata = null)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]); 
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendInternal(msg, contentLength, stream);
         }
-
-        /// <summary>
-        /// Send metadata to the server with no data.
-        /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(Dictionary<object, object> metadata)
-        {
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-            return SendInternal(msg, 0, new MemoryStream(new byte[0]));
-        }
-
-        /// <summary>
-        /// Send data to the server asynchronously.
-        /// </summary>
-        /// <param name="data">String containing data.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string data)
-        {
-            if (String.IsNullOrEmpty(data)) return await SendAsync(null, new byte[0]);
-            else return await SendAsync(null, Encoding.UTF8.GetBytes(data));
-        }
-
+        
         /// <summary>
         /// Send data and metadata to the server asynchronously.
         /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="data">String containing data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="token">Cancellation token to cancel the request.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(Dictionary<object, object> metadata, string data)
+        public async Task<bool> SendAsync(string data, Dictionary<object, object> metadata = null, CancellationToken token = default)
         {
-            if (String.IsNullOrEmpty(data)) return await SendAsync(null, new byte[0]);
-            else return await SendAsync(metadata, Encoding.UTF8.GetBytes(data));
+            if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0], null);
+            if (token == default(CancellationToken)) token = _Token;
+            return await SendAsync(Encoding.UTF8.GetBytes(data), metadata, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Send data to the server asynchronously.
-        /// </summary>
-        /// <param name="data">Byte array containing data.</param>
-        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(byte[] data)
-        {
-            if (data == null) data = new byte[0];
-            return await SendAsync(null, data);
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the server asynchronously.
         /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="data">Byte array containing data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="token">Cancellation token to cancel the request.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(Dictionary<object, object> metadata, byte[] data)
+        public async Task<bool> SendAsync(byte[] data, Dictionary<object, object> metadata = null, CancellationToken token = default)
         {
+            if (token == default(CancellationToken)) token = _Token;
             if (data == null) data = new byte[0];
             WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return await SendAsync(metadata, contentLength, stream);
+            return await SendAsync(contentLength, stream, metadata, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Send data to the server from a stream asynchronously.
-        /// </summary>
-        /// <param name="contentLength">The number of bytes to send.</param>
-        /// <param name="stream">The stream containing the data.</param>
-        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(long contentLength, Stream stream)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (stream == null) stream = new MemoryStream(new byte[0]);
-            return await SendAsync(null, contentLength, stream);
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the server from a stream asynchronously.
         /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="contentLength">The number of bytes to send.</param>
         /// <param name="stream">The stream containing the data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="token">Cancellation token to cancel the request.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(Dictionary<object, object> metadata, long contentLength, Stream stream)
+        public async Task<bool> SendAsync(long contentLength, Stream stream, Dictionary<object, object> metadata = null, CancellationToken token = default)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
+            if (token == default(CancellationToken)) token = _Token;
             if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-            return await SendInternalAsync(msg, contentLength, stream);
+            return await SendInternalAsync(msg, contentLength, stream, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Send metadata to the server with no data, asynchronously
-        /// </summary>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(Dictionary<object, object> metadata)
-        {
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-            return await SendInternalAsync(msg, 0, new MemoryStream(new byte[0]));
-        }
-
+         
         /// <summary>
         /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
         /// </summary>
         /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
         /// <param name="data">Data to send.</param>
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(int timeoutMs, string data)
-        {
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (String.IsNullOrEmpty(data)) return SendAndWait(null, timeoutMs, new byte[0]);
-            return SendAndWait(null, timeoutMs, Encoding.UTF8.GetBytes(data));
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="data">Data to send.</param>
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(int timeoutMs, byte[] data)
-        {
-            if (data == null) data = new byte[0];
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            return SendAndWait(null, timeoutMs, data);
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="contentLength">The number of bytes to send from the supplied stream.</param>
-        /// <param name="stream">Stream containing data.</param>
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(int timeoutMs, long contentLength, Stream stream)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (stream == null) stream = new MemoryStream(new byte[0]);
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            return SendAndWait(null, timeoutMs, contentLength, stream);
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
         /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="data">Data to send.</param>
         /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs, string data)
+        public SyncResponse SendAndWait(int timeoutMs, string data, Dictionary<object, object> metadata = null)
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (String.IsNullOrEmpty(data)) return SendAndWait(metadata, timeoutMs, new byte[0]);
-            return SendAndWait(metadata, timeoutMs, Encoding.UTF8.GetBytes(data)); 
+            if (String.IsNullOrEmpty(data)) return SendAndWait(timeoutMs, new byte[0], metadata);
+            return SendAndWait(timeoutMs, Encoding.UTF8.GetBytes(data), metadata); 
         }
 
         /// <summary>
         /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
         /// </summary>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
         /// <param name="data">Data to send.</param>
+        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs, byte[] data)
+        public SyncResponse SendAndWait(int timeoutMs, byte[] data, Dictionary<object, object> metadata = null)
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (data == null) data = new byte[0];
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
             WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return SendAndWait(metadata, timeoutMs, contentLength, stream);
+            return SendAndWait(timeoutMs, contentLength, stream, metadata);
         }
 
         /// <summary>
         /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
         /// </summary>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
         /// <param name="contentLength">The number of bytes to send from the supplied stream.</param>
         /// <param name="stream">Stream containing data.</param>
+        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs, long contentLength, Stream stream)
+        public SyncResponse SendAndWait(int timeoutMs, long contentLength, Stream stream, Dictionary<object, object> metadata = null)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
@@ -703,21 +576,7 @@ namespace WatsonTcp
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, contentLength, stream);
         }
-
-        /// <summary>
-        /// Send metadata and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param> 
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(Dictionary<object, object> metadata, int timeoutMs)
-        {
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
-            return SendAndWaitInternal(msg, timeoutMs, 0, new MemoryStream(new byte[0]));
-        }
-
+         
         #endregion
 
         #region Private-Methods
@@ -769,14 +628,49 @@ namespace WatsonTcp
             } 
         }
 
+        #region Connection
+
+        private void EnableKeepalives()
+        {
+            try
+            {
+#if NETCOREAPP || NET5_0
+
+                _Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime);
+                _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
+                _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+
+#elif NETFRAMEWORK
+
+                byte[] keepAlive = new byte[12]; 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
+                _Client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
+
+#elif NETSTANDARD
+
+#endif
+            }
+            catch (Exception)
+            {
+                _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
+            }
+        }
+
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             return _Settings.AcceptInvalidCertificates;
         }
-         
+
+        #endregion
+
+        #region Read
+
         private async Task DataReceiver()
         {  
-            while (!_Token.IsCancellationRequested)
+            while (true)
             {
                 bool readLocked = false;
                  
@@ -784,7 +678,7 @@ namespace WatsonTcp
                 {
                     #region Check-for-Connection
 
-                    if (_Client == null || !_Client.Connected || _Token.IsCancellationRequested)
+                    if (_Client == null || !_Client.Connected)
                     {
                         _Settings.Logger?.Invoke(_Header + "disconnect detected");
                         break;
@@ -794,15 +688,15 @@ namespace WatsonTcp
 
                     #region Read-Message
 
-                    readLocked = await _ReadLock.WaitAsync(1);
-                    if (!readLocked)
+                    while (true)
                     {
-                        Task.Delay(30).Wait();
-                        continue;
-                    }
+                        readLocked = await _ReadLock.WaitAsync(10, _Token).ConfigureAwait(false);
+                        if (readLocked) break;
+                        await Task.Delay(10, _Token).ConfigureAwait(false);
+                    } 
                      
                     WatsonMessage msg = new WatsonMessage(_DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
-                    bool buildSuccess = await msg.BuildFromStream(_Token);
+                    bool buildSuccess = await msg.BuildFromStream(_Token).ConfigureAwait(false);
                     if (!buildSuccess)
                     {
                         _Settings.Logger?.Invoke(_Header + "disconnect detected");
@@ -811,7 +705,7 @@ namespace WatsonTcp
 
                     if (msg == null)
                     { 
-                        await Task.Delay(30);
+                        await Task.Delay(30, _Token).ConfigureAwait(false);
                         continue;
                     }
 
@@ -832,13 +726,13 @@ namespace WatsonTcp
                     else if (msg.Status == MessageStatus.AuthSuccess)
                     {
                         _Settings.Logger?.Invoke(_Header + "authentication successful");
-                        _Events.HandleAuthenticationSucceeded(this, EventArgs.Empty);
+                        Task unawaited = Task.Run(() => _Events.HandleAuthenticationSucceeded(this, EventArgs.Empty), _Token);
                         continue;
                     }
                     else if (msg.Status == MessageStatus.AuthFailure)
                     {
                         _Settings.Logger?.Invoke(_Header + "authentication failed");
-                        _Events.HandleAuthenticationFailure(this, EventArgs.Empty);
+                        Task unawaited = Task.Run(() => _Events.HandleAuthenticationFailure(this, EventArgs.Empty), _Token);
                         continue;
                     }
                     else if (msg.Status == MessageStatus.AuthRequired)
@@ -856,7 +750,7 @@ namespace WatsonTcp
                     if (msg.SyncRequest != null && msg.SyncRequest.Value)
                     { 
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
-                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize); 
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
                          
                         if (DateTime.Now < expiration)
                         { 
@@ -892,7 +786,7 @@ namespace WatsonTcp
                     { 
                         // No need to amend message expiration; it is copied from the request, which was set by this node
                         // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
-                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize);
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
                         if (DateTime.Now < msg.Expiration.Value)
                         {
@@ -912,7 +806,7 @@ namespace WatsonTcp
 
                         if (_Events.IsUsingMessages)
                         { 
-                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize); 
+                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
                             MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msgData);
                             await Task.Run(() => _Events.HandleMessageReceived(this, args));
                         }
@@ -936,7 +830,7 @@ namespace WatsonTcp
                                 sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, ws);
                                 // sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, ms);
                                 // data has been read, can continue to next message
-                                await Task.Run(() => _Events.HandleStreamReceived(this, sr));
+                                Task unawaited = Task.Run(() => _Events.HandleStreamReceived(this, sr), _Token);
                             } 
                         }
                         else
@@ -986,6 +880,10 @@ namespace WatsonTcp
             _Events.HandleServerDisconnected(this, EventArgs.Empty);
         }
 
+        #endregion
+
+        #region Send
+
         private bool SendInternal(WatsonMessage msg, long contentLength, Stream stream)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
@@ -997,31 +895,32 @@ namespace WatsonTcp
             }
 
             bool disconnectDetected = false;
+             
+            if (_Client == null
+                || !_Client.Connected)
+            {
+                disconnectDetected = true;
+                return false;
+            }
+                  
+            _WriteLock.Wait();
 
             try
-            {
-                if (_Client == null
-                    || !_Client.Connected)
-                {
-                    disconnectDetected = true;
-                    return false;
-                }
-                  
-                _WriteLock.Wait();
-
-                try
-                { 
-                    SendHeaders(msg); 
-                    SendDataStream(contentLength, stream); 
-                }
-                finally
-                {
-                    _WriteLock.Release();
-                }
+            { 
+                SendHeaders(msg); 
+                SendDataStream(contentLength, stream);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
                 return true;
+            }
+            catch (TaskCanceledException)
+            {
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
             }
             catch (Exception e)
             {
@@ -1031,21 +930,23 @@ namespace WatsonTcp
                     SerializationHelper.SerializeJson(e, true));
 
                 _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                 
+
                 disconnectDetected = true;
                 return false;
             }
             finally
             {
+                _WriteLock.Release();
+
                 if (disconnectDetected)
                 {
                     Connected = false;
                     Dispose();
                 }
-            }
+            } 
         }
 
-        private async Task<bool> SendInternalAsync(WatsonMessage msg, long contentLength, Stream stream)
+        private async Task<bool> SendInternalAsync(WatsonMessage msg, long contentLength, Stream stream, CancellationToken token)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (!Connected) return false;
@@ -1055,35 +956,43 @@ namespace WatsonTcp
                 throw new ArgumentException("Cannot read from supplied stream.");
             }
 
+            if (token == default(CancellationToken))
+            {
+                CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _Token);
+                token = linkedCts.Token;
+            }
+
             bool disconnectDetected = false;
+             
+            if (_Client == null || !_Client.Connected)
+            {
+                disconnectDetected = true;
+                return false;
+            }
+                 
+            await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             try
-            {
-                if (_Client == null || !_Client.Connected)
-                {
-                    disconnectDetected = true;
-                    return false;
-                }
-                 
-                await _WriteLock.WaitAsync();
-
-                try
-                { 
-                    await SendHeadersAsync(msg); 
-                    await SendDataStreamAsync(contentLength, stream); 
-                }
-                finally
-                {
-                    _WriteLock.Release();
-                }
+            { 
+                await SendHeadersAsync(msg, token).ConfigureAwait(false); 
+                await SendDataStreamAsync(contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
                 return true;
             }
+            catch (TaskCanceledException)
+            {
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(_Header + "message write exception: " + 
+                _Settings.Logger?.Invoke(
+                    _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ":" +
                     Environment.NewLine +
                     e.ToString() +
                     Environment.NewLine);
@@ -1093,6 +1002,8 @@ namespace WatsonTcp
             }
             finally
             {
+                _WriteLock.Release(); 
+
                 if (disconnectDetected)
                 {
                     Connected = false;
@@ -1118,27 +1029,29 @@ namespace WatsonTcp
                 disconnectDetected = true;
                 throw new InvalidOperationException("Client is not connected to the server.");
             }
-             
-            try
-            { 
-                _WriteLock.Wait(); 
+              
+            _WriteLock.Wait(); 
 
-                try
-                {
-                    SendHeaders(msg);
-                    SendDataStream(contentLength, stream); 
-                }
-                finally
-                {
-                    _WriteLock.Release(); 
-                }
+            try
+            {
+                SendHeaders(msg);
+                SendDataStream(contentLength, stream);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
             }
+            catch (TaskCanceledException)
+            {
+                return null;
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
+            }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(_Header + "message write exception: " +
+                _Settings.Logger?.Invoke(
+                    _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ":" +
                     Environment.NewLine +
                     e.ToString() +
                     Environment.NewLine);
@@ -1148,12 +1061,14 @@ namespace WatsonTcp
             }
             finally
             {
+                _WriteLock.Release();
+
                 if (disconnectDetected)
                 {
                     Connected = false;
-                    Dispose(); 
+                    Dispose();
                 }
-            }
+            } 
 
             SyncResponse ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
             return ret;
@@ -1166,11 +1081,11 @@ namespace WatsonTcp
             _DataStream.Flush();
         }
 
-        private async Task SendHeadersAsync(WatsonMessage msg)
+        private async Task SendHeadersAsync(WatsonMessage msg, CancellationToken token)
         {
             byte[] headerBytes = msg.HeaderBytes; 
-            await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-            await _DataStream.FlushAsync();
+            await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length, token).ConfigureAwait(false);
+            await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
          
         private void SendDataStream(long contentLength, Stream stream)
@@ -1194,7 +1109,7 @@ namespace WatsonTcp
             _DataStream.Flush(); 
         }
 
-        private async Task SendDataStreamAsync(long contentLength, Stream stream)
+        private async Task SendDataStreamAsync(long contentLength, Stream stream, CancellationToken token)
         {
             if (contentLength <= 0) return;
 
@@ -1204,42 +1119,55 @@ namespace WatsonTcp
              
             while (bytesRemaining > 0)
             {
-                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
                 if (bytesRead > 0)
                 {
-                    await _DataStream.WriteAsync(buffer, 0, bytesRead);
+                    await _DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     bytesRemaining -= bytesRead;
                 }
             }  
 
-            await _DataStream.FlushAsync();
+            await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
-         
+
+        #endregion
+
+        #region Tasks
+
         private async Task MonitorForExpiredSyncResponses()
         {
-            while (_TokenSource != null && !_TokenSource.IsCancellationRequested)
+            try
             {
-                if (_Token.IsCancellationRequested) break;
+                while (true)
+                {
+                    await Task.Delay(1000, _Token).ConfigureAwait(false);
 
-                lock (_SyncResponseLock)
-                { 
-                    if (_SyncResponses.Any(s => 
-                        s.Value.ExpirationUtc < DateTime.Now
-                        ))
+                    lock (_SyncResponseLock)
                     {
-                        Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s => 
+                        if (_SyncResponses.Any(s =>
                             s.Value.ExpirationUtc < DateTime.Now
-                            ).ToDictionary(dict => dict.Key, dict => dict.Value);
-
-                        foreach (KeyValuePair<string, SyncResponse> curr in expired)
+                            ))
                         {
-                            _Settings.Logger?.Invoke(_Header + "expiring response " + curr.Key.ToString());
-                            _SyncResponses.Remove(curr.Key);
-                        }
-                    }
-                }
+                            Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s =>
+                                s.Value.ExpirationUtc < DateTime.Now
+                                ).ToDictionary(dict => dict.Key, dict => dict.Value);
 
-                await Task.Delay(1000);
+                            foreach (KeyValuePair<string, SyncResponse> curr in expired)
+                            {
+                                _Settings.Logger?.Invoke(_Header + "expiring response " + curr.Key.ToString());
+                                _SyncResponses.Remove(curr.Key);
+                            }
+                        }
+                    } 
+                }
+            }
+            catch (TaskCanceledException)
+            {
+
+            }
+            catch (OperationCanceledException)
+            {
+
             }
         }
 
@@ -1247,54 +1175,38 @@ namespace WatsonTcp
         {
             SyncResponse ret = null;
 
-            while (true)
-            {
-                lock (_SyncResponseLock)
-                {
-                    if (_SyncResponses.ContainsKey(guid))
-                    {
-                        ret = _SyncResponses[guid];
-                        _SyncResponses.Remove(guid);
-                        break;
-                    }
-                }
-
-                if (DateTime.Now >= expirationUtc) break;
-                Task.Delay(50).Wait();
-            }
-
-            if (ret != null) return ret;
-            else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
-        }
-
-        private void EnableKeepalives()
-        {
             try
             {
-#if NETCOREAPP
+                while (true)
+                {
+                    lock (_SyncResponseLock)
+                    {
+                        if (_SyncResponses.ContainsKey(guid))
+                        {
+                            ret = _SyncResponses[guid];
+                            _SyncResponses.Remove(guid);
+                            break;
+                        }
+                    }
 
-                _Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime);
-                _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
-                _Client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+                    if (DateTime.Now >= expirationUtc) break;
+                    Task.Delay(50).Wait(_Token);
+                }
 
-#elif NETFRAMEWORK
-
-                byte[] keepAlive = new byte[12]; 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
-                _Client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
-
-#elif NETSTANDARD
-
-#endif
+                if (ret != null) return ret;
+                else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
             }
-            catch (Exception)
+            catch (TaskCanceledException)
             {
-                _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
+                return null;
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
             }
         }
+
+        #endregion
 
         #endregion
     }

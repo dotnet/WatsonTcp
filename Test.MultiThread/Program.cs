@@ -203,7 +203,7 @@ namespace TestMultiThread
                     Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
                     try
                     {
-                        SyncResponse syncResponse = _Server.SendAndWait(_ClientIpPort, _SendAndWaitInterval, _DataSmallBytes);
+                        SyncResponse syncResponse = _Server.SendAndWait(_SendAndWaitInterval, _ClientIpPort, _DataSmallBytes);
                         Console.WriteLine("[server] Sync response received");
                     }
                     catch (Exception e)

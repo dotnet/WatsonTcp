@@ -581,173 +581,85 @@
             </summary>
             <param name="presharedKey">Up to 16-character string.</param>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.String)">
-            <summary>
-            Send data to the server.
-            </summary>
-            <param name="data">String containing data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Collections.Generic.Dictionary{System.Object,System.Object},System.String)">
+        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and metadata to the server.
             </summary>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="data">String containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
             <returns>Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Byte[])">
-            <summary>
-            Send data to the server.
-            </summary>
-            <param name="data">Byte array containing data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Byte[])">
+        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Byte[],System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and metadata to the server.
             </summary>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="data">Byte array containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
             <returns>Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Int64,System.IO.Stream)">
-            <summary>
-            Send data to the server using a stream.
-            </summary>
-            <param name="contentLength">The number of bytes in the stream.</param>
-            <param name="stream">The stream containing the data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream)">
+        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and metadata to the server using a stream.
             </summary>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="contentLength">The number of bytes in the stream.</param>
             <param name="stream">The stream containing the data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Send(System.Collections.Generic.Dictionary{System.Object,System.Object})">
-            <summary>
-            Send metadata to the server with no data.
-            </summary>
             <param name="metadata">Dictionary containing metadata.</param>
             <returns>Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.String)">
-            <summary>
-            Send data to the server asynchronously.
-            </summary>
-            <param name="data">String containing data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Collections.Generic.Dictionary{System.Object,System.Object},System.String)">
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Threading.CancellationToken)">
             <summary>
             Send data and metadata to the server asynchronously.
             </summary>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="data">String containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
             <returns>Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Byte[])">
-            <summary>
-            Send data to the server asynchronously.
-            </summary>
-            <param name="data">Byte array containing data.</param>
-            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Byte[])">
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Byte[],System.Collections.Generic.Dictionary{System.Object,System.Object},System.Threading.CancellationToken)">
             <summary>
             Send data and metadata to the server asynchronously.
             </summary>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="data">Byte array containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
             <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Int64,System.IO.Stream)">
-            <summary>
-            Send data to the server from a stream asynchronously.
-            </summary>
-            <param name="contentLength">The number of bytes to send.</param>
-            <param name="stream">The stream containing the data.</param>
-            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream)">
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Threading.CancellationToken)">
             <summary>
             Send data and metadata to the server from a stream asynchronously.
             </summary>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="contentLength">The number of bytes to send.</param>
             <param name="stream">The stream containing the data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
             <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Collections.Generic.Dictionary{System.Object,System.Object})">
-            <summary>
-            Send metadata to the server with no data, asynchronously
-            </summary>
-            <param name="metadata">Dictionary containing metadata.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Int32,System.String)">
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Int32,System.String,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
             </summary>
             <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
             <param name="data">Data to send.</param>
+            <param name="metadata">Metadata dictionary to attach to the message.</param>
             <returns>SyncResponse.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Int32,System.Byte[])">
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Int32,System.Byte[],System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
             </summary>
             <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
             <param name="data">Data to send.</param>
+            <param name="metadata">Metadata dictionary to attach to the message.</param>
             <returns>SyncResponse.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Int32,System.Int64,System.IO.Stream)">
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Int32,System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
             </summary>
             <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
             <param name="contentLength">The number of bytes to send from the supplied stream.</param>
             <param name="stream">Stream containing data.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32,System.String)">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
             <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="data">Data to send.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32,System.Byte[])">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="data">Data to send.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32,System.Int64,System.IO.Stream)">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="contentLength">The number of bytes to send from the supplied stream.</param>
-            <param name="stream">Stream containing data.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWait(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32)">
-            <summary>
-            Send metadata and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param> 
             <returns>SyncResponse.</returns>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Dispose(System.Boolean)">
@@ -1006,194 +918,94 @@
             Stop accepting connections.
             </summary>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.String)">
+        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.String,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data to the specified client.
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
             <param name="data">String containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
             <returns>Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.String)">
+        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Byte[],System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and metadata to the specified client.
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
-            <param name="data">String containing data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Byte[])">
-            <summary>
-            Send data to the specified client.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
             <param name="data">Byte array containing data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Byte[])">
-            <summary>
-            Send data and metadata to the specified client.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
             <param name="metadata">Dictionary containing metadata.</param>
-            <param name="data">Byte array containing data.</param>
             <returns>Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Int64,System.IO.Stream)">
-            <summary>
-            Send data to the specified client using a stream.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="contentLength">The number of bytes in the stream.</param>
-            <param name="stream">The stream containing the data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream)">
+        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and metadata to the specified client using a stream.
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="contentLength">The number of bytes in the stream.</param>
             <param name="stream">The stream containing the data.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.Send(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object})">
-            <summary>
-            Send metadata to the specified client with no data.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
             <param name="metadata">Dictionary containing metadata.</param>
             <returns>Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.String)">
-            <summary>
-            Send data to the specified client, asynchronously.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="data">String containing data.</param>
-            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.String)">
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Threading.CancellationToken)">
             <summary>
             Send data and metadata to the specified client, asynchronously.
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="data">String containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
             <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Byte[])">
-            <summary>
-            Send data to the specified client, asynchronously.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="data">Byte array containing data.</param>
-            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Byte[])">
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Byte[],System.Collections.Generic.Dictionary{System.Object,System.Object},System.Threading.CancellationToken)">
             <summary>
             Send data and metadata to the specified client, asynchronously.
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="data">Byte array containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
             <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Int64,System.IO.Stream)">
-            <summary>
-            Send data to the specified client using a stream, asynchronously.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="contentLength">The number of bytes in the stream.</param>
-            <param name="stream">The stream containing the data.</param>
-            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream)">
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Threading.CancellationToken)">
             <summary>
             Send data and metadata to the specified client using a stream, asynchronously.
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
             <param name="contentLength">The number of bytes in the stream.</param>
             <param name="stream">The stream containing the data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
             <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAsync(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object})">
-            <summary>
-            Send metadata to the specified client with no data, asynchronously.
-            </summary>
-            <param name="ipPort">IP:port of the recipient client.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.String,System.Int32,System.String)">
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.Int32,System.String,System.String,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
             </summary>
-            <param name="ipPort">The IP:port of the client.</param>
             <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+            <param name="ipPort">The IP:port of the client.</param>
             <param name="data">Data to send.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.String,System.Int32,System.Byte[])">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="ipPort">The IP:port of the client.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="data">Data to send.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.String,System.Int32,System.Int64,System.IO.Stream)">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="ipPort">The IP:port of the client.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="contentLength">The number of bytes to send from the supplied stream.</param>
-            <param name="stream">Stream containing data.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32,System.String)">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="ipPort">The IP:port of the client.</param>
             <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="data">Data to send.</param>
             <returns>SyncResponse.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32,System.Byte[])">
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.Int32,System.String,System.Byte[],System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and wait for a response for the specified number of milliseconds.
             </summary>
-            <param name="ipPort">The IP:port of the client.</param>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
             <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+            <param name="ipPort">The IP:port of the client.</param>
             <param name="data">Data to send.</param>
+            <param name="metadata">Metadata dictionary to attach to the message.</param>
             <returns>SyncResponse.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32,System.Int64,System.IO.Stream)">
+        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.Int32,System.String,System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.Object,System.Object})">
             <summary>
             Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
             </summary>
-            <param name="ipPort">The IP:port of the client.</param>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
             <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+            <param name="ipPort">The IP:port of the client.</param>
             <param name="contentLength">The number of bytes to send from the supplied stream.</param>
             <param name="stream">Stream containing data.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.SendAndWait(System.String,System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int32)">
-            <summary>
-            Send metadata and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="ipPort">The IP:port of the client.</param>
             <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param> 
             <returns>SyncResponse.</returns>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.IsClientConnected(System.String)">

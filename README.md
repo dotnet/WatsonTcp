@@ -11,11 +11,12 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.5.0
+## New in v4.6.0
 
-- Excellent changes and recommendations led by @syntacs for reliability
-- Better coordination between Dispose and server Stop and client Disconnect
-- Exception handling in server and client event handlers as well as callbacks
+- More changes based on suggestions from @syntacs and @MartyIX
+- Consolidated ```Send``` constructors with optional params to reduce complexity
+- Optional ```CancellationToken``` parameters for async ```Send``` methods
+- Use of ```ConfigureAwait``` for better reliability
 
 ## Test Applications
 
@@ -77,7 +78,7 @@ Special thanks to the following people for their support and contributions to th
 
 @brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
-@DuAell @syntacs @zsolt777 @broms95 @Antwns @syntacs
+@DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
@@ -107,7 +108,7 @@ static void Main(string[] args)
     // send a message with metadata
     Dictionary<object, object> md = new Dictionary<object, object>();
     md.Add("foo", "bar");
-    server.Send("[IP:port]", md, "Hello, client!  Here's some metadata!");
+    server.Send("[IP:port]", "Hello, client!  Here's some metadata!", md);
 
     // send async!
     await server.SendAsync("[IP:port", "Hello, client!  I'm async!");
@@ -167,7 +168,7 @@ static void Main(string[] args)
     // send a message with metadata
     Dictionary<object, object> md = new Dictionary<object, object>();
     md.Add("foo", "bar");
-    client.Send(md, "Hello, client!  Here's some metadata!");
+    client.Send("Hello, client!  Here's some metadata!", md);
 
     // send async!
     await client.SendAsync("Hello, client!  I'm async!");

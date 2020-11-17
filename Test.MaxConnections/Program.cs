@@ -129,7 +129,7 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
+                        success = server.Send(ipPort, userInput);
                         Console.WriteLine(success);
                         break;
 
@@ -141,7 +141,7 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.Send(ipPort, metadata, Encoding.UTF8.GetBytes(userInput));
+                        success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput), metadata);
                         Console.WriteLine(success);
                         break;
 
@@ -164,7 +164,7 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(userInput)).Result;
+                        success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput), metadata).Result;
                         Console.WriteLine(success);
                         break;
 

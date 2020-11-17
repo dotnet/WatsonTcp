@@ -72,13 +72,13 @@ namespace TestClient
                     case "send md":
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        if (!_Client.Send(metadata, Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
+                        if (!_Client.Send(Encoding.UTF8.GetBytes(userInput), metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "send md large":
                         metadata = new Dictionary<object, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i, i);
-                        if (!_Client.Send(metadata, "Hello!")) Console.WriteLine("Failed");
+                        if (!_Client.Send("Hello!", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
@@ -90,7 +90,7 @@ namespace TestClient
                     case "sendasync md":
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        success = _Client.SendAsync(metadata, Encoding.UTF8.GetBytes(userInput)).Result;
+                        success = _Client.SendAsync(Encoding.UTF8.GetBytes(userInput), metadata).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
@@ -100,7 +100,7 @@ namespace TestClient
 
                     case "sendempty":
                         metadata = InputDictionary();
-                        success = _Client.Send(metadata);
+                        success = _Client.Send("", metadata);
                         if (!success) Console.WriteLine("Failed");
                         break;
 
@@ -426,7 +426,7 @@ namespace TestClient
 
             try
             {
-                SyncResponse resp = _Client.SendAndWait(metadata, timeoutMs, userInput);
+                SyncResponse resp = _Client.SendAndWait(timeoutMs, userInput, metadata);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -453,7 +453,7 @@ namespace TestClient
 
             try
             {
-                SyncResponse resp = _Client.SendAndWait(dict, timeoutMs);
+                SyncResponse resp = _Client.SendAndWait(timeoutMs, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

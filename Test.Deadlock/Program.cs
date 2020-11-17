@@ -93,7 +93,7 @@ namespace Test.Deadlock
         {
             try
             {
-                SyncResponse resp = server.SendAndWait(clientIpPort, 5000, "Here's your request from the server!");
+                SyncResponse resp = server.SendAndWait(5000, clientIpPort, "Here's your request from the server!");
                 if (resp == null)
                 {
                     Console.WriteLine("Server did not receive response from client");

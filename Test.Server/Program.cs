@@ -153,14 +153,14 @@ namespace TestServer
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        if (!_Server.Send(ipPort, metadata, userInput)) Console.WriteLine("Failed"); 
+                        if (!_Server.Send(ipPort, userInput, metadata)) Console.WriteLine("Failed"); 
                         break;
 
                     case "send md large":
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         metadata = new Dictionary<object, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i, i);
-                        if (!_Server.Send(ipPort, metadata, "Hello!")) Console.WriteLine("Failed");
+                        if (!_Server.Send(ipPort, "Hello!", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
@@ -174,7 +174,7 @@ namespace TestServer
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        success = _Server.SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(userInput)).Result;
+                        success = _Server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput), metadata).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
@@ -185,7 +185,7 @@ namespace TestServer
                     case "sendempty":
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         metadata = InputDictionary();
-                        if (!_Server.Send(ipPort, metadata)) Console.WriteLine("Failed");
+                        if (!_Server.Send(ipPort, "", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait empty":
@@ -426,7 +426,7 @@ namespace TestServer
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(ipPort, timeoutMs, userInput);
+                SyncResponse resp = _Server.SendAndWait(timeoutMs, ipPort, userInput);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -454,7 +454,7 @@ namespace TestServer
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(ipPort, dict, timeoutMs);
+                SyncResponse resp = _Server.SendAndWait(timeoutMs, ipPort, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

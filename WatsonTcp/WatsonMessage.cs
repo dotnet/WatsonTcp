@@ -254,7 +254,7 @@ namespace WatsonTcp
             {
                 #region Read-Headers
 
-                await _DataStream.ReadAsync(headerBytes, 0, 24, token); 
+                await _DataStream.ReadAsync(headerBytes, 0, 24, token).ConfigureAwait(false); 
                 byte[] headerBuffer = new byte[1];
 
                 while (true)
@@ -269,7 +269,7 @@ namespace WatsonTcp
                         break;
                     }
 
-                    await _DataStream.ReadAsync(headerBuffer, 0, 1, token);
+                    await _DataStream.ReadAsync(headerBuffer, 0, 1, token).ConfigureAwait(false);
                     headerBytes = WatsonCommon.AppendBytes(headerBytes, headerBuffer); 
                 }
 
@@ -289,6 +289,11 @@ namespace WatsonTcp
                 #endregion 
 
                 return true;
+            }
+            catch (TaskCanceledException)
+            {
+                _Logger?.Invoke(_Header + "message read canceled");
+                return false;
             }
             catch (OperationCanceledException)
             {

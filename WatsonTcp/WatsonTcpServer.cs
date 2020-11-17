@@ -349,52 +349,30 @@ namespace WatsonTcp
                 throw;
             }
         }
-         
+
         /// <summary>
         /// Send data to the specified client.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">String containing data.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string ipPort, string data)
-        {
-            return Send(ipPort, null, data);
-        }
-
-        /// <summary>
-        /// Send data and metadata to the specified client.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <param name="data">String containing data.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string ipPort, Dictionary<object, object> metadata, string data)
+        public bool Send(string ipPort, string data, Dictionary<object, object> metadata = null)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             byte[] bytes = new byte[0];
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
-            return Send(ipPort, metadata, bytes);
+            return Send(ipPort, bytes, metadata);
         }
-
-        /// <summary>
-        /// Send data to the specified client.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="data">Byte array containing data.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string ipPort, byte[] data)
-        {
-            return Send(ipPort, null, data); 
-        }
-
+          
         /// <summary>
         /// Send data and metadata to the specified client.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="data">Byte array containing data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string ipPort, Dictionary<object, object> metadata, byte[] data)
+        public bool Send(string ipPort, byte[] data, Dictionary<object, object> metadata = null)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
@@ -405,30 +383,18 @@ namespace WatsonTcp
 
             if (data == null) data = new byte[0];
             WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return Send(ipPort, metadata, contentLength, stream);
+            return Send(ipPort, contentLength, stream, metadata);
         }
-
-        /// <summary>
-        /// Send data to the specified client using a stream.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="contentLength">The number of bytes in the stream.</param>
-        /// <param name="stream">The stream containing the data.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string ipPort, long contentLength, Stream stream)
-        {
-            return Send(ipPort, null, contentLength, stream);
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the specified client using a stream.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="contentLength">The number of bytes in the stream.</param>
         /// <param name="stream">The stream containing the data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
+        public bool Send(string ipPort, long contentLength, Stream stream, Dictionary<object, object> metadata = null)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
@@ -442,73 +408,36 @@ namespace WatsonTcp
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendInternal(client, msg, contentLength, stream);
         }
-
-        /// <summary>
-        /// Send metadata to the specified client with no data.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(string ipPort, Dictionary<object, object> metadata)
-        {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
-            {
-                _Settings.Logger?.Invoke(_Header + "unable to find client " + ipPort);
-                return false;
-            }
-
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-            return SendInternal(client, msg, 0, new MemoryStream(new byte[0]));
-        }
-
-        /// <summary>
-        /// Send data to the specified client, asynchronously.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="data">String containing data.</param>
-        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, string data)
-        {
-            return await SendAsync(ipPort, null, data);
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the specified client, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="data">String containing data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="token">Cancellation token to cancel the request.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, string data)
+        public async Task<bool> SendAsync(string ipPort, string data, Dictionary<object, object> metadata = null, CancellationToken token = default)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (token == default(CancellationToken)) token = _Token;
             byte[] bytes = new byte[0];
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
-            return await SendAsync(ipPort, metadata, bytes);
+            return await SendAsync(ipPort, bytes, metadata, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Send data to the specified client, asynchronously.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="data">Byte array containing data.</param>
-        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, byte[] data)
-        {
-            return await SendAsync(ipPort, null, data); 
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the specified client, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="data">Byte array containing data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="token">Cancellation token to cancel the request.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, byte[] data)
+        public async Task<bool> SendAsync(string ipPort, byte[] data, Dictionary<object, object> metadata = null, CancellationToken token = default)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (token == default(CancellationToken)) token = _Token;
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
                 _Settings.Logger?.Invoke(_Header + "unable to find client " + ipPort);
@@ -517,33 +446,23 @@ namespace WatsonTcp
 
             if (data == null) data = new byte[0];
             WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return await SendAsync(ipPort, metadata, contentLength, stream);
+            return await SendAsync(ipPort, contentLength, stream, metadata, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Send data to the specified client using a stream, asynchronously.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="contentLength">The number of bytes in the stream.</param>
-        /// <param name="stream">The stream containing the data.</param>
-        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, long contentLength, Stream stream)
-        {
-            return await SendAsync(ipPort, null, contentLength, stream);
-        }
-
+         
         /// <summary>
         /// Send data and metadata to the specified client using a stream, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
         /// <param name="contentLength">The number of bytes in the stream.</param>
         /// <param name="stream">The stream containing the data.</param>
+        /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="token">Cancellation token to cancel the request.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
+        public async Task<bool> SendAsync(string ipPort, long contentLength, Stream stream, Dictionary<object, object> metadata = null, CancellationToken token = default)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
+            if (token == default(CancellationToken)) token = _Token;
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
             {
                 _Settings.Logger?.Invoke(_Header + "unable to find client " + ipPort);
@@ -552,89 +471,33 @@ namespace WatsonTcp
 
             if (stream == null) stream = new MemoryStream(new byte[0]);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-            return await SendInternalAsync(client, msg, contentLength, stream);
+            return await SendInternalAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Send metadata to the specified client with no data, asynchronously.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, Dictionary<object, object> metadata)
-        {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
-            {
-                _Settings.Logger?.Invoke(_Header + "unable to find client " + ipPort);
-                return false;
-            }
-
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-            return await SendInternalAsync(client, msg, 0, new MemoryStream(new byte[0]));
-        }
-
+            
         /// <summary>
         /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
         /// </summary>
-        /// <param name="ipPort">The IP:port of the client.</param>
         /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+        /// <param name="ipPort">The IP:port of the client.</param>
         /// <param name="data">Data to send.</param>
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(string ipPort, int timeoutMs, string data)
-        {
-            return SendAndWait(ipPort, null, timeoutMs, data);
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="ipPort">The IP:port of the client.</param>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="data">Data to send.</param>
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(string ipPort, int timeoutMs, byte[] data)
-        {
-            return SendAndWait(ipPort, null, timeoutMs, data);
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="ipPort">The IP:port of the client.</param>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="contentLength">The number of bytes to send from the supplied stream.</param>
-        /// <param name="stream">Stream containing data.</param>
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(string ipPort, int timeoutMs, long contentLength, Stream stream)
-        {
-            return SendAndWait(ipPort, null, timeoutMs, contentLength, stream); 
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="ipPort">The IP:port of the client.</param>
         /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="data">Data to send.</param>
         /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(string ipPort, Dictionary<object, object> metadata, int timeoutMs, string data)
+        public SyncResponse SendAndWait(int timeoutMs, string ipPort, string data, Dictionary<object, object> metadata = null)
         {
             byte[] bytes = new byte[0];
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
-            return SendAndWait(ipPort, metadata, timeoutMs, bytes);
+            return SendAndWait(timeoutMs, ipPort, bytes, metadata);
         }
 
         /// <summary>
         /// Send data and wait for a response for the specified number of milliseconds.
         /// </summary>
-        /// <param name="ipPort">The IP:port of the client.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+        /// <param name="ipPort">The IP:port of the client.</param>
         /// <param name="data">Data to send.</param>
+        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(string ipPort, Dictionary<object, object> metadata, int timeoutMs, byte[] data)
+        public SyncResponse SendAndWait(int timeoutMs, string ipPort, byte[] data, Dictionary<object, object> metadata = null)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
@@ -645,19 +508,19 @@ namespace WatsonTcp
             }
             if (data == null) data = new byte[0];
             WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
-            return SendAndWait(ipPort, metadata, timeoutMs, contentLength, stream);
+            return SendAndWait(timeoutMs, ipPort, contentLength, stream, metadata);
         }
 
         /// <summary>
         /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
         /// </summary>
-        /// <param name="ipPort">The IP:port of the client.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+        /// <param name="ipPort">The IP:port of the client.</param>
         /// <param name="contentLength">The number of bytes to send from the supplied stream.</param>
         /// <param name="stream">Stream containing data.</param>
+        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
         /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(string ipPort, Dictionary<object, object> metadata, int timeoutMs, long contentLength, Stream stream)
+        public SyncResponse SendAndWait(int timeoutMs, string ipPort, long contentLength, Stream stream, Dictionary<object, object> metadata = null)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
@@ -671,27 +534,6 @@ namespace WatsonTcp
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
             WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendAndWaitInternal(client, msg, timeoutMs, contentLength, stream);
-        }
-
-        /// <summary>
-        /// Send metadata and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="ipPort">The IP:port of the client.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param> 
-        /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(string ipPort, Dictionary<object, object> metadata, int timeoutMs)
-        {
-            if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
-            {
-                _Settings.Logger?.Invoke(_Header + "unable to find client " + ipPort);
-                throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
-            }
-            DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, 0, new MemoryStream(new byte[0]), true, false, expiration, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
-            return SendAndWaitInternal(client, msg, timeoutMs, 0, new MemoryStream(new byte[0]));
         }
 
         /// <summary>
@@ -810,7 +652,38 @@ namespace WatsonTcp
                 _IsListening = false; 
             } 
         }
-         
+
+        #region Connection
+
+        private void EnableKeepalives()
+        {
+            try
+            {
+#if NETCOREAPP || NET5_0
+
+                _Listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime);
+                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
+                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+
+#elif NETFRAMEWORK
+
+                byte[] keepAlive = new byte[12]; 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
+                _Listener.Server.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
+
+#elif NETSTANDARD
+
+#endif
+            }
+            catch (Exception)
+            {
+                _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
+            }
+        }
+
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
@@ -843,7 +716,7 @@ namespace WatsonTcp
 
                     #region Accept-and-Validate
 
-                    TcpClient tcp = await _Listener.AcceptTcpClientAsync();
+                    TcpClient tcp = await _Listener.AcceptTcpClientAsync().ConfigureAwait(false);
                     tcp.LingerState.Enabled = false;
 
                     string clientIp = ((IPEndPoint)tcp.Client.RemoteEndPoint).Address.ToString();
@@ -854,7 +727,8 @@ namespace WatsonTcp
                         continue;
                     }
 
-                    ClientMetadata client = new ClientMetadata(tcp); 
+                    ClientMetadata client = new ClientMetadata(tcp);
+                    CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_Token, client.Token);
 
                     #endregion
 
@@ -876,7 +750,7 @@ namespace WatsonTcp
 
                     if (_Mode == Mode.Tcp)
                     {
-                        unawaited = Task.Run(() => FinalizeConnection(client), client.Token);
+                        unawaited = Task.Run(() => FinalizeConnection(client, linkedCts.Token), linkedCts.Token);
                     }
                     else if (_Mode == Mode.Ssl)
                     {
@@ -889,15 +763,13 @@ namespace WatsonTcp
                             client.SslStream = new SslStream(client.NetworkStream, false);
                         }
 
-                        unawaited = Task.Run(() =>
+                        unawaited = Task.Run(async () =>
                         {
-                            Task<bool> success = StartTls(client);
-                            if (success.Result)
-                            {
-                                FinalizeConnection(client);
-                            }
+                            bool success = await StartTls(client).ConfigureAwait(false);
+                            if (success) FinalizeConnection(client, linkedCts.Token);
+                            else client.Dispose();
 
-                        }, client.Token);
+                        }, linkedCts.Token);
                     }
                     else
                     {
@@ -934,7 +806,7 @@ namespace WatsonTcp
         {
             try
             { 
-                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, !_Settings.AcceptInvalidCertificates);
+                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, !_Settings.AcceptInvalidCertificates).ConfigureAwait(false);
 
                 if (!client.SslStream.IsEncrypted)
                 {
@@ -977,7 +849,7 @@ namespace WatsonTcp
             return true;
         }
 
-        private void FinalizeConnection(ClientMetadata client)
+        private void FinalizeConnection(ClientMetadata client, CancellationToken token)
         { 
             #region Add-to-Client-List
 
@@ -1004,7 +876,7 @@ namespace WatsonTcp
             #region Start-Data-Receiver
 
             _Settings.Logger?.Invoke(_Header + "starting data receiver for " + client.IpPort);
-            Task.Run(async () => await DataReceiver(client), client.Token);
+            Task unawaited = Task.Run(() => DataReceiver(client, token), token);
 
             _Events.HandleClientConnected(this, new ClientConnectedEventArgs(client.IpPort));
 
@@ -1085,18 +957,20 @@ namespace WatsonTcp
             }
         }
 
-        private async Task DataReceiver(ClientMetadata client)
-        { 
+        #endregion
+
+        #region Read
+
+        private async Task DataReceiver(ClientMetadata client, CancellationToken token)
+        {
             while (true)
             {
                 try
-                {
-                    client.Token.ThrowIfCancellationRequested();
-
+                { 
                     if (!IsConnected(client)) break;
 
                     WatsonMessage msg = new WatsonMessage(client.DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
-                    bool buildSuccess = await msg.BuildFromStream(client.Token);
+                    bool buildSuccess = await msg.BuildFromStream(token).ConfigureAwait(false);
                     if (!buildSuccess)
                     {
                         _Settings.Logger?.Invoke(_Header + "disconnect detected for client " + client.IpPort);
@@ -1105,7 +979,7 @@ namespace WatsonTcp
 
                     if (msg == null)
                     {
-                        await Task.Delay(30);
+                        await Task.Delay(30, token).ConfigureAwait(false);
                         continue;
                     }
                      
@@ -1186,7 +1060,7 @@ namespace WatsonTcp
                     if (msg.SyncRequest != null && msg.SyncRequest.Value)
                     { 
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
-                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize);
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
                           
                         if (DateTime.Now < expiration)
                         { 
@@ -1222,7 +1096,7 @@ namespace WatsonTcp
                     { 
                         // No need to amend message expiration; it is copied from the request, which was set by this node
                         // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
-                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize);
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
                         if (DateTime.Now < msg.Expiration.Value)
                         {
@@ -1242,9 +1116,9 @@ namespace WatsonTcp
 
                         if (_Events.IsUsingMessages)
                         { 
-                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize); 
+                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
                             MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msgData);
-                            await Task.Run(() => _Events.HandleMessageReceived(this, mr));
+                            await Task.Run(() => _Events.HandleMessageReceived(this, mr), token);
                         }
                         else if (_Events.IsUsingStreams)
                         {
@@ -1266,7 +1140,7 @@ namespace WatsonTcp
                                 sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ws);
                                 // sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ms);
                                 // data has been read, can continue to next message
-                                await Task.Run(() => _Events.HandleStreamReceived(this, sr));
+                                await Task.Run(() => _Events.HandleStreamReceived(this, sr), token);
                             } 
                         }
                         else
@@ -1322,6 +1196,10 @@ namespace WatsonTcp
             client.Dispose();  
         }
 
+        #endregion
+
+        #region Send
+
         private bool SendInternal(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
@@ -1346,6 +1224,14 @@ namespace WatsonTcp
                 _Statistics.AddSentBytes(contentLength);
                 return true;
             }
+            catch (TaskCanceledException)
+            {
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(
@@ -1362,7 +1248,7 @@ namespace WatsonTcp
             }
         }
          
-        private async Task<bool> SendInternalAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream)
+        private async Task<bool> SendInternalAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream, CancellationToken token)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
             if (msg == null) throw new ArgumentNullException(nameof(msg));
@@ -1375,16 +1261,30 @@ namespace WatsonTcp
                 }
             }
 
-            await client.WriteLock.WaitAsync();
+            if (token == default(CancellationToken))
+            {
+                CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _Token);
+                token = linkedCts.Token;
+            }
+
+            await client.WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             try
             {
-                await SendHeadersAsync(client, msg);
-                await SendDataStreamAsync(client, contentLength, stream);
+                await SendHeadersAsync(client, msg, token).ConfigureAwait(false);
+                await SendDataStreamAsync(client, contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
                 return true;
+            }
+            catch (TaskCanceledException)
+            {
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
             }
             catch (Exception e)
             {
@@ -1451,11 +1351,11 @@ namespace WatsonTcp
             client.DataStream.Flush();
         }
 
-        private async Task SendHeadersAsync(ClientMetadata client, WatsonMessage msg)
+        private async Task SendHeadersAsync(ClientMetadata client, WatsonMessage msg, CancellationToken token)
         { 
             byte[] headerBytes = msg.HeaderBytes;
-            await client.DataStream.WriteAsync(headerBytes, 0, headerBytes.Length);
-            await client.DataStream.FlushAsync();
+            await client.DataStream.WriteAsync(headerBytes, 0, headerBytes.Length, token).ConfigureAwait(false);
+            await client.DataStream.FlushAsync(token).ConfigureAwait(false);
         }
          
         private void SendDataStream(ClientMetadata client, long contentLength, Stream stream)
@@ -1479,7 +1379,7 @@ namespace WatsonTcp
             client.DataStream.Flush();
         }
 
-        private async Task SendDataStreamAsync(ClientMetadata client, long contentLength, Stream stream)
+        private async Task SendDataStreamAsync(ClientMetadata client, long contentLength, Stream stream, CancellationToken token)
         {
             if (contentLength <= 0) return;
 
@@ -1489,65 +1389,89 @@ namespace WatsonTcp
              
             while (bytesRemaining > 0)
             {
-                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
                 if (bytesRead > 0)
                 {
-                    await client.DataStream.WriteAsync(buffer, 0, bytesRead);
+                    await client.DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     bytesRemaining -= bytesRead;
                 }
             } 
 
-            await client.DataStream.FlushAsync();
+            await client.DataStream.FlushAsync(token).ConfigureAwait(false);
         }
-          
+
+        #endregion
+
+        #region Tasks
+
         private async Task MonitorForIdleClients()
-        { 
-            while (!_Token.IsCancellationRequested)
+        {
+            try
             {
-                if (_Settings.IdleClientTimeoutSeconds > 0 && _ClientsLastSeen.Count > 0)
+                while (true)
                 {
-                    DateTime idleTimestamp = DateTime.Now.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds);
+                    await Task.Delay(5000, _Token).ConfigureAwait(false);
 
-                    foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
+                    if (_Settings.IdleClientTimeoutSeconds > 0 && _ClientsLastSeen.Count > 0)
                     {
-                        if (curr.Value < idleTimestamp)
-                        {
-                            _ClientsTimedout.TryAdd(curr.Key, DateTime.Now);
-                            _Settings.Logger?.Invoke(_Header + "disconnecting client " + curr.Key + " due to idle timeout");
-                            DisconnectClient(curr.Key);
-                        }
-                    }
-                }
+                        DateTime idleTimestamp = DateTime.Now.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds);
 
-                await Task.Delay(5000, _Token);
+                        foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
+                        {
+                            if (curr.Value < idleTimestamp)
+                            {
+                                _ClientsTimedout.TryAdd(curr.Key, DateTime.Now);
+                                _Settings.Logger?.Invoke(_Header + "disconnecting client " + curr.Key + " due to idle timeout");
+                                DisconnectClient(curr.Key);
+                            }
+                        }
+                    } 
+                }
+            }
+            catch (TaskCanceledException)
+            {
+
+            }
+            catch (OperationCanceledException)
+            {
+
             }
         }
 
         private async Task MonitorForExpiredSyncResponses()
         {
-            while (!_TokenSource.IsCancellationRequested)
+            try
             {
-                if (_Token.IsCancellationRequested) break;
-
-                await Task.Delay(1000);
-
-                lock (_SyncResponseLock)
+                while (true)
                 {
-                    if (_SyncResponses.Any(s => 
-                        s.Value.ExpirationUtc < DateTime.Now
-                        ))
-                    {
-                        Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s => 
-                            s.Value.ExpirationUtc < DateTime.Now
-                            ).ToDictionary(dict => dict.Key, dict => dict.Value);
+                    await Task.Delay(1000, _Token).ConfigureAwait(false);
 
-                        foreach (KeyValuePair<string, SyncResponse> curr in expired)
+                    lock (_SyncResponseLock)
+                    {
+                        if (_SyncResponses.Any(s =>
+                            s.Value.ExpirationUtc < DateTime.Now
+                            ))
                         {
-                            _Settings.Logger?.Invoke(_Header + "expiring response " + curr.Key.ToString());
-                            _SyncResponses.Remove(curr.Key);
+                            Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s =>
+                                s.Value.ExpirationUtc < DateTime.Now
+                                ).ToDictionary(dict => dict.Key, dict => dict.Value);
+
+                            foreach (KeyValuePair<string, SyncResponse> curr in expired)
+                            {
+                                _Settings.Logger?.Invoke(_Header + "expiring response " + curr.Key.ToString());
+                                _SyncResponses.Remove(curr.Key);
+                            }
                         }
                     }
                 }
+            }
+            catch (TaskCanceledException)
+            {
+
+            }
+            catch (OperationCanceledException)
+            {
+
             }
         }
 
@@ -1555,54 +1479,38 @@ namespace WatsonTcp
         {
             SyncResponse ret = null;
 
-            while (true)
-            {
-                lock (_SyncResponseLock)
-                {
-                    if (_SyncResponses.ContainsKey(guid))
-                    {
-                        ret = _SyncResponses[guid];
-                        _SyncResponses.Remove(guid);
-                        break;
-                    }
-                }
-
-                if (DateTime.Now >= expirationUtc) break;
-                Task.Delay(50).Wait();
-            }
-
-            if (ret != null) return ret;
-            else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
-        }
-
-        private void EnableKeepalives()
-        {
             try
             {
-#if NETCOREAPP
+                while (true)
+                {
+                    lock (_SyncResponseLock)
+                    {
+                        if (_SyncResponses.ContainsKey(guid))
+                        {
+                            ret = _SyncResponses[guid];
+                            _SyncResponses.Remove(guid);
+                            break;
+                        }
+                    }
 
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime);
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+                    if (DateTime.Now >= expirationUtc) break;
+                    Task.Delay(50).Wait(_Token);
+                }
 
-#elif NETFRAMEWORK
-
-                byte[] keepAlive = new byte[12]; 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
-                _Listener.Server.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
-
-#elif NETSTANDARD
-
-#endif
+                if (ret != null) return ret;
+                else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
             }
-            catch (Exception)
+            catch (TaskCanceledException)
             {
-                _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
+                return null;
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
             }
         }
+
+        #endregion
 
         #endregion
     }

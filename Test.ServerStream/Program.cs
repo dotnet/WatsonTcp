@@ -139,7 +139,7 @@ namespace TestServerStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = _Server.Send(ipPort, metadata, data.Length, ms);
+                        success = _Server.Send(ipPort, data.Length, ms, metadata);
                         Console.WriteLine(success);
                         break;
 
@@ -148,8 +148,9 @@ namespace TestServerStream
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        data = Encoding.UTF8.GetBytes(userInput);
+                        data = Encoding.UTF8.GetBytes(userInput); 
                         ms = new MemoryStream(data);
+                        ms.Seek(0, SeekOrigin.Begin); 
                         success = _Server.SendAsync(ipPort, data.Length, ms).Result;
                         Console.WriteLine(success);
                         break;
@@ -162,7 +163,7 @@ namespace TestServerStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = _Server.SendAsync(ipPort, metadata, data.Length, ms).Result;
+                        success = _Server.SendAsync(ipPort, data.Length, ms, metadata).Result;
                         Console.WriteLine(success);
                         break;
 
@@ -431,7 +432,7 @@ namespace TestServerStream
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(ipPort, timeoutMs, userInput);
+                SyncResponse resp = _Server.SendAndWait(timeoutMs, ipPort, userInput); 
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -459,7 +460,7 @@ namespace TestServerStream
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(ipPort, dict, timeoutMs);
+                SyncResponse resp = _Server.SendAndWait(timeoutMs, ipPort, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

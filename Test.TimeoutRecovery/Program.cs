@@ -138,7 +138,7 @@ namespace Test.TimeoutRecovery
                         ipPort = InputString("IP:port:", lastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        if (!server.Send(ipPort, metadata, userInput)) Console.WriteLine("Failed");
+                        if (!server.Send(ipPort, userInput, metadata)) Console.WriteLine("Failed");
                         Console.WriteLine(success);
                         break;
 
@@ -146,7 +146,7 @@ namespace Test.TimeoutRecovery
                         ipPort = InputString("IP:port:", lastIpPort, false);
                         metadata = new Dictionary<object, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i, i);
-                        if (!server.Send(ipPort, metadata, "Hello!")) Console.WriteLine("Failed");
+                        if (!server.Send(ipPort, "Hello!", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
@@ -160,7 +160,7 @@ namespace Test.TimeoutRecovery
                         ipPort = InputString("IP:port:", lastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         metadata = InputDictionary();
-                        success = server.SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(userInput)).Result;
+                        success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput), metadata).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
@@ -171,7 +171,7 @@ namespace Test.TimeoutRecovery
                     case "sendempty":
                         ipPort = InputString("IP:port:", lastIpPort, false);
                         metadata = InputDictionary();
-                        if (!server.Send(ipPort, metadata)) Console.WriteLine("Failed");
+                        if (!server.Send(ipPort, "", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait empty":
@@ -411,7 +411,7 @@ namespace Test.TimeoutRecovery
 
             try
             {
-                SyncResponse resp = server.SendAndWait(ipPort, timeoutMs, userInput);
+                SyncResponse resp = server.SendAndWait(timeoutMs, ipPort, userInput);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -439,7 +439,7 @@ namespace Test.TimeoutRecovery
 
             try
             {
-                SyncResponse resp = server.SendAndWait(ipPort, dict, timeoutMs);
+                SyncResponse resp = server.SendAndWait(timeoutMs, ipPort, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
