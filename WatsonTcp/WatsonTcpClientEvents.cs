@@ -14,39 +14,39 @@ namespace WatsonTcp
         /// <summary>
         /// Event fired when authentication has succeeded.
         /// </summary>
-        public event EventHandler AuthenticationSucceeded = delegate { };
+        public event EventHandler AuthenticationSucceeded;
 
         /// <summary>
         /// Event fired when authentication has failed.
         /// </summary>
-        public event EventHandler AuthenticationFailure = delegate { };
+        public event EventHandler AuthenticationFailure;
 
         /// <summary>  
         /// This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload. 
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<MessageReceivedFromServerEventArgs> MessageReceived = delegate { };
+        public event EventHandler<MessageReceivedFromServerEventArgs> MessageReceived;
 
         /// <summary> 
         /// This callback is called when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<StreamReceivedFromServerEventArgs> StreamReceived = delegate { };
+        public event EventHandler<StreamReceivedFromServerEventArgs> StreamReceived;
 
         /// <summary>
         /// Event fired when the client successfully connects to the server.
         /// </summary>
-        public event EventHandler ServerConnected = delegate { };
+        public event EventHandler ServerConnected;
 
         /// <summary>
         /// Event fired when the client disconnects from the server.
         /// </summary>
-        public event EventHandler ServerDisconnected = delegate { };
+        public event EventHandler ServerDisconnected;
 
         /// <summary>
         /// This event is fired when an exception is encountered.
         /// </summary>
-        public event EventHandler<ExceptionEventArgs> ExceptionEncountered = delegate { };
+        public event EventHandler<ExceptionEventArgs> ExceptionEncountered;
 
         #endregion
 

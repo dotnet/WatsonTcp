@@ -14,56 +14,56 @@ namespace WatsonTcp
         /// <summary>
         /// Event to fire when authentication is requested from a client.
         /// </summary>
-        public event EventHandler<AuthenticationRequestedEventArgs> AuthenticationRequested = delegate { };
+        public event EventHandler<AuthenticationRequestedEventArgs> AuthenticationRequested;
 
         /// <summary>
         /// Event to fire when a client successfully authenticates.
         /// </summary>
-        public event EventHandler<AuthenticationSucceededEventArgs> AuthenticationSucceeded = delegate { };
+        public event EventHandler<AuthenticationSucceededEventArgs> AuthenticationSucceeded;
 
         /// <summary>
         /// Event to fire when a client fails authentication.
         /// </summary>
-        public event EventHandler<AuthenticationFailedEventArgs> AuthenticationFailed = delegate { };
+        public event EventHandler<AuthenticationFailedEventArgs> AuthenticationFailed;
 
         /// <summary>
         /// Event to fire when a client connects to the server.
         /// The IP:port of the client is passed in the arguments.
         /// </summary>
-        public event EventHandler<ClientConnectedEventArgs> ClientConnected = delegate { };
+        public event EventHandler<ClientConnectedEventArgs> ClientConnected;
 
         /// <summary>
         /// Event to fire when a client disconnects from the server.
         /// The IP:port is passed in the arguments along with the reason for the disconnection.
         /// </summary>
-        public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected = delegate { };
+        public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
 
         /// <summary>
         /// This event is fired when a message is received from a client and it is desired that WatsonTcp pass the byte array containing the message payload.
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<MessageReceivedFromClientEventArgs> MessageReceived = delegate { }; 
+        public event EventHandler<MessageReceivedFromClientEventArgs> MessageReceived; 
 
         /// <summary> 
         /// This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<StreamReceivedFromClientEventArgs> StreamReceived = delegate { };
+        public event EventHandler<StreamReceivedFromClientEventArgs> StreamReceived;
 
         /// <summary>
         /// This event is fired when the server is started.
         /// </summary>
-        public event EventHandler ServerStarted = delegate { };
+        public event EventHandler ServerStarted;
 
         /// <summary>
         /// This event is fired when the server is stopped.
         /// </summary>
-        public event EventHandler ServerStopped = delegate { };
+        public event EventHandler ServerStopped;
 
         /// <summary>
         /// This event is fired when an exception is encountered.
         /// </summary>
-        public event EventHandler<ExceptionEventArgs> ExceptionEncountered = delegate { };
+        public event EventHandler<ExceptionEventArgs> ExceptionEncountered;
 
         #endregion
 
