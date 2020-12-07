@@ -96,7 +96,7 @@ namespace WatsonTcp
 
         internal void HandleAuthenticationSucceeded(object sender, EventArgs args)
         {
-            WrappedEventHandler(() => ServerConnected?.Invoke(sender, args), "ServerConnected", sender); 
+            WrappedEventHandler(() => AuthenticationSucceeded?.Invoke(sender, args), "ServerConnected", sender); 
         }
 
         internal void HandleAuthenticationFailure(object sender, EventArgs args)
