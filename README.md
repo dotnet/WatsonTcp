@@ -234,7 +234,7 @@ server.Events.ClientDisconnected += ClientDisconnected;
 server.Events.StreamReceived += StreamReceived; 
 server.Start();
 
-static void StreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+static void StreamReceived(object sender, StreamReceivedEventArgs args)
 {
     long bytesRemaining = args.ContentLength;
     int bytesRead = 0;
@@ -263,7 +263,7 @@ client.Events.ServerDisconnected += ServerDisconnected;
 client.Events.StreamReceived += StreamReceived; 
 client.Start();
 
-static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args)
+static void StreamReceived(object sender, StreamReceivedEventArgs args)
 {
     long bytesRemaining = args.ContentLength;
     int bytesRead = 0;
@@ -282,7 +282,7 @@ static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args
         }
     }
 
-    Console.WriteLine("Stream received: " + Encoding.UTF8.GetString(ms.ToArray())); 
+    Console.WriteLine("Stream received from " + args.IpPort + ": " + Encoding.UTF8.GetString(ms.ToArray())); 
 }
 ```
  
