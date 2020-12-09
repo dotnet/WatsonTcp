@@ -30,25 +30,25 @@ namespace WatsonTcp
         /// Event to fire when a client connects to the server.
         /// The IP:port of the client is passed in the arguments.
         /// </summary>
-        public event EventHandler<ClientConnectedEventArgs> ClientConnected;
+        public event EventHandler<ConnectionEventArgs> ClientConnected;
 
         /// <summary>
         /// Event to fire when a client disconnects from the server.
         /// The IP:port is passed in the arguments along with the reason for the disconnection.
         /// </summary>
-        public event EventHandler<ClientDisconnectedEventArgs> ClientDisconnected;
+        public event EventHandler<DisconnectionEventArgs> ClientDisconnected;
 
         /// <summary>
         /// This event is fired when a message is received from a client and it is desired that WatsonTcp pass the byte array containing the message payload.
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<MessageReceivedFromClientEventArgs> MessageReceived; 
+        public event EventHandler<MessageReceivedEventArgs> MessageReceived; 
 
         /// <summary> 
         /// This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<StreamReceivedFromClientEventArgs> StreamReceived;
+        public event EventHandler<StreamReceivedEventArgs> StreamReceived;
 
         /// <summary>
         /// This event is fired when the server is started.
@@ -126,22 +126,22 @@ namespace WatsonTcp
             WrappedEventHandler(() => AuthenticationFailed?.Invoke(sender, args), "AuthenticationFailed", sender);
         }
 
-        internal void HandleClientConnected(object sender, ClientConnectedEventArgs args)
+        internal void HandleClientConnected(object sender, ConnectionEventArgs args)
         {
             WrappedEventHandler(() => ClientConnected?.Invoke(sender, args), "ClientConnected", sender);
         }
 
-        internal void HandleClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+        internal void HandleClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             WrappedEventHandler(() => ClientDisconnected?.Invoke(sender, args), "ClientDisconnected", sender);
         }
 
-        internal void HandleMessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        internal void HandleMessageReceived(object sender, MessageReceivedEventArgs args)
         {
             WrappedEventHandler(() => MessageReceived?.Invoke(sender, args), "MessageReceived", sender);
         }
 
-        internal void HandleStreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+        internal void HandleStreamReceived(object sender, StreamReceivedEventArgs args)
         {
             WrappedEventHandler(() => StreamReceived?.Invoke(sender, args), "StreamReceived", sender);
         }

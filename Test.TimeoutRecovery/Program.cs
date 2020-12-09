@@ -335,18 +335,18 @@ namespace Test.TimeoutRecovery
             }
         }
 
-        private static void ClientConnected(object sender, ClientConnectedEventArgs args)
+        private static void ClientConnected(object sender, ConnectionEventArgs args)
         {
             lastIpPort = args.IpPort;
             Console.WriteLine("Client connected: " + args.IpPort);
         }
 
-        private static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+        private static void ClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
 
-        private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
             lastIpPort = args.IpPort;
             Console.Write("Message received from " + args.IpPort + ": ");

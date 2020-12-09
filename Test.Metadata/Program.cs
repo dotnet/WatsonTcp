@@ -35,7 +35,7 @@ namespace Test.Metadata
 
         #region Events
 
-        private static void ServerMessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void ServerMessageReceived(object sender, MessageReceivedEventArgs args)
         { 
             try
             {
@@ -50,7 +50,7 @@ namespace Test.Metadata
             }
         }
 
-        private static void ClientMessageReceived(object sender, MessageReceivedFromServerEventArgs args)
+        private static void ClientMessageReceived(object sender, MessageReceivedEventArgs args)
         {
 
         }

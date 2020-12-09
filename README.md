@@ -11,12 +11,12 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.6.0
+## New in v4.7.0
 
-- More changes based on suggestions from @syntacs and @MartyIX
-- Consolidated ```Send``` constructors with optional params to reduce complexity
-- Optional ```CancellationToken``` parameters for async ```Send``` methods
-- Use of ```ConfigureAwait``` for better reliability
+- Breaking changes
+- Consolidated connection/disconnection event arguments
+- Consolidated message/stream received event arguments
+- Aligned disconnection reason with message status
 
 ## Test Applications
 
@@ -125,19 +125,19 @@ static void Main(string[] args)
     } 
 }
 
-static void ClientConnected(object sender, ClientConnectedEventArgs args)
+static void ClientConnected(object sender, ConnectionEventArgs args)
 {
     Console.WriteLine("Client connected: " + args.IpPort);
 }
 
-static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+static void ClientDisconnected(object sender, DisconnectionEventArgs args)
 {
     Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
 }
 
-static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+static void MessageReceived(object sender, MessageReceivedEventArgs args)
 {
-    Console.WriteLine("Message received from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
+    Console.WriteLine("Message from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
 }
 
 static SyncResponse SyncRequestReceived(SyncRequest req)
@@ -185,19 +185,19 @@ static void Main(string[] args)
     }  
 }
 
-static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
+static void MessageReceived(object sender, MessageReceivedEventArgs args)
 {
-    Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(args.Data));
+    Console.WriteLine("Message from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
 }
 
 static void ServerConnected(object sender, EventArgs args)
 {
-    Console.WriteLine("Server connected");
+    Console.WriteLine("Server " + args.IpPort + " connected");
 }
 
 static void ServerDisconnected(object sender, EventArgs args)
 {
-    Console.WriteLine("Server disconnected");
+    Console.WriteLine("Server " + args.IpPort + " disconnected");
 }
 
 static SyncResponse SyncRequestReceived(SyncRequest req)

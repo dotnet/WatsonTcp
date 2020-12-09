@@ -2,14 +2,21 @@
 
 ## Current Version
 
+v4.7.0
+
+- Breaking changes
+- Consolidated connection/disconnection event arguments
+- Consolidated message/stream received event arguments
+- Aligned disconnection reason with message status
+
+## Previous Versions
+
 v4.6.0.0
 
 - More changes based on suggestions from @syntacs and @MartyIX
 - Consolidated ```Send``` constructors with optional params to reduce complexity
 - Optional ```CancellationToken``` parameters for async ```Send``` methods
 - Use of ```ConfigureAwait``` for better reliability
-
-## Previous Versions
 
 v4.5.0.1
 

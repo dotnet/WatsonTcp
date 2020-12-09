@@ -338,18 +338,18 @@ namespace TestServerStream
             Console.WriteLine("");
         }
          
-        private static void ClientConnected(object sender, ClientConnectedEventArgs args)
+        private static void ClientConnected(object sender, ConnectionEventArgs args)
         {
             _LastIpPort = args.IpPort;
             Console.WriteLine("Client connected: " + args.IpPort);
         } 
 
-        private static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+        private static void ClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void StreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+        private static void StreamReceived(object sender, StreamReceivedEventArgs args)
         {
             try
             {

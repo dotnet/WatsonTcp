@@ -22,12 +22,17 @@ namespace WatsonTcp
         /// <summary>
         /// Client connection was intentionally terminated programmatically or by the server.
         /// </summary>
-        [EnumMember(Value = "Kicked")]
-        Kicked = 1,
+        [EnumMember(Value = "Removed")]
+        Removed = 1,
         /// <summary>
         /// Client connection timed out; server did not receive data within the timeout window.
         /// </summary>
         [EnumMember(Value = "Timeout")]
-        Timeout = 2
+        Timeout = 2,
+        /// <summary>
+        /// Disconnect due to server shutdown.
+        /// </summary>
+        [EnumMember(Value = "Shutdown")]
+        Shutdown = 3
     }
 }

@@ -76,22 +76,22 @@ namespace TestLargeMessages
 
         #region Server-Callbacks
          
-        static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
+        static void ServerClientConnected(object sender, ConnectionEventArgs args) 
         {
             Console.WriteLine("Server detected connection from client: " + args.IpPort);
         }
          
-        static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args) 
+        static void ServerClientDisconnected(object sender, DisconnectionEventArgs args) 
         {
             Console.WriteLine("Server detected disconnection from client: " + args.IpPort + " [" + args.Reason.ToString() + "]");
         }
          
-        static void ServerMessageReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        static void ServerMessageReceived(object sender, MessageReceivedEventArgs args) 
         {
             Console.WriteLine("Server received " + args.Data.Length + " bytes from " + args.IpPort + ": MD5 " + Md5(args.Data));
         }
          
-        static void ServerStreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+        static void ServerStreamReceived(object sender, StreamReceivedEventArgs args)
         {
             Console.Write("Server received " + args.ContentLength + " bytes from " + args.IpPort + ": MD5 " + Md5(args.DataStream)); 
         }
@@ -99,25 +99,25 @@ namespace TestLargeMessages
         #endregion
 
         #region Client-Callbacks
-         
-        static void ServerConnected(object sender, EventArgs args) 
+
+        private static void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Console.WriteLine("Client detected successful connection to server");
+            Console.WriteLine(args.IpPort + " connected");
+        }
+
+        private static void ServerDisconnected(object sender, DisconnectionEventArgs args)
+        {
+            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
+        }
+
+        static void MessageReceived(object sender, MessageReceivedEventArgs args) 
+        {
+            Console.WriteLine("Client received " + args.Data.Length + " bytes from " + args.IpPort + ": MD5 " + Md5(args.Data));
         }
          
-        static void ServerDisconnected(object sender, EventArgs args) 
+        static void StreamReceived(object sender, StreamReceivedEventArgs args) 
         {
-            Console.WriteLine("Client detected disconnection from server");
-        }
-         
-        static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args) 
-        {
-            Console.WriteLine("Client received " + args.Data.Length + " bytes from server: MD5 " + Md5(args.Data));
-        }
-         
-        static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args) 
-        {
-            Console.Write("Client received " + args.ContentLength + " bytes from server: MD5 " + Md5(args.DataStream));
+            Console.Write("Client received " + args.ContentLength + " bytes from " + args.IpPort + ": MD5 " + Md5(args.DataStream));
         }
 
         #endregion

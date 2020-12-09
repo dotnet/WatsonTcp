@@ -5,11 +5,11 @@ using System.Text;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Event arguments for when a message is received from a client.
+    /// Event arguments for when a message is received.
     /// </summary>
-    public class MessageReceivedFromClientEventArgs
+    public class MessageReceivedEventArgs : EventArgs
     {
-        internal MessageReceivedFromClientEventArgs(string ipPort, Dictionary<object, object> metadata, byte[] data)
+        internal MessageReceivedEventArgs(string ipPort, Dictionary<object, object> metadata, byte[] data)
         {
             IpPort = ipPort;
             Metadata = metadata;
@@ -17,17 +17,17 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// The IP:port of the client.
+        /// The IP:port of the endpoint.
         /// </summary>
         public string IpPort { get; }
 
         /// <summary>
-        /// The metadata received from the client.
+        /// The metadata received from the endpoint.
         /// </summary>
         public Dictionary<object, object> Metadata { get; }
 
         /// <summary>
-        /// The data received from the client.
+        /// The data received from the endpoint.
         /// </summary>
         public byte[] Data { get; }
     }

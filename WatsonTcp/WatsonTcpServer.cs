@@ -559,7 +559,8 @@ namespace WatsonTcp
         /// Disconnects the specified client.
         /// </summary>
         /// <param name="ipPort">IP:port of the client.</param>
-        public void DisconnectClient(string ipPort)
+        /// <param name="status">Reason for the disconnect.  This is conveyed to the client.</param>
+        public void DisconnectClient(string ipPort, MessageStatus status = MessageStatus.Removed)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
@@ -571,27 +572,25 @@ namespace WatsonTcp
                 if (!_ClientsTimedout.ContainsKey(ipPort)) _ClientsKicked.TryAdd(ipPort, DateTime.Now);
 
                 WatsonMessage removeMsg = new WatsonMessage();
-                removeMsg.Status = MessageStatus.Removed;
+                removeMsg.Status = status;
                 SendInternal(client, removeMsg, 0, null);
 
                 client.Dispose();
-                _Clients.TryRemove(ipPort, out ClientMetadata removed);
+                _Clients.TryRemove(ipPort, out _);
             }
         }
 
         /// <summary>
         /// Disconnects all connected clients.
         /// </summary>
-        public void DisconnectClients()
+        /// <param name="status">Reason for the disconnect.  This is conveyed to each client.</param>
+        public void DisconnectClients(MessageStatus status = MessageStatus.Removed)
         {
             if (_Clients != null && _Clients.Count > 0)
             {
-                WatsonMessage discMsg = new WatsonMessage();
-                discMsg.Status = MessageStatus.Disconnecting;
-
                 foreach (KeyValuePair<string, ClientMetadata> currClient in _Clients)
                 {
-                    DisconnectClient(currClient.Value.IpPort);
+                    DisconnectClient(currClient.Value.IpPort, status);
                 }
             } 
         }
@@ -613,7 +612,7 @@ namespace WatsonTcp
 
                 if (_IsListening) Stop();
 
-                DisconnectClients();
+                DisconnectClients(MessageStatus.Shutdown);
 
                 if (_Listener != null)
                 {
@@ -878,7 +877,7 @@ namespace WatsonTcp
             _Settings.Logger?.Invoke(_Header + "starting data receiver for " + client.IpPort);
             Task unawaited = Task.Run(() => DataReceiver(client, token), token);
 
-            _Events.HandleClientConnected(this, new ClientConnectedEventArgs(client.IpPort));
+            _Events.HandleClientConnected(this, new ConnectionEventArgs(client.IpPort));
 
             #endregion 
         }
@@ -1046,7 +1045,7 @@ namespace WatsonTcp
                         }
                     }
 
-                    if (msg.Status == MessageStatus.Disconnecting)
+                    if (msg.Status == MessageStatus.Shutdown)
                     {
                         _Settings.Logger?.Invoke(_Header + "client " + client.IpPort + " is disconnecting");
                         break;
@@ -1117,18 +1116,18 @@ namespace WatsonTcp
                         if (_Events.IsUsingMessages)
                         { 
                             msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
-                            MessageReceivedFromClientEventArgs mr = new MessageReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msgData);
+                            MessageReceivedEventArgs mr = new MessageReceivedEventArgs(client.IpPort, msg.Metadata, msgData);
                             await Task.Run(() => _Events.HandleMessageReceived(this, mr), token);
                         }
                         else if (_Events.IsUsingStreams)
                         {
-                            StreamReceivedFromClientEventArgs sr = null;
+                            StreamReceivedEventArgs sr = null;
                             WatsonStream ws = null;
 
                             if (msg.ContentLength >= _Settings.MaxProxiedStreamSize)
                             {
                                 ws = new WatsonStream(msg.ContentLength, msg.DataStream);
-                                sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ws);
+                                sr = new StreamReceivedEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ws);
                                 // sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, msg.DataStream);
                                 // must run synchronously, data exists in the underlying stream
                                 _Events.HandleStreamReceived(this, sr); 
@@ -1137,7 +1136,7 @@ namespace WatsonTcp
                             {
                                 MemoryStream ms = WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize);
                                 ws = new WatsonStream(msg.ContentLength, ms); 
-                                sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ws);
+                                sr = new StreamReceivedEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ws);
                                 // sr = new StreamReceivedFromClientEventArgs(client.IpPort, msg.Metadata, msg.ContentLength, ms);
                                 // data has been read, can continue to next message
                                 await Task.Run(() => _Events.HandleStreamReceived(this, sr), token);
@@ -1179,10 +1178,10 @@ namespace WatsonTcp
                 }
             }
              
-            ClientDisconnectedEventArgs cd = null; 
-            if (_ClientsKicked.ContainsKey(client.IpPort)) cd = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Kicked); 
-            else if (_ClientsTimedout.ContainsKey(client.IpPort)) cd = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Timeout); 
-            else cd = new ClientDisconnectedEventArgs(client.IpPort, DisconnectReason.Normal);
+            DisconnectionEventArgs cd = null; 
+            if (_ClientsKicked.ContainsKey(client.IpPort)) cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Removed); 
+            else if (_ClientsTimedout.ContainsKey(client.IpPort)) cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Timeout); 
+            else cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Normal);
             _Events.HandleClientDisconnected(this, cd); 
              
             _Clients.TryRemove(client.IpPort, out _);
@@ -1422,7 +1421,7 @@ namespace WatsonTcp
                             {
                                 _ClientsTimedout.TryAdd(curr.Key, DateTime.Now);
                                 _Settings.Logger?.Invoke(_Header + "disconnecting client " + curr.Key + " due to idle timeout");
-                                DisconnectClient(curr.Key);
+                                DisconnectClient(curr.Key, MessageStatus.Timeout);
                             }
                         }
                     } 

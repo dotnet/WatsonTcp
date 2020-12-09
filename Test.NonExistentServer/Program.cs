@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using WatsonTcp;
@@ -13,13 +14,13 @@ namespace Test.NonExistentServer
             {
                 WatsonTcpClient client = new WatsonTcpClient("10.1.2.3", 1234); // NonExistant Server
 
-                client.Events.ServerConnected += HandleServerConnected;
-                client.Events.ServerDisconnected += HandleServerDisconnected;
-                client.Events.MessageReceived += HandleMessageReceived;
+                client.Events.ServerConnected += ServerConnected;
+                client.Events.ServerDisconnected += ServerDisconnected;
+                client.Events.MessageReceived += MessageReceived;
 
                 try
                 {
-                    Console.WriteLine("Starting Client");
+                    Console.WriteLine("Starting client");
                     client.Connect();
                 }
                 catch (Exception ex)
@@ -33,17 +34,19 @@ namespace Test.NonExistentServer
             Thread.Sleep(10000); 
         }
 
-        static void HandleServerConnected(object sender, EventArgs e)
+        static void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Console.WriteLine("Server Connected");
+            Console.WriteLine(args.IpPort + " connected");
         }
-        static void HandleServerDisconnected(object sender, EventArgs e)
+
+        static void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine("Server Disconnected");
+            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
         }
-        static void HandleMessageReceived(object sender, MessageReceivedFromServerEventArgs e)
+
+        static void MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Console.WriteLine("Message Recieved");
+            Console.WriteLine("Message received from " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }
     } 
 }

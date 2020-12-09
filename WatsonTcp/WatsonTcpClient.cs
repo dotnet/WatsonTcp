@@ -378,7 +378,7 @@ namespace WatsonTcp
 
             _DataReceiver = Task.Run(() => DataReceiver(), _Token);
             _MonitorSyncResponses = Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
-            _Events.HandleServerConnected(this, EventArgs.Empty);
+            _Events.HandleServerConnected(this, new ConnectionEventArgs((_ServerIp + ":" + _ServerPort)));
             _Settings.Logger?.Invoke(_Header + "connected");
         }
          
@@ -394,7 +394,7 @@ namespace WatsonTcp
             if (Connected)
             {
                 WatsonMessage msg = new WatsonMessage();
-                msg.Status = MessageStatus.Disconnecting;
+                msg.Status = MessageStatus.Shutdown;
                 SendInternal(msg, 0, null);
             }
 
@@ -669,7 +669,9 @@ namespace WatsonTcp
         #region Read
 
         private async Task DataReceiver()
-        {  
+        {
+            DisconnectReason reason = DisconnectReason.Normal;
+
             while (true)
             {
                 bool readLocked = false;
@@ -716,11 +718,19 @@ namespace WatsonTcp
                     if (msg.Status == MessageStatus.Removed)
                     {
                         _Settings.Logger?.Invoke(_Header + "disconnect due to server-side removal");
+                        reason = DisconnectReason.Removed;
                         break;
                     }
-                    else if (msg.Status == MessageStatus.Disconnecting)
+                    else if (msg.Status == MessageStatus.Shutdown)
                     {
                         _Settings.Logger?.Invoke(_Header + "disconnect due to server shutdown");
+                        reason = DisconnectReason.Shutdown;
+                        break;
+                    }
+                    else if (msg.Status == MessageStatus.Timeout)
+                    {
+                        _Settings.Logger?.Invoke(_Header + "disconnect due to timeout");
+                        reason = DisconnectReason.Timeout;
                         break;
                     }
                     else if (msg.Status == MessageStatus.AuthSuccess)
@@ -807,18 +817,18 @@ namespace WatsonTcp
                         if (_Events.IsUsingMessages)
                         { 
                             msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
-                            MessageReceivedFromServerEventArgs args = new MessageReceivedFromServerEventArgs(msg.Metadata, msgData);
+                            MessageReceivedEventArgs args = new MessageReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msgData);
                             await Task.Run(() => _Events.HandleMessageReceived(this, args));
                         }
                         else if (_Events.IsUsingStreams)
                         {
-                            StreamReceivedFromServerEventArgs sr = null;
+                            StreamReceivedEventArgs sr = null;
                             WatsonStream ws = null;
 
                             if (msg.ContentLength >= _Settings.MaxProxiedStreamSize)
                             {
                                 ws = new WatsonStream(msg.ContentLength, msg.DataStream);
-                                sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, ws);
+                                sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws);
                                 // sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, msg.DataStream);
                                 // must run synchronously, data exists in the underlying stream
                                 _Events.HandleStreamReceived(this, sr);
@@ -827,7 +837,7 @@ namespace WatsonTcp
                             {
                                 MemoryStream ms = WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize);
                                 ws = new WatsonStream(msg.ContentLength, ms);
-                                sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, ws);
+                                sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws);
                                 // sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, ms);
                                 // data has been read, can continue to next message
                                 Task unawaited = Task.Run(() => _Events.HandleStreamReceived(this, sr), _Token);
@@ -877,7 +887,7 @@ namespace WatsonTcp
             Connected = false;
 
             _Settings.Logger?.Invoke(_Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
-            _Events.HandleServerDisconnected(this, EventArgs.Empty);
+            _Events.HandleServerDisconnected(this, new DisconnectionEventArgs((_ServerIp + ":" + _ServerPort), reason));
         }
 
         #endregion

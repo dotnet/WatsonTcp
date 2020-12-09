@@ -6,19 +6,25 @@ using System.Text;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Event arguments for when a stream is received from the server.
+    /// Event arguments for when a stream is received.
     /// </summary>
-    public class StreamReceivedFromServerEventArgs
+    public class StreamReceivedEventArgs : EventArgs
     {
-        internal StreamReceivedFromServerEventArgs(Dictionary<object, object> metadata, long contentLength, Stream stream)
+        internal StreamReceivedEventArgs(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
+            IpPort = ipPort;
             Metadata = metadata;
             ContentLength = contentLength;
             DataStream = stream;
         }
 
         /// <summary>
-        /// The metadata received from the server.
+        /// The IP:port of the endpoint.
+        /// </summary>
+        public string IpPort { get; }
+
+        /// <summary>
+        /// The metadata received from the endpoint.
         /// </summary>
         public Dictionary<object, object> Metadata
         {
@@ -89,6 +95,6 @@ namespace WatsonTcp
 
             byte[] data = ms.ToArray();
             return data;
-        }  
+        } 
     }
 }

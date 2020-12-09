@@ -334,11 +334,11 @@ namespace TestClientStream
             Console.WriteLine("");
         }
          
-        private static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args) 
+        private static void StreamReceived(object sender, StreamReceivedEventArgs args) 
         {
             try
             {
-                Console.Write("Stream from server [" + args.ContentLength + " bytes]: ");
+                Console.Write("Stream from " + args.IpPort + " [" + args.ContentLength + " bytes]: ");
 
                 int bytesRead = 0;
                 int bufferSize = 65536;
@@ -427,15 +427,15 @@ namespace TestClientStream
         {
             Console.WriteLine("Authentication failed");
         }
-         
-        private static void ServerConnected(object sender, EventArgs args)
+
+        private static void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Console.WriteLine("Server connected");
+            Console.WriteLine(args.IpPort + " connected");
         }
 
-        private static void ServerDisconnected(object sender, EventArgs args)
+        private static void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine("Server disconnected");
+            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
         }
 
         private static void SendAndWait()

@@ -353,7 +353,7 @@ namespace TestServer
             }
         }
          
-        private static void ClientConnected(object sender, ClientConnectedEventArgs args)
+        private static void ClientConnected(object sender, ConnectionEventArgs args)
         {
             _LastIpPort = args.IpPort;
             Console.WriteLine("Client connected: " + args.IpPort);
@@ -361,15 +361,15 @@ namespace TestServer
             // server.DisconnectClient(args.IpPort);
         }
          
-        private static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+        private static void ClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
             _LastIpPort = args.IpPort;
-            Console.Write("Message received from " + args.IpPort + ": ");
+            Console.Write("Message from " + args.IpPort + ": ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 

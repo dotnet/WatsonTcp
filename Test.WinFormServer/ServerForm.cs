@@ -35,19 +35,19 @@ namespace Test.WinFormServer
             Logger("Server started.");
         }
          
-        private void OnClientDisconnected(object sender, ClientDisconnectedEventArgs e)
+        private void OnClientDisconnected(object sender, DisconnectionEventArgs e)
         {
             Logger("Client " + e.IpPort + " disconnected: " + e.Reason.ToString());
             _ClientIpPort = string.Empty;
         }
 
-        private void OnClientConnected(object sender, ClientConnectedEventArgs e)
+        private void OnClientConnected(object sender, ConnectionEventArgs e)
         {
             Logger("Client " + e.IpPort + " connected");
             _ClientIpPort = e.IpPort;
         }
 
-        private void OnMessageReceived(object sender, MessageReceivedFromClientEventArgs e)
+        private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
             Logger("Client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }

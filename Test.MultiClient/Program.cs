@@ -182,7 +182,7 @@ namespace TestMultiClient
             Console.WriteLine("[client] finished");
         }
          
-        private static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
+        private static void ServerClientConnected(object sender, ConnectionEventArgs args) 
         {
             connectionCount++;
             Console.WriteLine("[server] connection from " + args.IpPort + " (now " + connectionCount + ")");
@@ -195,25 +195,25 @@ namespace TestMultiClient
             connections.Add(args.IpPort);
         }
          
-        private static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args) 
+        private static void ServerClientDisconnected(object sender, DisconnectionEventArgs args) 
         {
             connectionCount--;
             Console.WriteLine("[server] disconnection from " + args.IpPort + " [now " + connectionCount + "]: " + args.Reason.ToString());
         }
          
-        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        private static void ServerMsgReceived(object sender, MessageReceivedEventArgs args) 
         {
         }
          
-        private static void ClientServerConnected(object sender, EventArgs args) 
+        private static void ClientServerConnected(object sender, ConnectionEventArgs args) 
         {
         }
          
-        private static void ClientServerDisconnected(object sender, EventArgs args) 
+        private static void ClientServerDisconnected(object sender, DisconnectionEventArgs args) 
         {
         }
          
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
+        private static void ClientMsgReceived(object sender, MessageReceivedEventArgs args) 
         {
         }
 

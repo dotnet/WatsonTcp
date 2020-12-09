@@ -148,7 +148,7 @@ namespace TestThroughput
             }
         }
          
-        private void Test2ServerMsgRcv(object sender, MessageReceivedFromClientEventArgs args) 
+        private void Test2ServerMsgRcv(object sender, MessageReceivedEventArgs args) 
         {
             try
             {
@@ -161,7 +161,7 @@ namespace TestThroughput
             }
         }
 
-        private void Test2ClientMsgRcv(object sender, MessageReceivedFromServerEventArgs args)
+        private void Test2ClientMsgRcv(object sender, MessageReceivedEventArgs args)
         {
 
         }

@@ -23,8 +23,8 @@ namespace Test.WinFormClient
             label1.Text = "";
             
             _Client = new WatsonTcpClient("127.0.0.1", 9000);
-            _Client.Events.ServerConnected += OnServerConnected;
-            _Client.Events.ServerDisconnected += OnServerDisconnected;
+            _Client.Events.ServerConnected += ServerConnected;
+            _Client.Events.ServerDisconnected += ServerDisconnected;
             _Client.Events.AuthenticationFailure += OnAuthenticationFailure;
             _Client.Events.MessageReceived += MessageReceived;
             _Client.Settings.Logger = Logger;
@@ -40,14 +40,14 @@ namespace Test.WinFormClient
             Logger("Authentication failure.");
         }
 
-        private void OnServerDisconnected(object sender, EventArgs e)
+        private void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Logger("Server disconnected.");
+            Logger(args.IpPort + " connected");
         }
 
-        private void OnServerConnected(object sender, EventArgs e)
+        private void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Logger("Server connected.");
+            Logger(args.IpPort + " disconnected: " + args.Reason.ToString());
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -71,9 +71,9 @@ namespace Test.WinFormClient
             _Client.Dispose();
         }
 
-        private void MessageReceived(object sender, MessageReceivedFromServerEventArgs e)
+        private void MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Logger("Message received: " + Encoding.UTF8.GetString(e.Data));
+            Logger("Message from " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }
     }
 }

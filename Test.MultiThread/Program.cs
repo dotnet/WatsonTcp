@@ -216,18 +216,18 @@ namespace TestMultiThread
             Console.WriteLine("[server] Finished");
         }
 
-        private static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
+        private static void ServerClientConnected(object sender, ConnectionEventArgs args) 
         {
             Console.WriteLine("[server] connection from " + args.IpPort);
             _ClientIpPort = args.IpPort;
         }
          
-        private static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+        private static void ServerClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
 
-        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void ServerMsgReceived(object sender, MessageReceivedEventArgs args)
         {
             // Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
             try
@@ -250,7 +250,7 @@ namespace TestMultiThread
             }
         }
 
-        private static void ServerStreamReceived(object sender, StreamReceivedFromClientEventArgs args)
+        private static void ServerStreamReceived(object sender, StreamReceivedEventArgs args)
         {
             // Console.WriteLine("[server] stream from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
             try
@@ -297,17 +297,16 @@ namespace TestMultiThread
             return new SyncResponse(req, new byte[0]);
         }
 
-        private static void ClientServerConnected(object sender, EventArgs args) 
+        private static void ClientServerConnected(object sender, ConnectionEventArgs args) 
         {
         }
          
-        private static void ClientServerDisconnected(object sender, EventArgs args) 
+        private static void ClientServerDisconnected(object sender, DisconnectionEventArgs args) 
         {
         }
 
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args)
-        {
-            // Console.WriteLine("[client] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
+        private static void ClientMsgReceived(object sender, MessageReceivedEventArgs args)
+        {  
             try
             {
                 string md5 = BytesToHex(Md5(args.Data));
@@ -328,9 +327,8 @@ namespace TestMultiThread
             }
         }
 
-        private static void ClientStreamReceived(object sender, StreamReceivedFromServerEventArgs args)
-        {
-            // Console.WriteLine("[client] stream from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
+        private static void ClientStreamReceived(object sender, StreamReceivedEventArgs args)
+        { 
             try
             {
                 string md5 = BytesToHex(Md5(args.Data)); 

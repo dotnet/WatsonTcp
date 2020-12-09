@@ -334,17 +334,17 @@ namespace Test.MaxConnections
             }
         }
 
-        private static void ClientConnected(object sender, ClientConnectedEventArgs args)
+        private static void ClientConnected(object sender, ConnectionEventArgs args)
         {
             Console.WriteLine("Client connected: " + args.IpPort);
         }
 
-        private static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+        private static void ClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
 
-        private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
             Console.WriteLine("Message received from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
             if (args.Metadata != null && args.Metadata.Count > 0)

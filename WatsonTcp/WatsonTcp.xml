@@ -34,34 +34,34 @@
             The IP:port of the client.
             </summary>
         </member>
-        <member name="T:WatsonTcp.ClientConnectedEventArgs">
-            <summary>
-            Event arguments for when a client connects to the server.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.ClientConnectedEventArgs.IpPort">
-            <summary>
-            The IP:port of the client.
-            </summary>
-        </member>
-        <member name="T:WatsonTcp.ClientDisconnectedEventArgs">
-            <summary>
-            Event arguments for when a client disconnects from the server.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.ClientDisconnectedEventArgs.IpPort">
-            <summary>
-            The IP:port of the client.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.ClientDisconnectedEventArgs.Reason">
-            <summary>
-            The reason for the disconnection.
-            </summary>
-        </member>
         <member name="M:WatsonTcp.ClientMetadata.Dispose">
             <summary>
             Tear down the object and dispose of resources.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.ConnectionEventArgs">
+            <summary>
+            Event arguments for when a connection is established.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionEventArgs.IpPort">
+            <summary>
+            The IP:port of the endpoint to which the connection was established.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.DisconnectionEventArgs">
+            <summary>
+            Event arguments for when a disconnection is encountered.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.DisconnectionEventArgs.IpPort">
+            <summary>
+            The IP:port of the endpoint for which the disconnection was detected.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.DisconnectionEventArgs.Reason">
+            <summary>
+            The reason for the disconnection.
             </summary>
         </member>
         <member name="T:WatsonTcp.DisconnectReason">
@@ -74,7 +74,7 @@
             Normal disconnection.
             </summary>
         </member>
-        <member name="F:WatsonTcp.DisconnectReason.Kicked">
+        <member name="F:WatsonTcp.DisconnectReason.Removed">
             <summary>
             Client connection was intentionally terminated programmatically or by the server.
             </summary>
@@ -82,6 +82,11 @@
         <member name="F:WatsonTcp.DisconnectReason.Timeout">
             <summary>
             Client connection timed out; server did not receive data within the timeout window.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.DisconnectReason.Shutdown">
+            <summary>
+            Disconnect due to server shutdown.
             </summary>
         </member>
         <member name="T:WatsonTcp.ExceptionEventArgs">
@@ -99,39 +104,24 @@
             JSON representation of the exception.
             </summary>
         </member>
-        <member name="T:WatsonTcp.MessageReceivedFromClientEventArgs">
+        <member name="T:WatsonTcp.MessageReceivedEventArgs">
             <summary>
-            Event arguments for when a message is received from a client.
+            Event arguments for when a message is received.
             </summary>
         </member>
-        <member name="P:WatsonTcp.MessageReceivedFromClientEventArgs.IpPort">
+        <member name="P:WatsonTcp.MessageReceivedEventArgs.IpPort">
             <summary>
-            The IP:port of the client.
+            The IP:port of the endpoint.
             </summary>
         </member>
-        <member name="P:WatsonTcp.MessageReceivedFromClientEventArgs.Metadata">
+        <member name="P:WatsonTcp.MessageReceivedEventArgs.Metadata">
             <summary>
-            The metadata received from the client.
+            The metadata received from the endpoint.
             </summary>
         </member>
-        <member name="P:WatsonTcp.MessageReceivedFromClientEventArgs.Data">
+        <member name="P:WatsonTcp.MessageReceivedEventArgs.Data">
             <summary>
-            The data received from the client.
-            </summary>
-        </member>
-        <member name="T:WatsonTcp.MessageReceivedFromServerEventArgs">
-            <summary>
-            Event arguments for when a message is received from the server.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.MessageReceivedFromServerEventArgs.Metadata">
-            <summary>
-            The metadata received from the server.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.MessageReceivedFromServerEventArgs.Data">
-            <summary>
-            The data received from the server.
+            The data received from the endpoint.
             </summary>
         </member>
         <member name="T:WatsonTcp.MessageStatus">
@@ -179,14 +169,19 @@
             Removed
             </summary>
         </member>
-        <member name="F:WatsonTcp.MessageStatus.Disconnecting">
+        <member name="F:WatsonTcp.MessageStatus.Shutdown">
             <summary>
-            Disconnecting
+            Shutdown
             </summary>
         </member>
         <member name="F:WatsonTcp.MessageStatus.Heartbeat">
             <summary>
             Heartbeat
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.MessageStatus.Timeout">
+            <summary>
+            Timeout
             </summary>
         </member>
         <member name="T:WatsonTcp.Mode">
@@ -204,58 +199,32 @@
             Ssl.
             </summary>
         </member>
-        <member name="T:WatsonTcp.StreamReceivedFromClientEventArgs">
+        <member name="T:WatsonTcp.StreamReceivedEventArgs">
             <summary>
-            Event arguments for when a stream is received from a client.
+            Event arguments for when a stream is received.
             </summary>
         </member>
-        <member name="P:WatsonTcp.StreamReceivedFromClientEventArgs.IpPort">
+        <member name="P:WatsonTcp.StreamReceivedEventArgs.IpPort">
             <summary>
-            The IP:port of the client.
+            The IP:port of the endpoint.
             </summary>
         </member>
-        <member name="P:WatsonTcp.StreamReceivedFromClientEventArgs.Metadata">
+        <member name="P:WatsonTcp.StreamReceivedEventArgs.Metadata">
             <summary>
-            The metadata received from the client.
+            The metadata received from the endpoint.
             </summary>
         </member>
-        <member name="P:WatsonTcp.StreamReceivedFromClientEventArgs.ContentLength">
-            <summary>
-            The number of data bytes that should be read from DataStream.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.StreamReceivedFromClientEventArgs.DataStream">
-            <summary>
-            The stream containing the message data.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.StreamReceivedFromClientEventArgs.Data">
-            <summary>
-            The data from DataStream.
-            Using Data will fully read the contents of DataStream.
-            </summary>
-        </member>
-        <member name="T:WatsonTcp.StreamReceivedFromServerEventArgs">
-            <summary>
-            Event arguments for when a stream is received from the server.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.StreamReceivedFromServerEventArgs.Metadata">
-            <summary>
-            The metadata received from the server.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.StreamReceivedFromServerEventArgs.ContentLength">
+        <member name="P:WatsonTcp.StreamReceivedEventArgs.ContentLength">
             <summary>
             The number of data bytes that should be read from DataStream.
             </summary>
         </member>
-        <member name="P:WatsonTcp.StreamReceivedFromServerEventArgs.DataStream">
+        <member name="P:WatsonTcp.StreamReceivedEventArgs.DataStream">
             <summary>
             The stream containing the message data.
             </summary>
         </member>
-        <member name="P:WatsonTcp.StreamReceivedFromServerEventArgs.Data">
+        <member name="P:WatsonTcp.StreamReceivedEventArgs.Data">
             <summary>
             The data from DataStream.
             Using Data will fully read the contents of DataStream.
@@ -719,11 +688,13 @@
         <member name="E:WatsonTcp.WatsonTcpClientEvents.ServerConnected">
             <summary>
             Event fired when the client successfully connects to the server.
+            The IP:port of the server is passed in the arguments.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpClientEvents.ServerDisconnected">
             <summary>
             Event fired when the client disconnects from the server.
+            The IP:port of the server is passed in the arguments.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpClientEvents.ExceptionEncountered">
@@ -1020,16 +991,18 @@
             </summary>
             <returns>An enumerable string list containing each client IP:port.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.DisconnectClient(System.String)">
+        <member name="M:WatsonTcp.WatsonTcpServer.DisconnectClient(System.String,WatsonTcp.MessageStatus)">
             <summary>
             Disconnects the specified client.
             </summary>
             <param name="ipPort">IP:port of the client.</param>
+            <param name="status">Reason for the disconnect.  This is conveyed to the client.</param>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.DisconnectClients">
+        <member name="M:WatsonTcp.WatsonTcpServer.DisconnectClients(WatsonTcp.MessageStatus)">
             <summary>
             Disconnects all connected clients.
             </summary>
+            <param name="status">Reason for the disconnect.  This is conveyed to each client.</param>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.Dispose(System.Boolean)">
             <summary>

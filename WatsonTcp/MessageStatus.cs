@@ -52,14 +52,19 @@ namespace WatsonTcp
         [EnumMember(Value = "Removed")] 
         Removed = 7,
         /// <summary>
-        /// Disconnecting
+        /// Shutdown
         /// </summary>
-        [EnumMember(Value = "Disconnecting")]
-        Disconnecting = 8,
+        [EnumMember(Value = "Shutdown")]
+        Shutdown = 8,
         /// <summary>
         /// Heartbeat
         /// </summary>
         [EnumMember(Value = "Heartbeat")]
-        Heartbeat = 9
+        Heartbeat = 9,
+        /// <summary>
+        /// Timeout
+        /// </summary>
+        [EnumMember(Value = "Timeout")]
+        Timeout = 10
     }
 }

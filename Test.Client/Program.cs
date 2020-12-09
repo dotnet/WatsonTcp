@@ -367,9 +367,9 @@ namespace TestClient
             Console.WriteLine("Authentication failed");
         }
          
-        private static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
+        private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            Console.Write("Message from server: ");
+            Console.Write("Message from " + args.IpPort + ": ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
@@ -407,14 +407,14 @@ namespace TestClient
             return new SyncResponse(req, retMetadata, "Here is your response!");
         }
 
-        private static void ServerConnected(object sender, EventArgs args) 
+        private static void ServerConnected(object sender, ConnectionEventArgs args) 
         {
-            Console.WriteLine("Server connected"); 
+            Console.WriteLine(args.IpPort + " connected"); 
         }
 
-        private static void ServerDisconnected(object sender, EventArgs args)
+        private static void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine("Server disconnected");
+            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
         }
 
         private static void SendAndWait()

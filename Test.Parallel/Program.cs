@@ -170,32 +170,32 @@ namespace TestParallel
             Console.WriteLine("[client] finished");
         }
          
-        private static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
+        private static void ServerClientConnected(object sender, ConnectionEventArgs args) 
         {
             Console.WriteLine("[server] connection from " + args.IpPort);
         }
          
-        private static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args) 
+        private static void ServerClientDisconnected(object sender, DisconnectionEventArgs args) 
         {
             Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        private static void ServerMsgReceived(object sender, MessageReceivedEventArgs args) 
         {
             Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
          
-        private static void ClientServerConnected(object sender, EventArgs args) 
+        private static void ClientServerConnected(object sender, ConnectionEventArgs args) 
         {
         }
          
-        private static void ClientServerDisconnected(object sender, EventArgs args) 
+        private static void ClientServerDisconnected(object sender, DisconnectionEventArgs args) 
         {
         }
          
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
+        private static void ClientMsgReceived(object sender, MessageReceivedEventArgs args) 
         {
-            Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
+            Console.WriteLine("[client] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
 
         public static byte[] InitByteArray(int count, byte val)

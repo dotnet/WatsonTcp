@@ -23,7 +23,7 @@ namespace Test.FastDisconnect
             }
         }
 
-        static void MessageReceived(object sender, MessageReceivedFromServerEventArgs args)
+        static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
 
         }

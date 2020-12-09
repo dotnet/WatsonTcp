@@ -5,17 +5,17 @@ using System.Text;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Event arguments for when a client connects to the server.
+    /// Event arguments for when a connection is established.
     /// </summary>
-    public class ClientConnectedEventArgs
+    public class ConnectionEventArgs : EventArgs
     {
-        internal ClientConnectedEventArgs(string ipPort)
+        internal ConnectionEventArgs(string ipPort)
         {
             IpPort = ipPort;
         }
 
         /// <summary>
-        /// The IP:port of the client.
+        /// The IP:port of the endpoint to which the connection was established.
         /// </summary>
         public string IpPort { get; }
     }

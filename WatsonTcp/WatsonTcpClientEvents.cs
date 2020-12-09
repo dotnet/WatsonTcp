@@ -25,23 +25,25 @@ namespace WatsonTcp
         /// This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload. 
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<MessageReceivedFromServerEventArgs> MessageReceived;
+        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
 
         /// <summary> 
         /// This callback is called when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
         /// If MessageReceived is set, StreamReceived will not be used.
         /// </summary>
-        public event EventHandler<StreamReceivedFromServerEventArgs> StreamReceived;
+        public event EventHandler<StreamReceivedEventArgs> StreamReceived;
 
         /// <summary>
         /// Event fired when the client successfully connects to the server.
+        /// The IP:port of the server is passed in the arguments.
         /// </summary>
-        public event EventHandler ServerConnected;
+        public event EventHandler<ConnectionEventArgs> ServerConnected;
 
         /// <summary>
         /// Event fired when the client disconnects from the server.
+        /// The IP:port of the server is passed in the arguments.
         /// </summary>
-        public event EventHandler ServerDisconnected;
+        public event EventHandler<DisconnectionEventArgs> ServerDisconnected;
 
         /// <summary>
         /// This event is fired when an exception is encountered.
@@ -104,22 +106,22 @@ namespace WatsonTcp
             WrappedEventHandler(() => AuthenticationFailure?.Invoke(sender, args), "AuthenticationFailure", sender);
         }
 
-        internal void HandleMessageReceived(object sender, MessageReceivedFromServerEventArgs args)
+        internal void HandleMessageReceived(object sender, MessageReceivedEventArgs args)
         {
             WrappedEventHandler(() => MessageReceived?.Invoke(sender, args), "MessageReceived", sender);
         }
 
-        internal void HandleStreamReceived(object sender, StreamReceivedFromServerEventArgs args)
+        internal void HandleStreamReceived(object sender, StreamReceivedEventArgs args)
         {
             WrappedEventHandler(() => StreamReceived?.Invoke(sender, args), "StreamReceived", sender);
         }
 
-        internal void HandleServerConnected(object sender, EventArgs args)
+        internal void HandleServerConnected(object sender, ConnectionEventArgs args)
         {
             WrappedEventHandler(() => ServerConnected?.Invoke(sender, args), "ServerConnected", sender);
         }
 
-        internal void HandleServerDisconnected(object sender, EventArgs args)
+        internal void HandleServerDisconnected(object sender, DisconnectionEventArgs args)
         {
             WrappedEventHandler(() => ServerDisconnected?.Invoke(sender, args), "ServerDisconnected", sender);
         }
