@@ -260,6 +260,16 @@ namespace WatsonTcp
                 while (true)
                 {
                     byte[] endCheck = headerBytes.Skip(headerBytes.Length - 4).Take(4).ToArray();
+
+                    if ((int)endCheck[3] == 0
+                       && (int)endCheck[2] == 0
+                       && (int)endCheck[1] == 0
+                       && (int)endCheck[0] == 0)
+                    {
+                        _Logger?.Invoke(_Header + "null header data, peer disconnect detected");
+                        return false;
+                    }
+
                     if ((int)endCheck[3] == 10
                         && (int)endCheck[2] == 13
                         && (int)endCheck[1] == 10
