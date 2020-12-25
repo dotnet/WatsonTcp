@@ -2,14 +2,18 @@
 
 ## Current Version
 
+v4.7.1
+
+- Breaking change; TCP keepalives now disabled by default due to incompatibility and problems on some platforms
+
+## Previous Versions
+
 v4.7.0
 
 - Breaking changes
 - Consolidated connection/disconnection event arguments
 - Consolidated message/stream received event arguments
 - Aligned disconnection reason with message status
-
-## Previous Versions
 
 v4.6.0.0
 

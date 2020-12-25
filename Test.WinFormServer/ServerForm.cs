@@ -71,7 +71,7 @@ namespace Test.WinFormServer
             if (this.InvokeRequired)
                 this.Invoke(new _LogDelegate(Logger), new object[] { msg });
             else
-                label1.Text += Environment.NewLine + msg;
+                label1.Text += Environment.NewLine + msg; 
         }
 
         private void bStop_Click(object sender, EventArgs e)

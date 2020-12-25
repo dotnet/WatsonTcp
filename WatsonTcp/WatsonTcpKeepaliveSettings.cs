@@ -20,7 +20,7 @@ namespace WatsonTcp
         /// Enable or disable TCP-based keepalive probes.
         /// TCP keepalives are only supported in .NET Core and .NET Framework projects.  .NET Standard does not provide facilities to support TCP keepalives.
         /// </summary>
-        public bool EnableTcpKeepAlives = true;
+        public bool EnableTcpKeepAlives = false;
 
         /// <summary>
         /// TCP keepalive interval, i.e. the number of seconds a TCP connection will wait for a keepalive response before sending another keepalive probe.
