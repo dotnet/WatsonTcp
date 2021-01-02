@@ -22,7 +22,7 @@ namespace TestServer
 
         private static void Main(string[] args)
         {
-            _ServerIp = InputString("Server IP:", "127.0.0.1", false);
+            _ServerIp = InputString("Server IP:", "localhost", false);
             _ServerPort = InputInteger("Server port:", 9000, true, false);
             _Ssl = InputBoolean("Use SSL:", false);
 

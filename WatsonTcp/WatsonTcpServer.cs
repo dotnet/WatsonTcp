@@ -182,6 +182,11 @@ namespace WatsonTcp
                 _ListenerIpAddress = IPAddress.Any;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
+            else if (listenerIp.Equals("localhost") || listenerIp.Equals("127.0.0.1") || listenerIp.Equals("::1"))
+            {
+                _ListenerIpAddress = IPAddress.Loopback;
+                _ListenerIp = _ListenerIpAddress.ToString();
+            }
             else
             {
                 _ListenerIpAddress = IPAddress.Parse(listenerIp);
@@ -215,6 +220,11 @@ namespace WatsonTcp
             if (String.IsNullOrEmpty(listenerIp))
             {
                 _ListenerIpAddress = IPAddress.Any;
+                _ListenerIp = _ListenerIpAddress.ToString();
+            }
+            else if (listenerIp.Equals("localhost") || listenerIp.Equals("127.0.0.1") || listenerIp.Equals("::1"))
+            {
+                _ListenerIpAddress = IPAddress.Loopback;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
             else
@@ -260,6 +270,11 @@ namespace WatsonTcp
             if (String.IsNullOrEmpty(listenerIp))
             {
                 _ListenerIpAddress = IPAddress.Any;
+                _ListenerIp = _ListenerIpAddress.ToString();
+            }
+            else if (listenerIp.Equals("localhost") || listenerIp.Equals("127.0.0.1") || listenerIp.Equals("::1"))
+            {
+                _ListenerIpAddress = IPAddress.Loopback;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
             else
