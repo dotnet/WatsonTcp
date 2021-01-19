@@ -321,8 +321,6 @@ namespace WatsonTcp
             if (!_Events.IsUsingMessages && !_Events.IsUsingStreams)
                 throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set.");
 
-            if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
-
             if (_Mode == Mode.Tcp)
             {
                 _Settings.Logger?.Invoke(_Header + "starting on " + _ListenerIp + ":" + _ListenerPort);
@@ -698,6 +696,36 @@ namespace WatsonTcp
             }
         }
 
+        private void EnableKeepalives(TcpClient client)
+        {
+            try
+            {
+#if NETCOREAPP || NET5_0
+
+                client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime);
+                client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
+                client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+
+#elif NETFRAMEWORK
+
+                byte[] keepAlive = new byte[12]; 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
+                client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
+
+#elif NETSTANDARD
+
+#endif
+            }
+            catch (Exception)
+            {
+                _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
+                _Keepalive.EnableTcpKeepAlives = false;
+            }
+        }
+
         private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             // return true; // Allow untrusted certificates.
@@ -730,18 +758,20 @@ namespace WatsonTcp
 
                     #region Accept-and-Validate
 
-                    TcpClient tcp = await _Listener.AcceptTcpClientAsync().ConfigureAwait(false);
-                    tcp.LingerState.Enabled = false;
+                    TcpClient tcpClient = await _Listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                    tcpClient.LingerState.Enabled = false;
 
-                    string clientIp = ((IPEndPoint)tcp.Client.RemoteEndPoint).Address.ToString();
+                    if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives(tcpClient);
+
+                    string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
                     if (_Settings.PermittedIPs.Count > 0 && !_Settings.PermittedIPs.Contains(clientIp))
                     {
                         _Settings.Logger?.Invoke(_Header + "rejecting connection from " + clientIp + " (not permitted)");
-                        tcp.Close();
+                        tcpClient.Close();
                         continue;
                     }
 
-                    ClientMetadata client = new ClientMetadata(tcp);
+                    ClientMetadata client = new ClientMetadata(tcpClient);
                     CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_Token, client.Token);
 
                     #endregion

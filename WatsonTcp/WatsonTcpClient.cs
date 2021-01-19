@@ -259,8 +259,6 @@ namespace WatsonTcp
             if (!_Events.IsUsingMessages && !_Events.IsUsingStreams) 
                 throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set.");
 
-            if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
-
             if (_Mode == Mode.Tcp)
             {
                 #region TCP
@@ -287,6 +285,8 @@ namespace WatsonTcp
                     _TcpStream = _Client.GetStream();
                     _DataStream = _TcpStream;
                     _SslStream = null;
+
+                    if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
 
                     Connected = true;
                 }
@@ -656,6 +656,7 @@ namespace WatsonTcp
             catch (Exception)
             {
                 _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
+                _Keepalive.EnableTcpKeepAlives = false;
             }
         }
 

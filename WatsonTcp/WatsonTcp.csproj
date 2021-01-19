@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;netstandard2.0;netstandard2.1;net461;net5.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>4.7.1.1</Version>
+    <Version>4.7.1.2</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
