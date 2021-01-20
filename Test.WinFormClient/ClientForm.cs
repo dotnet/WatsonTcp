@@ -14,8 +14,7 @@ namespace Test.WinFormClient
     public partial class ClientForm : Form
     {
         private WatsonTcpClient _Client = null;
-
-        delegate void _LogDelegate(string msg);
+        delegate void _LogDelegate(Severity sev, string msg);
         
         public ClientForm()
         {
@@ -37,33 +36,32 @@ namespace Test.WinFormClient
          
         private void OnAuthenticationFailure(object sender, EventArgs e)
         {
-            Logger("Authentication failure.");
+            Logger(Severity.Error, "Authentication failure.");
         }
 
         private void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Logger(args.IpPort + " connected");
+            Logger(Severity.Debug, args.IpPort + " connected");
         }
 
         private void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Logger(args.IpPort + " disconnected: " + args.Reason.ToString());
+            Logger(Severity.Debug, args.IpPort + " disconnected: " + args.Reason.ToString());
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             _Client.Send("Hello world!");
-            Logger("Sent message 'Hello world!'");
+            Logger(Severity.Debug, "Sent message 'Hello world!'");
         }
 
-        private void Logger(string msg)
+        private void Logger(Severity sev, string msg)
         {
             // If this is called by another thread we have to use Invoke           
             if (this.InvokeRequired)
-                this.Invoke(new _LogDelegate(Logger), new object[] { msg });
+                this.Invoke(new _LogDelegate(Logger), new object[] { sev, msg });
             else
-                label1.Text += Environment.NewLine + msg;
-                
+                label1.Text += Environment.NewLine + "[" + sev.ToString().PadRight(9) + "] " + msg;
         }
 
         private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -73,7 +71,7 @@ namespace Test.WinFormClient
 
         private void MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Logger("Message from " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
+            Logger(Severity.Debug, "Message from " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }
     }
 }

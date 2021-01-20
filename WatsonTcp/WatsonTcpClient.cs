@@ -263,7 +263,7 @@ namespace WatsonTcp
             {
                 #region TCP
 
-                _Settings.Logger?.Invoke(_Header + "connecting to " + _ServerIp + ":" + _ServerPort);
+                _Settings.Logger?.Invoke(Severity.Info, _Header + "connecting to " + _ServerIp + ":" + _ServerPort);
 
                 _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
@@ -275,6 +275,7 @@ namespace WatsonTcp
                     if (!connectSuccess)
                     {
                         _Client.Close();
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + "timeout connecting to " + _ServerIp + ":" + _ServerPort);
                         throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
                     }
 
@@ -292,6 +293,7 @@ namespace WatsonTcp
                 }
                 catch (Exception e)
                 {
+                    _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + Environment.NewLine + SerializationHelper.SerializeJson(e, true));
                     _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
@@ -306,7 +308,7 @@ namespace WatsonTcp
             {
                 #region SSL
 
-                _Settings.Logger?.Invoke(_Header + "connecting with SSL to " + _ServerIp + ":" + _ServerPort);
+                _Settings.Logger?.Invoke(Severity.Info, _Header + "connecting with SSL to " + _ServerIp + ":" + _ServerPort);
 
                 _Client.LingerState = new LingerOption(true, 0);
                 asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
@@ -318,6 +320,7 @@ namespace WatsonTcp
                     if (!connectSuccess)
                     {
                         _Client.Close();
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + "timeout connecting to " + _ServerIp + ":" + _ServerPort);
                         throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
                     }
 
@@ -339,16 +342,19 @@ namespace WatsonTcp
 
                     if (!_SslStream.IsEncrypted)
                     {
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + "stream to " + _ServerIp + ":" + _ServerPort + " is not encrypted");
                         throw new AuthenticationException("Stream is not encrypted");
                     }
 
                     if (!_SslStream.IsAuthenticated)
                     {
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + "stream to " + _ServerIp + ":" + _ServerPort + " is not authenticated");
                         throw new AuthenticationException("Stream is not authenticated");
                     }
 
                     if (_Settings.MutuallyAuthenticate && !_SslStream.IsMutuallyAuthenticated)
                     {
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + "mutual authentication with " + _ServerIp + ":" + _ServerPort + " failed");
                         throw new AuthenticationException("Mutual authentication failed");
                     }
 
@@ -358,6 +364,7 @@ namespace WatsonTcp
                 }
                 catch (Exception e)
                 {
+                    _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + Environment.NewLine + SerializationHelper.SerializeJson(e, true));
                     _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
@@ -379,7 +386,7 @@ namespace WatsonTcp
             _DataReceiver = Task.Run(() => DataReceiver(), _Token);
             _MonitorSyncResponses = Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
             _Events.HandleServerConnected(this, new ConnectionEventArgs((_ServerIp + ":" + _ServerPort)));
-            _Settings.Logger?.Invoke(_Header + "connected");
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
         }
          
         /// <summary>
@@ -389,7 +396,7 @@ namespace WatsonTcp
         {
             if (!Connected) throw new InvalidOperationException("Nonnected to the server.");
 
-            _Settings.Logger?.Invoke(_Header + "disconnecting");
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
             if (Connected)
             {
@@ -425,7 +432,7 @@ namespace WatsonTcp
 
             Connected = false;
 
-            _Settings.Logger?.Invoke(_Header + "disconnected");
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnected from " + _ServerIp + ":" + _ServerPort);
         }
 
         /// <summary>
@@ -590,7 +597,7 @@ namespace WatsonTcp
         { 
             if (disposing)
             {
-                _Settings.Logger?.Invoke(_Header + "disposing");
+                _Settings.Logger?.Invoke(Severity.Info, _Header + "disposing");
 
                 if (Connected) Disconnect();
 
@@ -655,7 +662,7 @@ namespace WatsonTcp
             }
             catch (Exception)
             {
-                _Settings.Logger?.Invoke(_Header + "keepalives not supported on this platform, disabled");
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "keepalives not supported on this platform, disabled");
                 _Keepalive.EnableTcpKeepAlives = false;
             }
         }
@@ -683,7 +690,7 @@ namespace WatsonTcp
 
                     if (_Client == null || !_Client.Connected)
                     {
-                        _Settings.Logger?.Invoke(_Header + "disconnect detected");
+                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected");
                         break;
                     }
 
@@ -702,7 +709,7 @@ namespace WatsonTcp
                     bool buildSuccess = await msg.BuildFromStream(_Token).ConfigureAwait(false);
                     if (!buildSuccess)
                     {
-                        _Settings.Logger?.Invoke(_Header + "disconnect detected");
+                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected");
                         break;
                     }
 
@@ -718,37 +725,37 @@ namespace WatsonTcp
 
                     if (msg.Status == MessageStatus.Removed)
                     {
-                        _Settings.Logger?.Invoke(_Header + "disconnect due to server-side removal");
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnect due to server-side removal");
                         reason = DisconnectReason.Removed;
                         break;
                     }
                     else if (msg.Status == MessageStatus.Shutdown)
                     {
-                        _Settings.Logger?.Invoke(_Header + "disconnect due to server shutdown");
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnect due to server shutdown");
                         reason = DisconnectReason.Shutdown;
                         break;
                     }
                     else if (msg.Status == MessageStatus.Timeout)
                     {
-                        _Settings.Logger?.Invoke(_Header + "disconnect due to timeout");
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnect due to timeout");
                         reason = DisconnectReason.Timeout;
                         break;
                     }
                     else if (msg.Status == MessageStatus.AuthSuccess)
                     {
-                        _Settings.Logger?.Invoke(_Header + "authentication successful");
+                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "authentication successful");
                         Task unawaited = Task.Run(() => _Events.HandleAuthenticationSucceeded(this, EventArgs.Empty), _Token);
                         continue;
                     }
                     else if (msg.Status == MessageStatus.AuthFailure)
                     {
-                        _Settings.Logger?.Invoke(_Header + "authentication failed");
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + "authentication failed");
                         Task unawaited = Task.Run(() => _Events.HandleAuthenticationFailure(this, EventArgs.Empty), _Token);
                         continue;
                     }
                     else if (msg.Status == MessageStatus.AuthRequired)
                     {
-                        _Settings.Logger?.Invoke(_Header + "authentication required by server; please authenticate using pre-shared key"); 
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "authentication required by server; please authenticate using pre-shared key"); 
                         string psk = _Callbacks.HandleAuthenticationRequested();
                         if (!String.IsNullOrEmpty(psk)) Authenticate(psk);
                         continue;
@@ -790,7 +797,7 @@ namespace WatsonTcp
                         }
                         else
                         { 
-                            _Settings.Logger?.Invoke(_Header + "expired synchronous request received and discarded");
+                            _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous request received and discarded");
                         } 
                     }
                     else if (msg.SyncResponse != null && msg.SyncResponse.Value)
@@ -808,7 +815,7 @@ namespace WatsonTcp
                         }
                         else
                         {
-                            _Settings.Logger?.Invoke(_Header + "expired synchronous response received and discarded");
+                            _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous response received and discarded");
                         }
                     }
                     else
@@ -829,24 +836,20 @@ namespace WatsonTcp
                             if (msg.ContentLength >= _Settings.MaxProxiedStreamSize)
                             {
                                 ws = new WatsonStream(msg.ContentLength, msg.DataStream);
-                                sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws);
-                                // sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, msg.DataStream);
-                                // must run synchronously, data exists in the underlying stream
+                                sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws); 
                                 _Events.HandleStreamReceived(this, sr);
                             }
                             else
                             {
                                 MemoryStream ms = WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize);
                                 ws = new WatsonStream(msg.ContentLength, ms);
-                                sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws);
-                                // sr = new StreamReceivedFromServerEventArgs(msg.Metadata, msg.ContentLength, ms);
-                                // data has been read, can continue to next message
+                                sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws); 
                                 Task unawaited = Task.Run(() => _Events.HandleStreamReceived(this, sr), _Token);
                             } 
                         }
                         else
                         {
-                            _Settings.Logger?.Invoke(_Header + "event handler not set for either MessageReceived or StreamReceived");
+                            _Settings.Logger?.Invoke(Severity.Error, _Header + "event handler not set for either MessageReceived or StreamReceived");
                             break;
                         }
                     }
@@ -870,11 +873,8 @@ namespace WatsonTcp
                 }
                 catch (Exception e)
                 {
-                    _Settings.Logger?.Invoke(
-                        _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ":" +
-                        Environment.NewLine +
-                        SerializationHelper.SerializeJson(e, true) +
-                        Environment.NewLine);
+                    _Settings.Logger?.Invoke(Severity.Error,
+                        _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ":" + Environment.NewLine + SerializationHelper.SerializeJson(e, true) + Environment.NewLine);
 
                     _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
@@ -887,7 +887,7 @@ namespace WatsonTcp
 
             Connected = false;
 
-            _Settings.Logger?.Invoke(_Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
+            _Settings.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
             _Events.HandleServerDisconnected(this, new DisconnectionEventArgs((_ServerIp + ":" + _ServerPort), reason));
         }
 
@@ -935,7 +935,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(
+                _Settings.Logger?.Invoke(Severity.Error,
                     _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ":" +
                     Environment.NewLine +
                     SerializationHelper.SerializeJson(e, true));
@@ -1002,7 +1002,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(
+                _Settings.Logger?.Invoke(Severity.Error,
                     _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ":" +
                     Environment.NewLine +
                     e.ToString() +
@@ -1061,7 +1061,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(
+                _Settings.Logger?.Invoke(Severity.Error,
                     _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ":" +
                     Environment.NewLine +
                     e.ToString() +
@@ -1165,7 +1165,7 @@ namespace WatsonTcp
 
                             foreach (KeyValuePair<string, SyncResponse> curr in expired)
                             {
-                                _Settings.Logger?.Invoke(_Header + "expiring response " + curr.Key.ToString());
+                                _Settings.Logger?.Invoke(Severity.Debug, _Header + "expiring response " + curr.Key.ToString());
                                 _SyncResponses.Remove(curr.Key);
                             }
                         }
@@ -1204,8 +1204,15 @@ namespace WatsonTcp
                     Task.Delay(50).Wait(_Token);
                 }
 
-                if (ret != null) return ret;
-                else throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+                if (ret != null)
+                {
+                    return ret;
+                }
+                else
+                {
+                    _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
+                    throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+                }
             }
             catch (TaskCanceledException)
             {

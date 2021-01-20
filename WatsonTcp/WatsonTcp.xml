@@ -199,6 +199,46 @@
             Ssl.
             </summary>
         </member>
+        <member name="T:WatsonTcp.Severity">
+            <summary>
+            Message severity.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Severity.Debug">
+            <summary>
+            Debug messages.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Severity.Info">
+            <summary>
+            Informational messages.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Severity.Warn">
+            <summary>
+            Warning messages.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Severity.Error">
+            <summary>
+            Error messages.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Severity.Alert">
+            <summary>
+            Alert messages.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Severity.Critical">
+            <summary>
+            Critical messages.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.Severity.Emergency">
+            <summary>
+            Emergency messages.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.StreamReceivedEventArgs">
             <summary>
             Event arguments for when a stream is received.
@@ -365,7 +405,7 @@
             Do not use.
             </summary>
         </member>
-        <member name="M:WatsonTcp.WatsonMessage.#ctor(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream,System.Boolean,System.Boolean,System.Nullable{System.DateTime},System.String,System.Action{System.String})">
+        <member name="M:WatsonTcp.WatsonMessage.#ctor(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream,System.Boolean,System.Boolean,System.Nullable{System.DateTime},System.String,System.Action{WatsonTcp.Severity,System.String})">
             <summary>
             Construct a new message to send.
             </summary>
@@ -378,7 +418,7 @@
             <param name="convGuid">Conversation GUID.</param>
             <param name="logger">Logger method.</param>
         </member>
-        <member name="M:WatsonTcp.WatsonMessage.#ctor(System.IO.Stream,System.Action{System.String})">
+        <member name="M:WatsonTcp.WatsonMessage.#ctor(System.IO.Stream,System.Action{WatsonTcp.Severity,System.String})">
             <summary>
             Read from a stream and construct a message.  Call BuildFromStream() to populate.
             </summary>

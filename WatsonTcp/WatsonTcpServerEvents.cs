@@ -169,7 +169,7 @@ namespace WatsonTcp
         {
             if (action == null) return;
 
-            Action<string> logger = ((WatsonTcpServer)sender).Settings.Logger;
+            Action<Severity, string> logger = ((WatsonTcpServer)sender).Settings.Logger;
 
             try
             {
@@ -177,7 +177,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                logger?.Invoke("Event handler exception in " + handler + ": " + Environment.NewLine + SerializationHelper.SerializeJson(e, true));
+                logger?.Invoke(Severity.Error, "Event handler exception in " + handler + ": " + Environment.NewLine + SerializationHelper.SerializeJson(e, true));
             }
         }
 

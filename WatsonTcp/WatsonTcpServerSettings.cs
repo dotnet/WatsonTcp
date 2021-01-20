@@ -54,7 +54,7 @@ namespace WatsonTcp
         /// <summary>
         /// Method to invoke when sending a log message.
         /// </summary>
-        public Action<string> Logger = null;
+        public Action<Severity, string> Logger = null;
 
         /// <summary>
         /// Enable acceptance of SSL certificates from clients that cannot be validated.
@@ -70,7 +70,7 @@ namespace WatsonTcp
         /// Preshared key that must be consistent between clients and this server.
         /// </summary>
         public string PresharedKey = null;
-         
+
         /// <summary>
         /// For Watson TCP server, the maximum amount of time to wait before considering a client idle and disconnecting them. 
         /// By default, this value is set to 0, which will never disconnect a client due to inactivity.
@@ -125,7 +125,18 @@ namespace WatsonTcp
         }
 
         #endregion
-         
+
+        #region Private-Members
+
+        private int _StreamBufferSize = 65536;
+        private int _MaxProxiedStreamSize = 67108864;
+
+        private int _MaxConnections = 4096;
+        private int _IdleClientTimeoutSeconds = 0;
+        private List<string> _PermittedIPs = new List<string>();
+
+        #endregion 
+
         #region Constructors-and-Factories
 
         /// <summary>
@@ -138,15 +149,12 @@ namespace WatsonTcp
 
         #endregion
 
-        #region Private-Members
+        #region Public-Methods
 
-        private int _StreamBufferSize = 65536;
-        private int _MaxProxiedStreamSize = 67108864;
-         
-        private int _MaxConnections = 4096;
-        private int _IdleClientTimeoutSeconds = 0;
-        private List<string> _PermittedIPs = new List<string>();
+        #endregion
 
-        #endregion 
+        #region Private-Methods
+
+        #endregion
     }
 }

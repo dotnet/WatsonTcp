@@ -457,9 +457,9 @@ namespace Test.TimeoutRecovery
             }
         }
 
-        private static void Logger(string msg)
+        private static void Logger(Severity sev, string msg)
         {
-            Console.WriteLine(msg);
+            Console.WriteLine("[" + sev.ToString().PadRight(9) + "] " + msg);
         }
     }
 }

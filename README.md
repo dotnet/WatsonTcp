@@ -11,9 +11,10 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - CavemanTcp - TCP client and server without framing that allows you direct control over socket I/O - https://github.com/jchristn/cavemantcp
 - SimpleTcp - TCP client and server without framing that sends received data to your application via callbacks - https://github.com/jchristn/simpletcp
 
-## New in v4.7.1
+## New in v4.8.0
 
-- Breaking change; TCP keepalives now disabled by default due to incompatibility and problems on some platforms
+- Breaking change; log messages now include a ```Severity``` parameter
+- TCP keepalives moved to the socket instead of the listener
 
 ## Test Applications
 
@@ -282,7 +283,32 @@ static void StreamReceived(object sender, StreamReceivedEventArgs args)
     Console.WriteLine("Stream received from " + args.IpPort + ": " + Encoding.UTF8.GetString(ms.ToArray())); 
 }
 ```
- 
+
+## Troubleshooting
+
+The first step in troubleshooting is to implement a logging method and attach it to ```Settings.Logger```, and as a general best practice while debugging, set ```Settings.DebugMessages``` to ```true```.
+
+```csharp
+client.Settings.DebugMessages = true;
+client.Settings.Logger = MyLoggerMethod;
+
+private void MyLoggerMethod(Severity sev, string msg)
+{
+    Console.WriteLine(sev.ToString() + ": " + msg);
+}
+```
+
+Additionally it is recommended that you implement the ```Events.ExceptionEncountered``` event.
+
+```csharp
+client.Events.ExceptionEncountered += MyExceptionEvent;
+
+private void MyExceptionEvent(object sender, ExceptionEventArgs args)
+{
+    Console.WriteLine(args.Json);
+}
+```
+
 ## Disconnection Handling
 
 The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically to provide a reference for WatsonTcp to handle a variety of disconnection scenarios.  The disconnection tests for which WatsonTcp is evaluated include:
@@ -309,7 +335,6 @@ server.Keepalive.TcpKeepAliveRetryCount = 5;    // number of failed keepalive pr
 Some important notes about TCP keepalives:
 
 - Keepalives only work in .NET Core and .NET Framework
-- Keepalives can be enabled on either client or server, but generally only work on server (being investigated)
 - ```Keepalive.TcpKeepAliveRetryCount``` is only applicable to .NET Core; for .NET Framework, this value is forced to 10
 
 ## Disconnecting Idle Clients

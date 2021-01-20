@@ -155,7 +155,7 @@ namespace WatsonTcp
 
         #region Private-Members
 
-        private Action<string> _Logger = null;
+        private Action<Severity, string> _Logger = null;
         private string _Header = "[WatsonMessage] ";
         //                                         1         2         3
         //                                12345678901234567890123456789012
@@ -197,7 +197,7 @@ namespace WatsonTcp
             bool syncResponse, 
             DateTime? expiration, 
             string convGuid,  
-            Action<string> logger)
+            Action<Severity, string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (contentLength > 0)
@@ -226,7 +226,7 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="stream">Stream.</param>
         /// <param name="logger">Logger method.</param>
-        internal WatsonMessage(Stream stream, Action<string> logger)
+        internal WatsonMessage(Stream stream, Action<Severity, string> logger)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (!stream.CanRead) throw new ArgumentException("Cannot read from stream.");
@@ -266,7 +266,7 @@ namespace WatsonTcp
                        && (int)endCheck[1] == 0
                        && (int)endCheck[0] == 0)
                     {
-                        _Logger?.Invoke(_Header + "null header data, peer disconnect detected");
+                        _Logger?.Invoke(Severity.Debug, _Header + "null header data, peer disconnect detected");
                         return false;
                     }
 
@@ -275,7 +275,7 @@ namespace WatsonTcp
                         && (int)endCheck[1] == 10
                         && (int)endCheck[0] == 13)
                     {
-                        _Logger?.Invoke(_Header + "found header demarcation");
+                        _Logger?.Invoke(Severity.Debug, _Header + "found header demarcation");
                         break;
                     }
 
@@ -294,7 +294,7 @@ namespace WatsonTcp
                 Expiration = msg.Expiration;
                 ConversationGuid = msg.ConversationGuid; 
 
-                _Logger?.Invoke(_Header + "header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(headerBytes).Trim()); 
+                _Logger?.Invoke(Severity.Debug, _Header + "header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(headerBytes).Trim()); 
 
                 #endregion 
 
@@ -302,27 +302,27 @@ namespace WatsonTcp
             }
             catch (TaskCanceledException)
             {
-                _Logger?.Invoke(_Header + "message read canceled");
+                _Logger?.Invoke(Severity.Debug, _Header + "message read canceled");
                 return false;
             }
             catch (OperationCanceledException)
             {
-                _Logger?.Invoke(_Header + "message read canceled");
+                _Logger?.Invoke(Severity.Debug, _Header + "message read canceled");
                 return false;
             }
             catch (ObjectDisposedException)
             {
-                _Logger?.Invoke(_Header + "socket disposed");
+                _Logger?.Invoke(Severity.Debug, _Header + "socket disposed");
                 return false;
             }
             catch (IOException)
             {
-                _Logger?.Invoke(_Header + "non-graceful termination by peer");
+                _Logger?.Invoke(Severity.Debug, _Header + "non-graceful termination by peer");
                 return false;
             }
             catch (Exception e)
             {
-                _Logger?.Invoke(_Header + "exception encountered: " +
+                _Logger?.Invoke(Severity.Error, _Header + "exception encountered: " +
                     Environment.NewLine +
                     "Header bytes: " + BitConverter.ToString(headerBytes).Replace("-", String.Empty) +
                     Environment.NewLine +

@@ -79,14 +79,14 @@ namespace Test.Deadlock
             }
         }
 
-        static void ServerLogger(string msg)
+        static void ServerLogger(Severity sev, string msg)
         {
-            Console.WriteLine("Server: " + msg);
+            Console.WriteLine("[Server] [" + sev.ToString().PadRight(9) + "] " + msg);
         }
 
-        static void ClientLogger(string msg)
+        static void ClientLogger(Severity sev, string msg)
         {
-            Console.WriteLine("Client: " + msg);
+            Console.WriteLine("[Client] [" + sev.ToString().PadRight(9) + "] " + msg);
         }
 
         static void ServerTask()

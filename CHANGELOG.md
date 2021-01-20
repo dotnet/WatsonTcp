@@ -2,11 +2,16 @@
 
 ## Current Version
 
+v4.8.0
+
+- Breaking change; log messages now include a ```Severity``` parameter
+- TCP keepalives moved to the socket instead of the listener
+
+## Previous Versions
+
 v4.7.1
 
 - Breaking change; TCP keepalives now disabled by default due to incompatibility and problems on some platforms
-
-## Previous Versions
 
 v4.7.0
 

@@ -17,7 +17,7 @@ namespace Test.WinFormServer
     {
         private string _ClientIpPort = null;
         private WatsonTcpServer _Server = null;
-        delegate void _LogDelegate(string msg);
+        delegate void _LogDelegate(Severity sev, string msg);
         
         public ServerForm()
         {
@@ -32,24 +32,24 @@ namespace Test.WinFormServer
             _Server.Events.ClientDisconnected += OnClientDisconnected;
             _Server.Settings.Logger = Logger; 
 
-            Logger("Server started.");
+            Logger(Severity.Debug, "Click 'Start' to start the server.");
         }
          
         private void OnClientDisconnected(object sender, DisconnectionEventArgs e)
         {
-            Logger("Client " + e.IpPort + " disconnected: " + e.Reason.ToString());
+            Logger(Severity.Debug, "Client " + e.IpPort + " disconnected: " + e.Reason.ToString());
             _ClientIpPort = string.Empty;
         }
 
         private void OnClientConnected(object sender, ConnectionEventArgs e)
         {
-            Logger("Client " + e.IpPort + " connected");
+            Logger(Severity.Debug, "Client " + e.IpPort + " connected");
             _ClientIpPort = e.IpPort;
         }
 
         private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Logger("Client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
+            Logger(Severity.Debug, "Client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }
 
         private void bSend_Click(object sender, EventArgs e)
@@ -57,21 +57,21 @@ namespace Test.WinFormServer
             if (!String.IsNullOrEmpty(_ClientIpPort))
             {
                 _Server.Send(_ClientIpPort, "Hello world!");
-                Logger("Sent 'Hello world!' to client " + _ClientIpPort);
+                Logger(Severity.Debug, "Sent 'Hello world!' to client " + _ClientIpPort);
             }
             else
             {
-                Logger("No client connected");
+                Logger(Severity.Warn, "No client connected");
             }
         }
 
-        private void Logger(string msg)
+        private void Logger(Severity sev, string msg)
         {
             // If this is called by another thread we have to use Invoke           
             if (this.InvokeRequired)
-                this.Invoke(new _LogDelegate(Logger), new object[] { msg });
+                this.Invoke(new _LogDelegate(Logger), new object[] { sev, msg });
             else
-                label1.Text += Environment.NewLine + msg; 
+                label1.Text += Environment.NewLine + "[" + sev.ToString().PadRight(9) + "] " + msg; 
         }
 
         private void bStop_Click(object sender, EventArgs e)
@@ -82,11 +82,11 @@ namespace Test.WinFormServer
             }
             catch (Exception ex)
             {
-                Logger("Stop exception");
-                Logger(SerializationHelper.SerializeJson(ex, true));
+                Logger(Severity.Error, "Stop exception");
+                Logger(Severity.Error, SerializationHelper.SerializeJson(ex, true));
             }
 
-            Logger("Leaving bStop_Click");
+            Logger(Severity.Debug, "Leaving bStop_Click");
         }
 
         private void bStart_Click(object sender, EventArgs e)
@@ -97,11 +97,11 @@ namespace Test.WinFormServer
             }
             catch (Exception ex)
             {
-                Logger("Start exception");
-                Logger(SerializationHelper.SerializeJson(ex, true));
+                Logger(Severity.Error, "Start exception");
+                Logger(Severity.Error, SerializationHelper.SerializeJson(ex, true));
             }
 
-            Logger("Leaving bStart_Click");
+            Logger(Severity.Debug, "Leaving bStart_Click");
         }
     }
 

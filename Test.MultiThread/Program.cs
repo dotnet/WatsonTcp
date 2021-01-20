@@ -62,7 +62,7 @@ namespace TestMultiThread
             else _Server.Events.StreamReceived += ServerStreamReceived;
             _Server.Callbacks.SyncRequestReceived = ServerSyncRequestReceived;
             _Server.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Server.Settings.Logger = Console.WriteLine;
+            _Server.Settings.Logger = ServerLogger;
             _Server.Settings.DebugMessages = _Debug;
             _Server.Start();
             
@@ -75,7 +75,7 @@ namespace TestMultiThread
             else _Client.Events.StreamReceived += ClientStreamReceived; 
             _Client.Callbacks.SyncRequestReceived = ClientSyncRequestReceived;
             _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Client.Settings.Logger = Console.WriteLine;
+            _Client.Settings.Logger = ClientLogger;
             _Client.Settings.DebugMessages = _Debug;
             _Client.Connect();
             
@@ -114,7 +114,7 @@ namespace TestMultiThread
             else _Server.Events.StreamReceived += ServerStreamReceived;
             _Server.Callbacks.SyncRequestReceived = ServerSyncRequestReceived;
             _Server.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Server.Settings.Logger = Console.WriteLine;
+            _Server.Settings.Logger = ServerLogger;
             _Server.Start();
 
             Thread.Sleep(2000);
@@ -126,7 +126,7 @@ namespace TestMultiThread
             else _Client.Events.StreamReceived += ClientStreamReceived;
             _Client.Callbacks.SyncRequestReceived = ClientSyncRequestReceived;
             _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
-            _Client.Settings.Logger = Console.WriteLine;
+            _Client.Settings.Logger = ClientLogger;
             _Client.Connect();
 
             while (String.IsNullOrEmpty(_ClientIpPort)) ;
@@ -441,5 +441,14 @@ namespace TestMultiThread
             return data;
         }
 
+        private static void ServerLogger(Severity sev, string msg)
+        {
+            Console.WriteLine("[Server] [" + sev.ToString().PadRight(9) + "] " + msg);
+        }
+
+        private static void ClientLogger(Severity sev, string msg)
+        {
+            Console.WriteLine("[Client] [" + sev.ToString().PadRight(9) + "] " + msg);
+        }
     }
 }
