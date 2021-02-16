@@ -76,7 +76,7 @@ Special thanks to the following people for their support and contributions to th
 
 @brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
-@DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck
+@DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
@@ -155,7 +155,7 @@ static void Main(string[] args)
     client.Events.ServerDisconnected += ServerDisconnected;
     client.Events.MessageReceived += MessageReceived; 
     client.Callbacks.SyncRequestReceived = SyncRequestReceived;
-    client.Start();
+    client.Connect();
 
     // check connectivity
     Console.WriteLine("Am I connected?  " + client.Connected);
@@ -218,7 +218,7 @@ server.Start();
 WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000, "test.pfx", "password"); 
 client.Settings.AcceptInvalidCertificates = true;
 client.Settings.MutuallyAuthenticate = true;
-client.Start();
+client.Connect();
 ```
 
 ## Example with Streams
@@ -259,7 +259,7 @@ WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
 client.Events.ServerConnected += ServerConnected;
 client.Events.ServerDisconnected += ServerDisconnected;
 client.Events.StreamReceived += StreamReceived; 
-client.Start();
+client.Connect();
 
 static void StreamReceived(object sender, StreamReceivedEventArgs args)
 {
