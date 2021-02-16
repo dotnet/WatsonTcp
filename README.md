@@ -209,7 +209,7 @@ static SyncResponse SyncRequestReceived(SyncRequest req)
 The examples above can be modified to use SSL as follows.  No other changes are needed.  Ensure that the certificate is exported as a PFX file and is resident in the directory of execution.
 ```csharp
 // server
-WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000, "test.pfx", "password"); 
+WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 9000, "test.pfx", "password"); 
 server.Settings.AcceptInvalidCertificates = true;
 server.Settings.MutuallyAuthenticate = true;
 server.Start();
@@ -226,7 +226,7 @@ client.Start();
 Refer to the ```Test.ClientStream``` and ```Test.ServerStream``` projects for a full example.  
 ```csharp
 // server
-WatsonTcpServer server = new WatsonTcpSslServer("127.0.0.1", 9000);
+WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 9000);
 server.Events.ClientConnected += ClientConnected;
 server.Events.ClientDisconnected += ClientDisconnected;
 server.Events.StreamReceived += StreamReceived; 
