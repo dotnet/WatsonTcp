@@ -698,13 +698,7 @@ namespace WatsonTcp
 
                     #region Read-Message
 
-                    while (true)
-                    {
-                        readLocked = await _ReadLock.WaitAsync(10, _Token).ConfigureAwait(false);
-                        if (readLocked) break;
-                        await Task.Delay(10, _Token).ConfigureAwait(false);
-                    } 
-                     
+                    await _ReadLock.WaitAsync(_Token);
                     WatsonMessage msg = new WatsonMessage(_DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
                     bool buildSuccess = await msg.BuildFromStream(_Token).ConfigureAwait(false);
                     if (!buildSuccess)
