@@ -149,6 +149,16 @@ namespace TestServer
                         if (!_Server.Send(ipPort, userInput)) Console.WriteLine("Failed");
                         break;
 
+                    case "send10":
+                        ipPort = InputString("IP:port:", _LastIpPort, false);
+                        userInput = InputString("Data:", null, false);
+                        for (int i = 0; i < 10; i++)
+                        {
+                            Console.WriteLine("Sending " + i);
+                            if (!_Server.Send(ipPort, userInput + "[" + i.ToString() + "]")) Console.WriteLine("Failed");
+                        }
+                        break;
+
                     case "send md":
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         userInput = InputString("Data:", null, false);

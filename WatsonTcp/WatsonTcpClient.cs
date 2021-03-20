@@ -682,8 +682,6 @@ namespace WatsonTcp
 
             while (true)
             {
-                bool readLocked = false;
-                 
                 try
                 {
                     #region Check-for-Connection
@@ -875,7 +873,7 @@ namespace WatsonTcp
                 } 
                 finally
                 {
-                    if (readLocked && _ReadLock != null) _ReadLock.Release();
+                    if (_ReadLock != null) _ReadLock.Release();
                 }
             }
 
