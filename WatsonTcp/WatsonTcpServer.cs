@@ -1207,14 +1207,21 @@ namespace WatsonTcp
                     break;
                 }
                 catch (Exception e)
-                { 
-                    _Settings.Logger?.Invoke(Severity.Error,
-                        _Header + "data receiver exception for " + client.IpPort + ":" +
-                        Environment.NewLine +
-                        SerializationHelper.SerializeJson(e, true) +
-                        Environment.NewLine);
+                {
+                    if (_Settings != null)
+                    {
+                        _Settings.Logger?.Invoke(Severity.Error,
+                            _Header + "data receiver exception for " + client.IpPort + ":" +
+                            Environment.NewLine +
+                            SerializationHelper.SerializeJson(e, true) +
+                            Environment.NewLine);
+                    }
 
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    if (_Events != null)
+                    {
+                        _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    }
+
                     break;
                 }
             }
