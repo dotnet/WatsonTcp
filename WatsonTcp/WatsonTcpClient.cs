@@ -330,13 +330,9 @@ namespace WatsonTcp
                     _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
 
                     if (_Settings.AcceptInvalidCertificates)
-                    {
                         _SslStream = new SslStream(_Client.GetStream(), false, new RemoteCertificateValidationCallback(AcceptCertificate)); 
-                    }
                     else
-                    { 
                         _SslStream = new SslStream(_Client.GetStream(), false);
-                    }
 
                     _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !_Settings.AcceptInvalidCertificates);
 
@@ -394,7 +390,7 @@ namespace WatsonTcp
         /// </summary>
         public void Disconnect()
         {
-            if (!Connected) throw new InvalidOperationException("Nonnected to the server.");
+            if (!Connected) throw new InvalidOperationException("Not connected to the server.");
 
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
@@ -865,17 +861,9 @@ namespace WatsonTcp
                 }
                 catch (Exception e)
                 {
-                    if (_Settings != null)
-                    {
-                        _Settings.Logger?.Invoke(Severity.Error,
-                            _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ":" + Environment.NewLine + SerializationHelper.SerializeJson(e, true) + Environment.NewLine);
-                    }
-
-                    if (_Events != null)
-                    {
-                        _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                    }
-
+                    _Settings?.Logger?.Invoke(Severity.Error,
+                        _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ":" + Environment.NewLine + SerializationHelper.SerializeJson(e, true) + Environment.NewLine);
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
                 } 
                 finally
@@ -886,8 +874,8 @@ namespace WatsonTcp
 
             Connected = false;
 
-            _Settings.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
-            _Events.HandleServerDisconnected(this, new DisconnectionEventArgs((_ServerIp + ":" + _ServerPort), reason));
+            _Settings?.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
+            _Events?.HandleServerDisconnected(this, new DisconnectionEventArgs((_ServerIp + ":" + _ServerPort), reason));
         }
 
         #endregion
