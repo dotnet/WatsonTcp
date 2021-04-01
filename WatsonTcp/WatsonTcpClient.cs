@@ -394,7 +394,7 @@ namespace WatsonTcp
         /// </summary>
         public void Disconnect()
         {
-            if (!Connected) throw new InvalidOperationException("Nonnected to the server.");
+            if (!Connected) throw new InvalidOperationException("Not connected to the server.");
 
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
@@ -886,8 +886,15 @@ namespace WatsonTcp
 
             Connected = false;
 
-            _Settings.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
-            _Events.HandleServerDisconnected(this, new DisconnectionEventArgs((_ServerIp + ":" + _ServerPort), reason));
+            if (_Settings != null)
+            {
+                _Settings.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
+            }
+
+            if (_Events != null)
+            {
+                _Events.HandleServerDisconnected(this, new DisconnectionEventArgs((_ServerIp + ":" + _ServerPort), reason));
+            }
         }
 
         #endregion

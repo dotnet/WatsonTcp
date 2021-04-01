@@ -1225,21 +1225,24 @@ namespace WatsonTcp
                     break;
                 }
             }
-             
-            DisconnectionEventArgs cd = null; 
-            if (_ClientsKicked.ContainsKey(client.IpPort)) cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Removed); 
-            else if (_ClientsTimedout.ContainsKey(client.IpPort)) cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Timeout); 
-            else cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Normal);
-            _Events.HandleClientDisconnected(this, cd); 
-             
-            _Clients.TryRemove(client.IpPort, out _);
-            _ClientsLastSeen.TryRemove(client.IpPort, out _);
-            _ClientsKicked.TryRemove(client.IpPort, out _);
-            _ClientsTimedout.TryRemove(client.IpPort, out _); 
-            _UnauthenticatedClients.TryRemove(client.IpPort, out _);
-            Interlocked.Decrement(ref _Connections);
 
-            _Settings.Logger?.Invoke(Severity.Debug, _Header + "client " + client.IpPort + " disconnected");
+            if (_Settings != null && _Events != null)//_Clients,_ClientsLastSeen etc.. are set to null when disposing server and are set to null also _Settings and _Events
+            {
+                DisconnectionEventArgs cd = null;
+                if (_ClientsKicked.ContainsKey(client.IpPort)) cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Removed);
+                else if (_ClientsTimedout.ContainsKey(client.IpPort)) cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Timeout);
+                else cd = new DisconnectionEventArgs(client.IpPort, DisconnectReason.Normal);
+                _Events.HandleClientDisconnected(this, cd);
+
+                _Clients.TryRemove(client.IpPort, out _);
+                _ClientsLastSeen.TryRemove(client.IpPort, out _);
+                _ClientsKicked.TryRemove(client.IpPort, out _);
+                _ClientsTimedout.TryRemove(client.IpPort, out _);
+                _UnauthenticatedClients.TryRemove(client.IpPort, out _);
+                Interlocked.Decrement(ref _Connections);
+
+                _Settings.Logger?.Invoke(Severity.Debug, _Header + "client " + client.IpPort + " disconnected");
+            }
             client.Dispose();  
         }
 
