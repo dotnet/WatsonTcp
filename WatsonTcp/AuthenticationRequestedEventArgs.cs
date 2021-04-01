@@ -5,11 +5,11 @@ using System.Text;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Event arguments for when a client connects to the server.
+    /// Event arguments for when authentication is requested from a client.
     /// </summary>
-    public class ClientConnectedEventArgs
+    public class AuthenticationRequestedEventArgs
     {
-        internal ClientConnectedEventArgs(string ipPort)
+        internal AuthenticationRequestedEventArgs(string ipPort)
         {
             IpPort = ipPort;
         }

@@ -5,18 +5,18 @@ using System.Text;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Event arguments for when a client disconnects from the server.
+    /// Event arguments for when a disconnection is encountered.
     /// </summary>
-    public class ClientDisconnectedEventArgs
+    public class DisconnectionEventArgs : EventArgs
     {
-        internal ClientDisconnectedEventArgs(string ipPort, DisconnectReason reason)
+        internal DisconnectionEventArgs(string ipPort, DisconnectReason reason)
         {
             IpPort = ipPort;
             Reason = reason;
         }
 
         /// <summary>
-        /// The IP:port of the client.
+        /// The IP:port of the endpoint for which the disconnection was detected.
         /// </summary>
         public string IpPort { get; }
 

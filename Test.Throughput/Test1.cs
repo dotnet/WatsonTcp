@@ -46,15 +46,15 @@ namespace TestThroughput
             {
                 using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 10000))
                 {
-                    server.MessageReceived += Test1ServerMsgRcv;
+                    server.Events.MessageReceived += Test1ServerMsgRcv;
                     server.Start();
-                    server.Logger = ServerLogger;
+                    // server.Settings.Logger = ServerLogger;
                     // server.Debug = true; 
 
                     using (WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 10000))
                     {
-                        client.MessageReceived += Test1ClientMsgRcv;
-                        client.Start();
+                        client.Events.MessageReceived += Test1ClientMsgRcv;
+                        client.Connect();
 
                         _Stopwatch.Start();
 
@@ -62,13 +62,13 @@ namespace TestThroughput
                         {
                             if (client.Send(_MsgBytes))
                             {
-                                _MessagesSentSuccess++;
-                                _MessagesProcessing++;
-                                _BytesSent += _MessageSize;
+                                Interlocked.Increment(ref _MessagesSentSuccess);
+                                Interlocked.Increment(ref _MessagesProcessing);
+                                Interlocked.Add(ref _BytesSent, _MessageSize);
                             }
                             else
                             {
-                                _MessagesSentFailed++;
+                                Interlocked.Increment(ref _MessagesSentFailed);
                             }
                         }
 
@@ -109,13 +109,13 @@ namespace TestThroughput
             }
         }
          
-        private void Test1ServerMsgRcv(object sender, MessageReceivedFromClientEventArgs args)
+        private void Test1ServerMsgRcv(object sender, MessageReceivedEventArgs args)
         {
             try
             {
-                Console.WriteLine("Processing message from client " + args.IpPort + " (" + args.Data.Length + " bytes)");
-                _BytesReceived += args.Data.Length;
-                _MessagesProcessing -= 1;
+                // Console.WriteLine("Processing message from client " + args.IpPort + " (" + args.Data.Length + " bytes)");
+                Interlocked.Add(ref _BytesReceived, args.Data.Length);
+                Interlocked.Decrement(ref _MessagesProcessing);
             }
             catch (Exception e)
             {
@@ -123,14 +123,9 @@ namespace TestThroughput
             }
         }
 
-        private void Test1ClientMsgRcv(object sender, MessageReceivedFromServerEventArgs args)
+        private void Test1ClientMsgRcv(object sender, MessageReceivedEventArgs args)
         {
 
-        }
-
-        private void ServerLogger(string msg)
-        {
-            Console.WriteLine("[server logger]: " + msg);
-        }
+        } 
     }
 }

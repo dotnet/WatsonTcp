@@ -30,7 +30,9 @@
         private void InitializeComponent()
         {
             this.label1 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
+            this.bSend = new System.Windows.Forms.Button();
+            this.bStart = new System.Windows.Forms.Button();
+            this.bStop = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -42,22 +44,44 @@
             this.label1.TabIndex = 1;
             this.label1.Text = "label1";
             // 
-            // button1
+            // bSend
             // 
-            this.button1.Location = new System.Drawing.Point(12, 12);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(107, 34);
-            this.button1.TabIndex = 2;
-            this.button1.Text = "Send Msg";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.bSend.Location = new System.Drawing.Point(238, 12);
+            this.bSend.Name = "bSend";
+            this.bSend.Size = new System.Drawing.Size(107, 34);
+            this.bSend.TabIndex = 2;
+            this.bSend.Text = "Send Msg";
+            this.bSend.UseVisualStyleBackColor = true;
+            this.bSend.Click += new System.EventHandler(this.bSend_Click);
+            // 
+            // bStart
+            // 
+            this.bStart.Location = new System.Drawing.Point(12, 12);
+            this.bStart.Name = "bStart";
+            this.bStart.Size = new System.Drawing.Size(107, 34);
+            this.bStart.TabIndex = 3;
+            this.bStart.Text = "Start";
+            this.bStart.UseVisualStyleBackColor = true;
+            this.bStart.Click += new System.EventHandler(this.bStart_Click);
+            // 
+            // bStop
+            // 
+            this.bStop.Location = new System.Drawing.Point(125, 12);
+            this.bStop.Name = "bStop";
+            this.bStop.Size = new System.Drawing.Size(107, 34);
+            this.bStop.TabIndex = 4;
+            this.bStop.Text = "Stop";
+            this.bStop.UseVisualStyleBackColor = true;
+            this.bStop.Click += new System.EventHandler(this.bStop_Click);
             // 
             // ServerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1066, 554);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.bStop);
+            this.Controls.Add(this.bStart);
+            this.Controls.Add(this.bSend);
             this.Controls.Add(this.label1);
             this.Name = "ServerForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -70,6 +94,8 @@
         #endregion
 
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button bSend;
+        private System.Windows.Forms.Button bStart;
+        private System.Windows.Forms.Button bStop;
     }
 }

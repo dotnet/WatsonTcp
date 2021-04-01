@@ -54,13 +54,14 @@ namespace TestClientStream
                         Console.WriteLine("  send md        send message with metadata to server");
                         Console.WriteLine("  sendasync      send message to server asynchronously");
                         Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
+                        Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  status         show if client connected");
-                        Console.WriteLine("  dispose        dispose of the connection");
-                        Console.WriteLine("  connect        connect to the server if not connected");
-                        Console.WriteLine("  reconnect      disconnect if connected, then reconnect");
+                        Console.WriteLine("  dispose        dispose of the client");
+                        Console.WriteLine("  connect        connect to the server");
+                        Console.WriteLine("  disconnect     disconnect from the server");
                         Console.WriteLine("  psk            set the preshared key");
                         Console.WriteLine("  auth           authenticate using the preshared key");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + client.DebugMessages + ")");
+                        Console.WriteLine("  debug          enable/disable debug");
                         break;
 
                     case "q":
@@ -88,7 +89,7 @@ namespace TestClientStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = client.Send(metadata, data.Length, ms);
+                        success = client.Send(data.Length, ms, metadata);
                         Console.WriteLine(success);
                         break;
 
@@ -109,8 +110,12 @@ namespace TestClientStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = client.SendAsync(metadata, data.Length, ms).Result;
+                        success = client.SendAsync(data.Length, ms, metadata).Result;
                         Console.WriteLine(success);
+                        break;
+
+                    case "sendandwait":
+                        SendAndWait();
                         break;
 
                     case "status":
@@ -129,28 +134,12 @@ namespace TestClientStream
                         client.Dispose();
                         break;
 
-                    case "connect":
-                        if (client != null && client.Connected)
-                        {
-                            Console.WriteLine("Already connected");
-                        }
-                        else
-                        {
-                            client = new WatsonTcpClient(serverIp, serverPort);
-                            client.ServerConnected += ServerConnected;
-                            client.ServerDisconnected += ServerDisconnected;
-                            client.StreamReceived += StreamReceived;
-                            client.Start();
-                        }
+                    case "connect": 
+                        client.Connect(); 
                         break;
 
-                    case "reconnect":
-                        if (client != null) client.Dispose();
-                        client = new WatsonTcpClient(serverIp, serverPort);
-                        client.ServerConnected += ServerConnected;
-                        client.ServerDisconnected += ServerDisconnected;
-                        client.StreamReceived += StreamReceived;
-                        client.Start();
+                    case "disconnect":
+                        client.Disconnect();
                         break;
 
                     case "psk":
@@ -162,8 +151,8 @@ namespace TestClientStream
                         break;
 
                     case "debug":
-                        client.DebugMessages = !client.DebugMessages;
-                        Console.WriteLine("Debug set to: " + client.DebugMessages);
+                        client.Settings.DebugMessages = !client.Settings.DebugMessages;
+                        Console.WriteLine("Debug set to: " + client.Settings.DebugMessages);
                         break;
 
                     default:
@@ -186,19 +175,20 @@ namespace TestClientStream
                 mutualAuthentication = InputBoolean("Mutually authenticate:", true);
 
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
-                client.AcceptInvalidCertificates = acceptInvalidCerts;
-                client.MutuallyAuthenticate = mutualAuthentication;
+                client.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
+                client.Settings.MutuallyAuthenticate = mutualAuthentication;
             }
 
-            client.AuthenticationFailure += AuthenticationFailure;
-            client.AuthenticationRequested = AuthenticationRequested;
-            client.AuthenticationSucceeded += AuthenticationSucceeded;
-            client.ServerConnected += ServerConnected;
-            client.ServerDisconnected += ServerDisconnected;
-            client.StreamReceived += StreamReceived;
-            client.Logger = Logger;
+            client.Callbacks.AuthenticationRequested = AuthenticationRequested;
+            client.Events.AuthenticationFailure += AuthenticationFailure;
+            client.Events.AuthenticationSucceeded += AuthenticationSucceeded;
+            client.Events.ServerConnected += ServerConnected;
+            client.Events.ServerDisconnected += ServerDisconnected;
+            client.Events.StreamReceived += StreamReceived;
+            client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            client.Settings.Logger = Logger;
             // client.Debug = true;
-            client.Start();
+            client.Connect();
         }
 
         private static bool InputBoolean(string question, bool yesDefault)
@@ -344,11 +334,11 @@ namespace TestClientStream
             Console.WriteLine("");
         }
          
-        private static void StreamReceived(object sender, StreamReceivedFromServerEventArgs args) 
+        private static void StreamReceived(object sender, StreamReceivedEventArgs args) 
         {
             try
             {
-                Console.Write("Stream from server [" + args.ContentLength + " bytes]: ");
+                Console.Write("Stream from " + args.IpPort + " [" + args.ContentLength + " bytes]: ");
 
                 int bytesRead = 0;
                 int bufferSize = 65536;
@@ -393,7 +383,31 @@ namespace TestClientStream
                 LogException("StreamReceived", e);
             }
         }
-         
+
+        private static SyncResponse SyncRequestReceived(SyncRequest req)
+        {
+            Console.Write("Message received from " + req.IpPort + ": ");
+            if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
+            else Console.WriteLine("[null]");
+
+            if (req.Metadata != null && req.Metadata.Count > 0)
+            {
+                Console.WriteLine("Metadata:");
+                foreach (KeyValuePair<object, object> curr in req.Metadata)
+                {
+                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                }
+            }
+
+            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
+            retMetadata.Add("foo", "bar");
+            retMetadata.Add("bar", "baz");
+
+            // Uncomment to test timeout
+            // Task.Delay(10000).Wait();
+            return new SyncResponse(req, retMetadata, "Here is your response!");
+        }
+
         private static string AuthenticationRequested()
         {
             Console.WriteLine("");
@@ -413,20 +427,74 @@ namespace TestClientStream
         {
             Console.WriteLine("Authentication failed");
         }
-         
-        private static void ServerConnected(object sender, EventArgs args)
+
+        private static void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Console.WriteLine("Server connected");
+            Console.WriteLine(args.IpPort + " connected");
         }
 
-        private static void ServerDisconnected(object sender, EventArgs args)
+        private static void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine("Server disconnected");
-        } 
+            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
+        }
 
-        private static void Logger(string msg)
+        private static void SendAndWait()
         {
-            Console.WriteLine(msg);
+            string userInput = InputString("Data:", null, false);
+            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+            Dictionary<object, object> metadata = new Dictionary<object, object>();
+            metadata.Add("foo", "bar");
+
+            try
+            {
+                SyncResponse resp = client.SendAndWait(timeoutMs, userInput, metadata);
+                if (resp.Metadata != null && resp.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
+        }
+
+        private static void SendAndWaitEmpty()
+        {
+            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+
+            Dictionary<object, object> dict = new Dictionary<object, object>();
+            dict.Add("foo", "bar");
+
+            try
+            {
+                SyncResponse resp = client.SendAndWait(timeoutMs, "");
+                if (resp.Metadata != null && resp.Metadata.Count > 0)
+                {
+                    Console.WriteLine("Metadata:");
+                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception: " + e.ToString());
+            }
+        }
+
+        private static void Logger(Severity sev, string msg)
+        {
+            Console.WriteLine("[" + sev.ToString().PadRight(9) + "] " + msg);
         }
     }
 }

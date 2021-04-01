@@ -6,11 +6,11 @@ using System.Text;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Event arguments for when a stream is received from a client.
+    /// Event arguments for when a stream is received.
     /// </summary>
-    public class StreamReceivedFromClientEventArgs
+    public class StreamReceivedEventArgs : EventArgs
     {
-        internal StreamReceivedFromClientEventArgs(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
+        internal StreamReceivedEventArgs(string ipPort, Dictionary<object, object> metadata, long contentLength, Stream stream)
         {
             IpPort = ipPort;
             Metadata = metadata;
@@ -19,12 +19,12 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// The IP:port of the client.
+        /// The IP:port of the endpoint.
         /// </summary>
         public string IpPort { get; }
 
         /// <summary>
-        /// The metadata received from the client.
+        /// The metadata received from the endpoint.
         /// </summary>
         public Dictionary<object, object> Metadata
         {
@@ -59,31 +59,42 @@ namespace WatsonTcp
             {
                 if (_Data != null) return _Data;
                 if (ContentLength <= 0) return null;
-                _Data = StreamToBytes(DataStream);
+                _Data = ReadFromStream(DataStream, ContentLength);
                 return _Data;
             }
         }
 
         private Dictionary<object, object> _Metadata = new Dictionary<object, object>();
         private byte[] _Data = null;
+        private int _BufferSize = 65536;
 
-        private byte[] StreamToBytes(Stream input)
+        private byte[] ReadFromStream(Stream stream, long count)
         {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-            if (!input.CanRead) throw new InvalidOperationException("Input stream is not readable");
+            if (count <= 0) return new byte[0]; 
+            byte[] buffer = new byte[_BufferSize];
 
-            byte[] buffer = new byte[16 * 1024];
-            using (MemoryStream ms = new MemoryStream())
+            int read = 0;
+            long bytesRemaining = count;
+            MemoryStream ms = new MemoryStream();
+
+            while (bytesRemaining > 0)
             {
-                int read;
+                if (_BufferSize > bytesRemaining) buffer = new byte[bytesRemaining];
 
-                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                read = stream.Read(buffer, 0, buffer.Length);
+                if (read > 0)
                 {
                     ms.Write(buffer, 0, read);
+                    bytesRemaining -= read;
                 }
-
-                return ms.ToArray();
+                else
+                {
+                    throw new IOException("Could not read from supplied stream.");
+                }
             }
-        }
+
+            byte[] data = ms.ToArray();
+            return data;
+        } 
     }
 }

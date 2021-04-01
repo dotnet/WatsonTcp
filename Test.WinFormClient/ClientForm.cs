@@ -14,49 +14,54 @@ namespace Test.WinFormClient
     public partial class ClientForm : Form
     {
         private WatsonTcpClient _Client = null;
-
+        delegate void _LogDelegate(Severity sev, string msg);
+        
         public ClientForm()
         {
             InitializeComponent();
             label1.Text = "";
             
             _Client = new WatsonTcpClient("127.0.0.1", 9000);
-            _Client.ServerConnected += OnServerConnected;
-            _Client.ServerDisconnected += OnServerDisconnected;
-            _Client.AuthenticationFailure += OnAuthenticationFailure;
-            _Client.MessageReceived += MessageReceived;
-            _Client.Logger = Logger;
+            _Client.Events.ServerConnected += ServerConnected;
+            _Client.Events.ServerDisconnected += ServerDisconnected;
+            _Client.Events.AuthenticationFailure += OnAuthenticationFailure;
+            _Client.Events.MessageReceived += MessageReceived;
+            _Client.Settings.Logger = Logger;
         }
          
         private void button1_Click(object sender, EventArgs e)
         {
-            _Client.Start();
+            _Client.Connect();
         }
          
         private void OnAuthenticationFailure(object sender, EventArgs e)
         {
-            label1.Text += Environment.NewLine + "Authentication failure.";
+            Logger(Severity.Error, "Authentication failure.");
         }
 
-        private void OnServerDisconnected(object sender, EventArgs e)
+        private void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            label1.Text += Environment.NewLine + "Server disconnected.";
+            Logger(Severity.Debug, args.IpPort + " connected");
         }
 
-        private void OnServerConnected(object sender, EventArgs e)
+        private void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            label1.Text += Environment.NewLine + "Server connected.";
+            Logger(Severity.Debug, args.IpPort + " disconnected: " + args.Reason.ToString());
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             _Client.Send("Hello world!");
-            label1.Text += Environment.NewLine + "Sent message 'Hello world!'";
+            Logger(Severity.Debug, "Sent message 'Hello world!'");
         }
 
-        private void Logger(string msg)
+        private void Logger(Severity sev, string msg)
         {
-            label1.Text += Environment.NewLine + msg;
+            // If this is called by another thread we have to use Invoke           
+            if (this.InvokeRequired)
+                this.Invoke(new _LogDelegate(Logger), new object[] { sev, msg });
+            else
+                label1.Text += Environment.NewLine + "[" + sev.ToString().PadRight(9) + "] " + msg;
         }
 
         private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -64,9 +69,9 @@ namespace Test.WinFormClient
             _Client.Dispose();
         }
 
-        private void MessageReceived(object sender, MessageReceivedFromServerEventArgs e)
+        private void MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            label1.Text += Environment.NewLine + "Message received: " + Encoding.UTF8.GetString(e.Data);
+            Logger(Severity.Debug, "Message from " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
         }
     }
 }

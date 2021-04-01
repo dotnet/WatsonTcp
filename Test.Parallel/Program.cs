@@ -23,9 +23,9 @@ namespace TestParallel
             Console.WriteLine("Starting in 3 seconds...");
 
             server = new WatsonTcpServer(null, serverPort);
-            server.ClientConnected += ServerClientConnected;
-            server.ClientDisconnected += ServerClientDisconnected;
-            server.MessageReceived += ServerMsgReceived;
+            server.Events.ClientConnected += ServerClientConnected;
+            server.Events.ClientDisconnected += ServerClientDisconnected;
+            server.Events.MessageReceived += ServerMsgReceived;
             server.Start();
 
             Thread.Sleep(3000);
@@ -155,10 +155,10 @@ namespace TestParallel
         {
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
-                client.ServerConnected += ClientServerConnected;
-                client.ServerDisconnected += ClientServerDisconnected;
-                client.MessageReceived += ClientMsgReceived;
-                client.Start();
+                client.Events.ServerConnected += ClientServerConnected;
+                client.Events.ServerDisconnected += ClientServerDisconnected;
+                client.Events.MessageReceived += ClientMsgReceived;
+                client.Connect();
 
                 for (int i = 0; i < numIterations; i++)
                 {
@@ -170,32 +170,32 @@ namespace TestParallel
             Console.WriteLine("[client] finished");
         }
          
-        private static void ServerClientConnected(object sender, ClientConnectedEventArgs args) 
+        private static void ServerClientConnected(object sender, ConnectionEventArgs args) 
         {
             Console.WriteLine("[server] connection from " + args.IpPort);
         }
          
-        private static void ServerClientDisconnected(object sender, ClientDisconnectedEventArgs args) 
+        private static void ServerClientDisconnected(object sender, DisconnectionEventArgs args) 
         {
             Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
         }
          
-        private static void ServerMsgReceived(object sender, MessageReceivedFromClientEventArgs args) 
+        private static void ServerMsgReceived(object sender, MessageReceivedEventArgs args) 
         {
             Console.WriteLine("[server] msg from " + args.IpPort + ": " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
          
-        private static void ClientServerConnected(object sender, EventArgs args) 
+        private static void ClientServerConnected(object sender, ConnectionEventArgs args) 
         {
         }
          
-        private static void ClientServerDisconnected(object sender, EventArgs args) 
+        private static void ClientServerDisconnected(object sender, DisconnectionEventArgs args) 
         {
         }
          
-        private static void ClientMsgReceived(object sender, MessageReceivedFromServerEventArgs args) 
+        private static void ClientMsgReceived(object sender, MessageReceivedEventArgs args) 
         {
-            Console.WriteLine("[server] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
+            Console.WriteLine("[client] msg from server: " + BytesToHex(Md5(args.Data)) + " (" + args.Data.Length + " bytes)");
         }
 
         public static byte[] InitByteArray(int count, byte val)

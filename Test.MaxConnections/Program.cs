@@ -40,25 +40,24 @@ namespace Test.MaxConnections
                     mutualAuthentication = InputBoolean("Mutually authenticate:", false);
 
                     server = new WatsonTcpServer(serverIp, serverPort, certFile, certPass);
-                    server.AcceptInvalidCertificates = acceptInvalidCerts;
-                    server.MutuallyAuthenticate = mutualAuthentication;
+                    server.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
+                    server.Settings.MutuallyAuthenticate = mutualAuthentication;
                 }
 
-                server.ClientConnected += ClientConnected;
-                server.ClientDisconnected += ClientDisconnected;
-                server.MessageReceived += MessageReceived;
+                server.Events.ClientConnected += ClientConnected;
+                server.Events.ClientDisconnected += ClientDisconnected;
+                server.Events.MessageReceived += MessageReceived;
                 // server.IdleClientTimeoutSeconds = 10;
-                server.Logger = Logger;
-                server.DebugMessages = debug;
+                server.Settings.Logger = Logger;
+                server.Settings.DebugMessages = debug;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
                 return;
             }
-
-            // server.Start();
-            Task serverStart = server.StartAsync();
+             
+            server.Start();
 
             bool runForever = true;
             while (runForever)
@@ -91,8 +90,8 @@ namespace Test.MaxConnections
                         Console.WriteLine("  stats          display server statistics");
                         Console.WriteLine("  stats reset    reset statistics other than start time and uptime");
                         Console.WriteLine("  conn           show connection count");
-                        Console.WriteLine("  max            set max connections (currently " + server.MaxConnections + ")");
-                        Console.WriteLine("  debug          enable/disable debug (currently " + server.DebugMessages + ")");
+                        Console.WriteLine("  max            set max connections (currently " + server.Settings.MaxConnections + ")");
+                        Console.WriteLine("  debug          enable/disable debug (currently " + server.Settings.DebugMessages + ")");
                         break;
 
                     case "q":
@@ -130,7 +129,7 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput));
+                        success = server.Send(ipPort, userInput);
                         Console.WriteLine(success);
                         break;
 
@@ -142,7 +141,7 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.Send(ipPort, metadata, Encoding.UTF8.GetBytes(userInput));
+                        success = server.Send(ipPort, Encoding.UTF8.GetBytes(userInput), metadata);
                         Console.WriteLine(success);
                         break;
 
@@ -165,7 +164,7 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = server.SendAsync(ipPort, metadata, Encoding.UTF8.GetBytes(userInput)).Result;
+                        success = server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput), metadata).Result;
                         Console.WriteLine(success);
                         break;
 
@@ -176,15 +175,15 @@ namespace Test.MaxConnections
                         break;
 
                     case "psk":
-                        server.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        server.Settings.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "stats":
-                        Console.WriteLine(server.Stats.ToString());
+                        Console.WriteLine(server.Statistics.ToString());
                         break;
 
                     case "stats reset":
-                        server.Stats.Reset();
+                        server.Statistics.Reset();
                         break;
 
                     case "conn":
@@ -192,12 +191,12 @@ namespace Test.MaxConnections
                         break;
 
                     case "max":
-                        server.MaxConnections = InputInteger("Max connections:", 4096, true, false);
+                        server.Settings.MaxConnections = InputInteger("Max connections:", 4096, true, false);
                         break;
 
                     case "debug":
-                        server.DebugMessages = !server.DebugMessages;
-                        Console.WriteLine("Debug set to: " + server.DebugMessages);
+                        server.Settings.DebugMessages = !server.Settings.DebugMessages;
+                        Console.WriteLine("Debug set to: " + server.Settings.DebugMessages);
                         break;
 
                     default:
@@ -335,17 +334,17 @@ namespace Test.MaxConnections
             }
         }
 
-        private static void ClientConnected(object sender, ClientConnectedEventArgs args)
+        private static void ClientConnected(object sender, ConnectionEventArgs args)
         {
             Console.WriteLine("Client connected: " + args.IpPort);
         }
 
-        private static void ClientDisconnected(object sender, ClientDisconnectedEventArgs args)
+        private static void ClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
         }
 
-        private static void MessageReceived(object sender, MessageReceivedFromClientEventArgs args)
+        private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
             Console.WriteLine("Message received from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
             if (args.Metadata != null && args.Metadata.Count > 0)
@@ -358,9 +357,9 @@ namespace Test.MaxConnections
             }
         }
 
-        private static void Logger(string msg)
+        private static void Logger(Severity sev, string msg)
         {
-            Console.WriteLine(msg);
+            Console.WriteLine("[" + sev.ToString().PadRight(9) + "] " + msg);
         }
     }
 }
