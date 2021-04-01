@@ -394,7 +394,7 @@ namespace WatsonTcp
         /// </summary>
         public void Disconnect()
         {
-            if (!Connected) throw new InvalidOperationException("Not connected to the server.");
+            if (!Connected) throw new InvalidOperationException("Nonnected to the server.");
 
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
