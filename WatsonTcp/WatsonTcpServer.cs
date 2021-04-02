@@ -920,8 +920,7 @@ namespace WatsonTcp
             #region Start-Data-Receiver
 
             _Settings.Logger?.Invoke(Severity.Debug, _Header + "starting data receiver for " + client.IpPort);
-            Task unawaited = Task.Run(() => DataReceiver(client, token), token);
-
+            client.DataReceiver = Task.Run(() => DataReceiver(client, token), token);
             _Events.HandleClientConnected(this, new ConnectionEventArgs(client.IpPort));
 
             #endregion 
@@ -1017,7 +1016,7 @@ namespace WatsonTcp
                     bool buildSuccess = await msg.BuildFromStream(token).ConfigureAwait(false);
                     if (!buildSuccess)
                     {
-                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected for client " + client.IpPort);
+                        _Settings?.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected for client " + client.IpPort);
                         break;
                     }
 

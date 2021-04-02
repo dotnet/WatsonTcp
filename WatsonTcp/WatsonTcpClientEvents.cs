@@ -139,14 +139,13 @@ namespace WatsonTcp
         {
             if (action == null) return;
 
-            Action<Severity, string> logger = ((WatsonTcpClient)sender).Settings.Logger;
-
             try
             {
                 action.Invoke();
             }
             catch (Exception e)
             {
+                Action<Severity, string> logger = ((WatsonTcpClient)sender).Settings?.Logger;
                 logger?.Invoke(Severity.Error, "Event handler exception in " + handler + ": " + Environment.NewLine + SerializationHelper.SerializeJson(e, true));
             }
         }

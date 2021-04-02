@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace WatsonTcp
 {
@@ -64,6 +65,8 @@ namespace WatsonTcp
             }
         }
 
+        internal Task DataReceiver { get; set; } = null;
+
         internal SemaphoreSlim WriteLock = new SemaphoreSlim(1, 1);
         internal SemaphoreSlim ReadLock = new SemaphoreSlim(1, 1);
 
@@ -115,6 +118,11 @@ namespace WatsonTcp
             {
                 _TcpClient.Close();
                 _TcpClient.Dispose();
+            }
+
+            while(DataReceiver?.Status== TaskStatus.Running)
+            {
+                Task.Delay(1).Wait();
             }
         } 
     }
