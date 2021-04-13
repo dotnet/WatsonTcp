@@ -426,6 +426,11 @@ namespace WatsonTcp
                 _Client.Close();
             }
 
+            while (_DataReceiver?.Status == TaskStatus.Running)
+            {
+                Task.Delay(1).Wait();
+            }
+
             Connected = false;
 
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnected from " + _ServerIp + ":" + _ServerPort);
@@ -684,7 +689,7 @@ namespace WatsonTcp
 
                     if (_Client == null || !_Client.Connected)
                     {
-                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected");
+                        _Settings?.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected");
                         break;
                     }
 
@@ -697,7 +702,7 @@ namespace WatsonTcp
                     bool buildSuccess = await msg.BuildFromStream(_Token).ConfigureAwait(false);
                     if (!buildSuccess)
                     {
-                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected");
+                        _Settings?.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected");
                         break;
                     }
 
@@ -713,19 +718,19 @@ namespace WatsonTcp
 
                     if (msg.Status == MessageStatus.Removed)
                     {
-                        _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnect due to server-side removal");
+                        _Settings?.Logger?.Invoke(Severity.Info, _Header + "disconnect due to server-side removal");
                         reason = DisconnectReason.Removed;
                         break;
                     }
                     else if (msg.Status == MessageStatus.Shutdown)
                     {
-                        _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnect due to server shutdown");
+                        _Settings?.Logger?.Invoke(Severity.Info, _Header + "disconnect due to server shutdown");
                         reason = DisconnectReason.Shutdown;
                         break;
                     }
                     else if (msg.Status == MessageStatus.Timeout)
                     {
-                        _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnect due to timeout");
+                        _Settings?.Logger?.Invoke(Severity.Info, _Header + "disconnect due to timeout");
                         reason = DisconnectReason.Timeout;
                         break;
                     }
