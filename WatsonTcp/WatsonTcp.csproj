@@ -3,17 +3,17 @@
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;netstandard2.0;netstandard2.1;net461;net5.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>4.8.4</Version>
+    <Version>4.8.5</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
-    <Copyright>(c)2020 Joel Christner</Copyright>
+    <Copyright>(c)2021 Joel Christner</Copyright>
     <PackageTags>tcp rpc ssl message messaging frame framing async api server bus queue mesh fabric</PackageTags>
     <PackageProjectUrl>https://github.com/jchristn/WatsonTcp</PackageProjectUrl>
     <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageReleaseNotes>Breaking change, log messages now include severity</PackageReleaseNotes>
+    <PackageReleaseNotes>Dispose fix, thank you @ozrecsec</PackageReleaseNotes>
     <PackageIconUrl></PackageIconUrl>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageIcon>watson.png</PackageIcon>

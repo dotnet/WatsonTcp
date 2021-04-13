@@ -120,9 +120,9 @@ namespace WatsonTcp
                 _TcpClient.Dispose();
             }
 
-            while(DataReceiver?.Status== TaskStatus.Running)
+            while (DataReceiver?.Status == TaskStatus.Running)
             {
-                Task.Delay(1).Wait();
+                Task.Delay(30).Wait();
             }
         } 
     }
