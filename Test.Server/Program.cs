@@ -73,6 +73,7 @@ namespace TestServer
             bool runForever = true;
             List<string> clients;
             string ipPort;
+            MessageStatus reason = MessageStatus.Removed;
             Dictionary<object, object> metadata;
             bool success = false;
 
@@ -204,7 +205,9 @@ namespace TestServer
 
                     case "remove":
                         ipPort = InputString("IP:port:", _LastIpPort, false);
-                        _Server.DisconnectClient(ipPort);
+                        Console.WriteLine("Valid disconnect reasons: Removed, Normal, Shutdown, Timeout");
+                        reason = (MessageStatus)(Enum.Parse(typeof(MessageStatus), InputString("Disconnect reason:", "Removed", false)));
+                        _Server.DisconnectClient(ipPort, reason);
                         break;
 
                     case "remove all":
