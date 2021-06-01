@@ -795,6 +795,13 @@
             For Watson TCP client, the number of seconds to wait before timing out a connection attempt.  Default is 5 seconds.  Value must be greater than zero.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.LocalPort">
+            <summary>
+            Local TCP port.  
+            Set to '0' to have the underlying TcpClient implementation automatically assign.
+            Value must be 0, or, 1024 or greater.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpClientSettings.#ctor">
             <summary>
             Instantiate the object.

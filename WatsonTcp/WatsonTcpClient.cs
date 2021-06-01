@@ -249,7 +249,16 @@ namespace WatsonTcp
         {
             if (Connected) throw new InvalidOperationException("Already connected to the server.");
 
-            _Client = new TcpClient();
+            if (_Settings.LocalPort == 0)
+            {
+                _Client = new TcpClient();
+            }
+            else
+            {
+                IPEndPoint ipe = new IPEndPoint(IPAddress.Any, _Settings.LocalPort);
+                _Client = new TcpClient(ipe);
+            }
+
             _Statistics = new WatsonTcpStatistics();
 
             IAsyncResult asyncResult = null;

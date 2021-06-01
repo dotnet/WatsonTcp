@@ -2,12 +2,16 @@
 
 ## Current Version
 
+v4.8.6
+
+- Specify the client port by setting ```Settings.LocalPort``` (0, 1024-65535 are valid, where 0 is auto-assigned)
+
+## Previous Versions
+
 v4.8.0
 
 - Breaking change; log messages now include a ```Severity``` parameter
 - TCP keepalives moved to the socket instead of the listener
-
-## Previous Versions
 
 v4.7.1
 

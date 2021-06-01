@@ -8,10 +8,9 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 
 **IMPORTANT** WatsonTcp provides framing to ensure message-level delivery which also dictates that you must either 1) use WatsonTcp for both the server and the client, or, 2) ensure that your client/server exchange messages with the WatsonTcp node using WatsonTcp's framing.  Refer to ```FRAMING.md``` for a reference on WatsonTcp message structure.
 
-## New in v4.8.0
+## New in v4.8.6
 
-- Breaking change; log messages now include a ```Severity``` parameter
-- TCP keepalives moved to the socket instead of the listener
+- Specify the client port by setting ```Settings.LocalPort``` (0, 1024-65535 are valid, where 0 is auto-assigned)
 
 ## Test Applications
 
@@ -73,7 +72,7 @@ Special thanks to the following people for their support and contributions to th
 
 @brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
-@DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz
+@DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz @nirajgenius
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 

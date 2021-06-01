@@ -87,6 +87,36 @@ namespace WatsonTcp
             }
         }
 
+        /// <summary>
+        /// Local TCP port.  
+        /// Set to '0' to have the underlying TcpClient implementation automatically assign.
+        /// Value must be 0, or, 1024 or greater.
+        /// </summary>
+        public int LocalPort
+        {
+            get
+            {
+                return _LocalPort;
+            }
+            set
+            {
+                if (value < 0)
+                {
+                    throw new ArgumentException("Valid values for LocalPort are 0, 1024-65535.");
+                }
+                else if (value > 0 && value < 1024)
+                {
+                    throw new ArgumentException("Valid values for LocalPort are 0, 1024-65535."); 
+                }
+                else if (value > 65535)
+                {
+                    throw new ArgumentException("Valid values for LocalPort are 0, 1024-65535.");
+                }
+
+                _LocalPort = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
@@ -95,6 +125,7 @@ namespace WatsonTcp
         private int _MaxProxiedStreamSize = 67108864;
 
         private int _ConnectTimeoutSeconds = 5;
+        private int _LocalPort = 0;
 
         #endregion
 
