@@ -8,9 +8,9 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 
 **IMPORTANT** WatsonTcp provides framing to ensure message-level delivery which also dictates that you must either 1) use WatsonTcp for both the server and the client, or, 2) ensure that your client/server exchange messages with the WatsonTcp node using WatsonTcp's framing.  Refer to ```FRAMING.md``` for a reference on WatsonTcp message structure.
 
-## New in v4.8.6
+## New in v4.8.7
 
-- Specify the client port by setting ```Settings.LocalPort``` (0, 1024-65535 are valid, where 0 is auto-assigned)
+- Bugfix, timeout values for .NET Framework now properly handled as milliseconds (thank you @zsolt777)
 
 ## Test Applications
 

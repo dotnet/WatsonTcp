@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.8.7
+
+- Bugfix, timeout values for .NET Framework now properly handled as milliseconds (thank you @zsolt777)
+
+## Previous Versions
+
 v4.8.6
 
 - Specify the client port by setting ```Settings.LocalPort``` (0, 1024-65535 are valid, where 0 is auto-assigned)
-
-## Previous Versions
 
 v4.8.0
 

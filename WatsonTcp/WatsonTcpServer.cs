@@ -667,35 +667,6 @@ namespace WatsonTcp
 
         #region Connection
 
-        private void EnableKeepalives()
-        {
-            try
-            {
-#if NETCOREAPP || NET5_0
-
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime);
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
-                _Listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
-
-#elif NETFRAMEWORK
-
-                byte[] keepAlive = new byte[12]; 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
-                _Listener.Server.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
-
-#elif NETSTANDARD
-
-#endif
-            }
-            catch (Exception)
-            {
-                _Settings.Logger?.Invoke(Severity.Error, _Header + "keepalives not supported on this platform, disabled");
-            }
-        }
-
         private void EnableKeepalives(TcpClient client)
         {
             try
@@ -709,10 +680,11 @@ namespace WatsonTcp
 
 #elif NETFRAMEWORK
 
+                // .NET Framework expects values in milliseconds
                 byte[] keepAlive = new byte[12]; 
                 Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveTime), 0, keepAlive, 4, 4);  
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)_Keepalive.TcpKeepAliveInterval), 0, keepAlive, 8, 4);  
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveTime * 1000)), 0, keepAlive, 4, 4);  
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveInterval * 1000)), 0, keepAlive, 8, 4);  
                 client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
 
 #elif NETSTANDARD
