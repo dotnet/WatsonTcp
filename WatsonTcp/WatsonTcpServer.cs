@@ -334,6 +334,7 @@ namespace WatsonTcp
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
+            _Listener.Start();
             _AcceptConnections = Task.Run(() => AcceptConnections(), _Token); // sets _IsListening
             _MonitorClients = Task.Run(() => MonitorForIdleClients(), _Token);
             _MonitorSyncResponses = Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
@@ -707,7 +708,6 @@ namespace WatsonTcp
         private async Task AcceptConnections()
         { 
             _IsListening = true;
-            _Listener.Start();
 
             while (true)
             { 
