@@ -477,11 +477,12 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="data">Byte array containing data.</param>
         /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="start">Start position within the supplied array.</param>
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        public bool Send(byte[] data, Dictionary<object, object> metadata = null)
+        public bool Send(byte[] data, Dictionary<object, object> metadata = null, int start = 0)
         {
             if (data == null) data = new byte[0];
-            WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
+            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return Send(contentLength, stream, metadata);
         }
 
@@ -511,21 +512,22 @@ namespace WatsonTcp
         {
             if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0], null);
             if (token == default(CancellationToken)) token = _Token;
-            return await SendAsync(Encoding.UTF8.GetBytes(data), metadata, token).ConfigureAwait(false);
+            return await SendAsync(Encoding.UTF8.GetBytes(data), metadata, 0, token).ConfigureAwait(false);
         }
-         
+
         /// <summary>
         /// Send data and metadata to the server asynchronously.
         /// </summary>
         /// <param name="data">Byte array containing data.</param>
         /// <param name="metadata">Dictionary containing metadata.</param>
+        /// <param name="start">Start position within the supplied array.</param>
         /// <param name="token">Cancellation token to cancel the request.</param>
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(byte[] data, Dictionary<object, object> metadata = null, CancellationToken token = default)
+        public async Task<bool> SendAsync(byte[] data, Dictionary<object, object> metadata = null, int start = 0, CancellationToken token = default)
         {
             if (token == default(CancellationToken)) token = _Token;
             if (data == null) data = new byte[0];
-            WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
+            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return await SendAsync(contentLength, stream, metadata, token).ConfigureAwait(false);
         }
          
@@ -566,13 +568,14 @@ namespace WatsonTcp
         /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
         /// <param name="data">Data to send.</param>
         /// <param name="metadata">Metadata dictionary to attach to the message.</param>
+        /// <param name="start">Start position within the supplied array.</param>
         /// <returns>SyncResponse.</returns>
-        public SyncResponse SendAndWait(int timeoutMs, byte[] data, Dictionary<object, object> metadata = null)
+        public SyncResponse SendAndWait(int timeoutMs, byte[] data, Dictionary<object, object> metadata = null, int start = 0)
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (data == null) data = new byte[0];
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonCommon.BytesToStream(data, out long contentLength, out Stream stream);
+            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return SendAndWait(timeoutMs, contentLength, stream, metadata);
         }
 
@@ -785,7 +788,7 @@ namespace WatsonTcp
                             SyncResponse syncResp = _Callbacks.HandleSyncRequestReceived(syncReq);
                             if (syncResp != null)
                             { 
-                                WatsonCommon.BytesToStream(syncResp.Data, out long contentLength, out Stream stream);
+                                WatsonCommon.BytesToStream(syncResp.Data, 0, out int contentLength, out Stream stream);
                                 WatsonMessage respMsg = new WatsonMessage( 
                                     syncResp.Metadata,
                                     contentLength,

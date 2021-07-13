@@ -94,6 +94,7 @@ namespace TestServer
                         Console.WriteLine("  list                list clients");
                         Console.WriteLine("  dispose             dispose of the server");
                         Console.WriteLine("  send                send message to client");
+                        Console.WriteLine("  send offset         send message to client with offset");
                         Console.WriteLine("  send md             send message with metadata to client");
                         Console.WriteLine("  sendasync           send message to a client asynchronously");
                         Console.WriteLine("  sendasync md        send message with metadata to a client asynchronously");
@@ -148,6 +149,13 @@ namespace TestServer
                         ipPort = InputString("IP:port:", _LastIpPort, false);
                         userInput = InputString("Data:", null, false);
                         if (!_Server.Send(ipPort, userInput)) Console.WriteLine("Failed");
+                        break;
+
+                    case "send offset":
+                        ipPort = InputString("IP:port:", _LastIpPort, false);
+                        userInput = InputString("Data:", null, false);
+                        int offset = InputInteger("Offset:", 0, true, true);
+                        if (!_Server.Send(ipPort, Encoding.UTF8.GetBytes(userInput), null, offset)) Console.WriteLine("Failed");
                         break;
 
                     case "send10":

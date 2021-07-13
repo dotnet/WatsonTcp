@@ -8,9 +8,9 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 
 **IMPORTANT** WatsonTcp provides framing to ensure message-level delivery which also dictates that you must either 1) use WatsonTcp for both the server and the client, or, 2) ensure that your client/server exchange messages with the WatsonTcp node using WatsonTcp's framing.  Refer to ```FRAMING.md``` for a reference on WatsonTcp message structure.
 
-## New in v4.8.8
+## New in v4.8.9
 
-- Move listener start into ```Start()``` method (thank you @avoitenko)
+- Added optional parameter ```offset``` to ```Send``` and ```SendAsync``` methods that use ```byte[]``` data (thank you @pha3z)
 
 ## Test Applications
 

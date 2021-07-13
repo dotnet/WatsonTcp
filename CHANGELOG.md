@@ -2,6 +2,12 @@
 
 ## Current Version
 
+v4.8.9
+
+- Added optional parameter ```offset``` to ```Send``` and ```SendAsync``` methods that use ```byte[]``` data (thank you @pha3z)
+
+## Previous Versions
+
 v4.8.8
 
 - Move listener start into ```Start()``` method (thank you @avoitenko)
@@ -9,8 +15,6 @@ v4.8.8
 v4.8.7
 
 - Bugfix, timeout values for .NET Framework now properly handled as milliseconds (thank you @zsolt777)
-
-## Previous Versions
 
 v4.8.6
 

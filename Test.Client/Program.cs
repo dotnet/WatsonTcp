@@ -39,6 +39,7 @@ namespace TestClient
                         Console.WriteLine("  q                   quit");
                         Console.WriteLine("  cls                 clear screen");
                         Console.WriteLine("  send                send message to server");
+                        Console.WriteLine("  send offset         send message to server with offset");
                         Console.WriteLine("  send md             send message with metadata to server");
                         Console.WriteLine("  sendasync           send message to server asynchronously");
                         Console.WriteLine("  sendasync md        send message with metadata to server asynchronously");
@@ -67,6 +68,12 @@ namespace TestClient
                     case "send":
                         userInput = InputString("Data:", null, false);
                         if (!_Client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
+                        break;
+
+                    case "send offset":
+                        userInput = InputString("Data:", null, false);
+                        int offset = InputInteger("Offset:", 0, true, true);
+                        if (!_Client.Send(Encoding.UTF8.GetBytes(userInput), null, offset)) Console.WriteLine("Failed");
                         break;
 
                     case "send md":
