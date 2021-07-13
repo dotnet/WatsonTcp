@@ -756,8 +756,9 @@ namespace WatsonTcp
                     else if (msg.Status == MessageStatus.AuthFailure)
                     {
                         _Settings.Logger?.Invoke(Severity.Error, _Header + "authentication failed");
+                        reason = DisconnectReason.AuthFailure;
                         Task unawaited = Task.Run(() => _Events.HandleAuthenticationFailure(this, EventArgs.Empty), _Token);
-                        continue;
+                        break;
                     }
                     else if (msg.Status == MessageStatus.AuthRequired)
                     {

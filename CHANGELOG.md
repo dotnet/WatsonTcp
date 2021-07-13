@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.8.10
+
+- Bugfix, authentication failure now disconnects clients and propagates the correct reason (thank you @Jyck)
+
+## Previous Versions
+
 v4.8.9
 
 - Added optional parameter ```offset``` to ```Send``` and ```SendAsync``` methods that use ```byte[]``` data (thank you @pha3z)
-
-## Previous Versions
 
 v4.8.8
 

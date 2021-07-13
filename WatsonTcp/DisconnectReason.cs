@@ -33,6 +33,11 @@ namespace WatsonTcp
         /// Disconnect due to server shutdown.
         /// </summary>
         [EnumMember(Value = "Shutdown")]
-        Shutdown = 3
+        Shutdown = 3,
+        /// <summary>
+        /// Disconnect due to authentication failure.
+        /// </summary>
+        [EnumMember(Value = "AuthFailure")]
+        AuthFailure
     }
 }

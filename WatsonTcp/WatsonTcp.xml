@@ -89,6 +89,11 @@
             Disconnect due to server shutdown.
             </summary>
         </member>
+        <member name="F:WatsonTcp.DisconnectReason.AuthFailure">
+            <summary>
+            Disconnect due to authentication failure.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.ExceptionEventArgs">
             <summary>
             Event arguments for when an exception is encountered. 

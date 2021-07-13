@@ -1008,6 +1008,11 @@ namespace WatsonTcp
                         {
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "message received from unauthenticated endpoint " + client.IpPort);
 
+                            byte[] data = null;
+                            WatsonMessage authMsg = null;
+                            int contentLength = 0;
+                            Stream authStream = null;
+
                             if (msg.Status == MessageStatus.AuthRequested)
                             {
                                 // check preshared key
@@ -1019,9 +1024,9 @@ namespace WatsonTcp
                                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "accepted authentication for " + client.IpPort);
                                         _UnauthenticatedClients.TryRemove(client.IpPort, out _);
                                         _Events.HandleAuthenticationSucceeded(this, new AuthenticationSucceededEventArgs(client.IpPort));
-                                        byte[] data = Encoding.UTF8.GetBytes("Authentication successful");
-                                        WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
-                                        WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+                                        data = Encoding.UTF8.GetBytes("Authentication successful");
+                                        WatsonCommon.BytesToStream(data, 0, out contentLength, out authStream);
+                                        authMsg = new WatsonMessage(null, contentLength, authStream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
                                         authMsg.Status = MessageStatus.AuthSuccess;
                                         SendInternal(client, authMsg, 0, null);
                                         continue;
@@ -1029,39 +1034,37 @@ namespace WatsonTcp
                                     else
                                     {
                                         _Settings.Logger?.Invoke(Severity.Warn, _Header + "declined authentication for " + client.IpPort);
-                                        byte[] data = Encoding.UTF8.GetBytes("Authentication declined");
+
+                                        /*
+                                        data = Encoding.UTF8.GetBytes("Authentication declined");
                                         _Events.HandleAuthenticationFailed(this, new AuthenticationFailedEventArgs(client.IpPort));
-                                        WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
-                                        WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+                                        WatsonCommon.BytesToStream(data, 0, out contentLength, out authStream);
+                                        authMsg = new WatsonMessage(null, contentLength, authStream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
                                         authMsg.Status = MessageStatus.AuthFailure;
                                         SendInternal(client, authMsg, 0, null);
                                         continue;
+                                        */
+
+                                        DisconnectClient(client.IpPort, MessageStatus.AuthFailure);
+                                        break;
                                     }
                                 }
-                                else
-                                {
-                                    _Settings.Logger?.Invoke(Severity.Warn, _Header + "no authentication material for " + client.IpPort);
-                                    byte[] data = Encoding.UTF8.GetBytes("No authentication material");
-                                    _Events.HandleAuthenticationFailed(this, new AuthenticationFailedEventArgs(client.IpPort));
-                                    WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
-                                    WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-                                    authMsg.Status = MessageStatus.AuthFailure;
-                                    SendInternal(client, authMsg, 0, null);
-                                    continue;
-                                }
                             }
-                            else
-                            {
-                                // decline the message
-                                _Settings.Logger?.Invoke(Severity.Warn, _Header + "no authentication material for " + client.IpPort);
-                                byte[] data = Encoding.UTF8.GetBytes("Authentication required");
-                                _Events.HandleAuthenticationRequested(this, new AuthenticationRequestedEventArgs(client.IpPort));
-                                WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
-                                WatsonMessage authMsg = new WatsonMessage(null, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
-                                authMsg.Status = MessageStatus.AuthRequired;
-                                SendInternal(client, authMsg, 0, null);
-                                continue;
-                            }
+
+                            // decline and terminate
+                            _Settings.Logger?.Invoke(Severity.Warn, _Header + "no authentication material for " + client.IpPort);
+
+                            /*
+                            data = Encoding.UTF8.GetBytes("Authentication required");
+                            _Events.HandleAuthenticationRequested(this, new AuthenticationRequestedEventArgs(client.IpPort));
+                            WatsonCommon.BytesToStream(data, 0, out contentLength, out authStream);
+                            authMsg = new WatsonMessage(null, contentLength, authStream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+                            authMsg.Status = MessageStatus.AuthFailure;
+                            SendInternal(client, authMsg, 0, null);
+                            */
+
+                            DisconnectClient(client.IpPort, MessageStatus.AuthFailure);
+                            break;
                         }
                     }
 
