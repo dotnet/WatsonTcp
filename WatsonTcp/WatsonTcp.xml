@@ -345,6 +345,21 @@
             <param name="metadata">Metadata to attach to the response.</param>
             <param name="data">Data to send as a response.</param>
         </member>
+        <member name="T:WatsonTcp.TlsVersion">
+            <summary>
+            Supported TLS versions
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.TlsVersion.Tls12">
+            <summary>
+            Use TLS 1.2 (you can't go below this)
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.TlsVersion.Tls13">
+            <summary>
+            Use TLS 1.3 (only valid for .Net 5.0 or greater)
+            </summary>
+        </member>
         <member name="P:WatsonTcp.WatsonMessage.ContentLength">
             <summary>
             Length of the data.
@@ -556,7 +571,7 @@
             <param name="serverIp">The IP address or hostname of the server.</param>
             <param name="serverPort">The TCP port on which the server is listening.</param>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.String,System.String)">
+        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.String,System.String,WatsonTcp.TlsVersion)">
             <summary>
             Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
             </summary>
@@ -564,14 +579,16 @@
             <param name="serverPort">The TCP port on which the server is listening.</param>
             <param name="pfxCertFile">The file containing the SSL certificate.</param>
             <param name="pfxCertPass">The password for the SSL certificate.</param>
+            <param name="tlsVersion">The TLS version used for this connection</param>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2)">
+        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2,WatsonTcp.TlsVersion)">
             <summary>
             Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
             </summary>
             <param name="serverIp">The IP address or hostname of the server.</param>
             <param name="serverPort">The TCP port on which the server is listening.</param>
             <param name="cert">The SSL certificate</param>
+            <param name="tlsVersion">The TLS version used for this conenction</param>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Dispose">
             <summary>        
@@ -904,7 +921,7 @@
             <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
             <param name="listenerPort">The TCP port on which the server should listen.</param>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32,System.String,System.String)">
+        <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32,System.String,System.String,WatsonTcp.TlsVersion)">
             <summary>
             Initialize the Watson TCP server with SSL.  
             Supply a specific IP address on which to listen.  Otherwise, use 'null' for the IP address to listen on any IP address.
@@ -915,8 +932,9 @@
             <param name="listenerPort">The TCP port on which the server should listen.</param>
             <param name="pfxCertFile">The file containing the SSL certificate.</param>
             <param name="pfxCertPass">The password for the SSL certificate.</param>
+            <param name="tlsVersion">The TLS version used for this connection</param>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2)">
+        <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2,WatsonTcp.TlsVersion)">
             <summary>
             Initialize the Watson TCP server with SSL.  
             Supply a specific IP address on which to listen.  Otherwise, use 'null' for the IP address to listen on any IP address.
@@ -926,6 +944,7 @@
             <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
             <param name="listenerPort">The TCP port on which the server should listen.</param>
             <param name="cert">The SSL certificate.</param>
+            <param name="tlsVersion">The TLS version used for this connection</param>
             <exception cref="T:System.ArgumentOutOfRangeException"></exception>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.Dispose">
