@@ -2,11 +2,15 @@
 
 ## Current Version
 
+v4.8.11
+
+- TLS extensions, thank you @cee-sharp
+
+## Previous Versions
+
 v4.8.10
 
 - Bugfix, authentication failure now disconnects clients and propagates the correct reason (thank you @Jyck)
-
-## Previous Versions
 
 v4.8.9
 

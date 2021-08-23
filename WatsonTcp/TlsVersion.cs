@@ -4,18 +4,18 @@ using Newtonsoft.Json.Converters;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Supported TLS versions
+    /// Supported TLS versions.
     /// </summary>
     [JsonConverter(typeof(StringEnumConverter))]
     public enum TlsVersion
     {
         /// <summary>
-        /// Use TLS 1.2 (you can't go below this)
+        /// Use TLS version 1.2 (this is the minimum version).
         /// </summary>
         Tls12,
         /// <summary>
-        /// Use TLS 1.3 (only valid for .Net 5.0 or greater)
+        /// Use TLS version 1.3 (only valid for .Net 5.0 or greater).
         /// </summary>
-        Tls13,
+        Tls13
     }
 }

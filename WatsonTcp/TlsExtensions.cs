@@ -3,8 +3,16 @@ using System.Security.Authentication;
 
 namespace WatsonTcp
 {
-    static class TlsExtensions
+    /// <summary>
+    /// TLS extensions.
+    /// </summary>
+    public static class TlsExtensions
     {
+        /// <summary>
+        /// TLS version to SSL protocol version.
+        /// </summary>
+        /// <param name="tlsVersion"></param>
+        /// <returns></returns>
         public static SslProtocols ToSslProtocols(this TlsVersion tlsVersion)
         {
             switch (tlsVersion)
@@ -16,7 +24,7 @@ namespace WatsonTcp
                     return SslProtocols.Tls13;
 #endif
                 default: 
-                    throw new ArgumentOutOfRangeException($"Unsupported TLS version {tlsVersion}");
+                    throw new ArgumentOutOfRangeException($"Unsupported TLS version {tlsVersion}.");
             }
         }
     }

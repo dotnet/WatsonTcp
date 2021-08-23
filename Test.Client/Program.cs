@@ -213,6 +213,7 @@ namespace TestClient
             _Client.Callbacks.SyncRequestReceived = SyncRequestReceived;
             _Client.Callbacks.AuthenticationRequested = AuthenticationRequested;
 
+            // _Client.Settings.IdleServerTimeoutMs = 5000;
             _Client.Settings.DebugMessages = _DebugMessages;
             _Client.Settings.Logger = Logger;
 

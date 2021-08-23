@@ -115,7 +115,7 @@ namespace WatsonTcp
         private WatsonTcpKeepaliveSettings _Keepalive = new WatsonTcpKeepaliveSettings();
 
         private Mode _Mode = Mode.Tcp;
-        private TlsVersion _TlsVersion; 
+        private TlsVersion _TlsVersion = TlsVersion.Tls12;
         private string _SourceIp = null;
         private int _SourcePort = 0;
         private string _ServerIp = null;
@@ -136,6 +136,10 @@ namespace WatsonTcp
         private CancellationToken _Token;
         private Task _DataReceiver = null;
         private Task _MonitorSyncResponses = null;
+        private Task _IdleServerMonitor = null;
+
+        private DateTime _LastActivity = DateTime.Now;
+        private bool _IsTimeout = false;
 
         private readonly object _SyncResponseLock = new object();
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>(); 
@@ -168,7 +172,7 @@ namespace WatsonTcp
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
-        /// <param name="tlsVersion">The TLS version used for this connection</param>
+        /// <param name="tlsVersion">The TLS version used for this connection.</param>
         public WatsonTcpClient(
             string serverIp,
             int serverPort,
@@ -212,7 +216,7 @@ namespace WatsonTcp
         /// <param name="serverIp">The IP address or hostname of the server.</param>
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="cert">The SSL certificate</param>
-        /// <param name="tlsVersion">The TLS version used for this conenction</param>
+        /// <param name="tlsVersion">The TLS version used for this conenction.</param>
         public WatsonTcpClient(
             string serverIp, 
             int serverPort, 
@@ -395,7 +399,11 @@ namespace WatsonTcp
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
 
+            _LastActivity = DateTime.Now;
+            _IsTimeout = false;
+
             _DataReceiver = Task.Run(() => DataReceiver(), _Token);
+            _IdleServerMonitor = Task.Run(() => IdleServerMonitor(), _Token);
             _MonitorSyncResponses = Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
             _Events.HandleServerConnected(this, new ConnectionEventArgs((_ServerIp + ":" + _ServerPort)));
             _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
@@ -419,7 +427,7 @@ namespace WatsonTcp
 
             if (_TokenSource != null)
             {
-                // stop the data receiver
+                // stop background tasks
                 if (!_TokenSource.IsCancellationRequested)
                 {
                     _TokenSource.Cancel();
@@ -443,6 +451,11 @@ namespace WatsonTcp
             }
 
             while (_DataReceiver?.Status == TaskStatus.Running)
+            {
+                Task.Delay(1).Wait();
+            }
+
+            while (_IdleServerMonitor?.Status == TaskStatus.Running)
             {
                 Task.Delay(1).Wait();
             }
@@ -732,6 +745,8 @@ namespace WatsonTcp
                         continue;
                     }
 
+                    _LastActivity = DateTime.Now;
+
                     #endregion
 
                     #region Process-by-Status
@@ -899,6 +914,8 @@ namespace WatsonTcp
             }
 
             Connected = false;
+
+            if (_IsTimeout) reason = DisconnectReason.Timeout;
 
             _Settings?.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
             _Events?.HandleServerDisconnected(this, new DisconnectionEventArgs((_ServerIp + ":" + _ServerPort), reason));
@@ -1234,6 +1251,25 @@ namespace WatsonTcp
             catch (OperationCanceledException)
             {
                 return null;
+            }
+        }
+
+        private async Task IdleServerMonitor()
+        {
+            while (!_Token.IsCancellationRequested)
+            {
+                await Task.Delay(_Settings.IdleServerEvaluationIntervalMs, _Token).ConfigureAwait(false);
+
+                if (_Settings.IdleServerTimeoutMs == 0) continue;
+
+                DateTime timeoutTime = _LastActivity.AddMilliseconds(_Settings.IdleServerTimeoutMs);
+
+                if (DateTime.Now > timeoutTime)
+                {
+                    _Settings.Logger?.Invoke(Severity.Warn, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort + " due to timeout");
+                    _IsTimeout = true;
+                    Disconnect();
+                }
             }
         }
 

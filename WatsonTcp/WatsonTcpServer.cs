@@ -135,7 +135,7 @@ namespace WatsonTcp
         private bool _IsListening = false;
 
         private Mode _Mode;
-        private TlsVersion _TlsVersion;
+        private TlsVersion _TlsVersion = TlsVersion.Tls12;
         private string _ListenerIp;
         private int _ListenerPort;
         private IPAddress _ListenerIpAddress;
@@ -207,7 +207,7 @@ namespace WatsonTcp
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
-        /// <param name="tlsVersion">The TLS version used for this connection</param>
+        /// <param name="tlsVersion">The TLS version required for client connections.</param>
         public WatsonTcpServer(
             string listenerIp,
             int listenerPort,
@@ -259,7 +259,7 @@ namespace WatsonTcp
         /// <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
         /// <param name="cert">The SSL certificate.</param>
-        /// <param name="tlsVersion">The TLS version used for this connection</param>
+        /// <param name="tlsVersion">The TLS version required for client connections.</param>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public WatsonTcpServer(
             string listenerIp,
