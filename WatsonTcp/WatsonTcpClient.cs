@@ -115,6 +115,7 @@ namespace WatsonTcp
         private WatsonTcpKeepaliveSettings _Keepalive = new WatsonTcpKeepaliveSettings();
 
         private Mode _Mode = Mode.Tcp;
+        private TlsVersion _TlsVersion; 
         private string _SourceIp = null;
         private int _SourcePort = 0;
         private string _ServerIp = null;
@@ -167,16 +168,19 @@ namespace WatsonTcp
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
+        /// <param name="tlsVersion">The TLS version used for this connection</param>
         public WatsonTcpClient(
             string serverIp,
             int serverPort,
             string pfxCertFile,
-            string pfxCertPass)
+            string pfxCertPass,
+            TlsVersion tlsVersion = TlsVersion.Tls12)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
               
             _Mode = Mode.Ssl;
+            _TlsVersion = tlsVersion;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
 
@@ -208,16 +212,19 @@ namespace WatsonTcp
         /// <param name="serverIp">The IP address or hostname of the server.</param>
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="cert">The SSL certificate</param>
+        /// <param name="tlsVersion">The TLS version used for this conenction</param>
         public WatsonTcpClient(
             string serverIp, 
             int serverPort, 
-            X509Certificate2 cert)
+            X509Certificate2 cert,
+            TlsVersion tlsVersion = TlsVersion.Tls12)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (cert == null) throw new ArgumentNullException(nameof(cert));
              
             _Mode = Mode.Ssl;
+            _TlsVersion = tlsVersion;
             _SslCertificate = cert;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
@@ -343,7 +350,7 @@ namespace WatsonTcp
                     else
                         _SslStream = new SslStream(_Client.GetStream(), false);
 
-                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, SslProtocols.Tls12, !_Settings.AcceptInvalidCertificates);
+                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, _TlsVersion.ToSslProtocols(), !_Settings.AcceptInvalidCertificates);
 
                     if (!_SslStream.IsEncrypted)
                     {

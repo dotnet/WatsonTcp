@@ -135,6 +135,7 @@ namespace WatsonTcp
         private bool _IsListening = false;
 
         private Mode _Mode;
+        private TlsVersion _TlsVersion;
         private string _ListenerIp;
         private int _ListenerPort;
         private IPAddress _ListenerIpAddress;
@@ -206,16 +207,19 @@ namespace WatsonTcp
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
+        /// <param name="tlsVersion">The TLS version used for this connection</param>
         public WatsonTcpServer(
             string listenerIp,
             int listenerPort,
             string pfxCertFile,
-            string pfxCertPass)
+            string pfxCertPass,
+            TlsVersion tlsVersion = TlsVersion.Tls12)
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
             if (String.IsNullOrEmpty(pfxCertFile)) throw new ArgumentNullException(nameof(pfxCertFile));
              
             _Mode = Mode.Ssl;
+            _TlsVersion = tlsVersion;
 
             if (String.IsNullOrEmpty(listenerIp))
             {
@@ -255,16 +259,19 @@ namespace WatsonTcp
         /// <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
         /// <param name="listenerPort">The TCP port on which the server should listen.</param>
         /// <param name="cert">The SSL certificate.</param>
+        /// <param name="tlsVersion">The TLS version used for this connection</param>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public WatsonTcpServer(
             string listenerIp,
             int listenerPort,
-            X509Certificate2 cert)
+            X509Certificate2 cert,
+            TlsVersion tlsVersion = TlsVersion.Tls12)
         {
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
             if (cert == null) throw new ArgumentNullException(nameof(cert));
 
             _Mode = Mode.Ssl;
+            _TlsVersion = tlsVersion;
             _SslCertificate = cert;
 
             if (String.IsNullOrEmpty(listenerIp))
@@ -826,7 +833,7 @@ namespace WatsonTcp
         {
             try
             { 
-                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, SslProtocols.Tls12, !_Settings.AcceptInvalidCertificates).ConfigureAwait(false);
+                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, _TlsVersion.ToSslProtocols(), !_Settings.AcceptInvalidCertificates).ConfigureAwait(false);
 
                 if (!client.SslStream.IsEncrypted)
                 {
@@ -846,7 +853,7 @@ namespace WatsonTcp
 
                 if (_Settings.MutuallyAuthenticate && !client.SslStream.IsMutuallyAuthenticated)
                 {
-                    _Settings.Logger?.Invoke(Severity.Error, _Header + "mutual authentication with " + client.IpPort + " failed");
+                    _Settings.Logger?.Invoke(Severity.Error, _Header + $"mutual authentication with {client.IpPort} ({_TlsVersion}) failed");
                     client.Dispose(); 
                     Interlocked.Decrement(ref _Connections);
                     return false;
@@ -855,7 +862,7 @@ namespace WatsonTcp
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(Severity.Error,
-                    _Header + "disconnected during SSL/TLS establishment with " + client.IpPort + ": " +
+                    _Header + $"disconnected during SSL/TLS establishment with {client.IpPort} ({_TlsVersion}): " +
                     Environment.NewLine +
                     SerializationHelper.SerializeJson(e, true));
 
