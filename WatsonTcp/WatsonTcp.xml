@@ -571,6 +571,11 @@
             Watson TCP keepalive settings.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.SslConfiguration">
+            <summary>
+            Watson TCP client SSL configuration.
+            </summary>
+        </member>
         <member name="P:WatsonTcp.WatsonTcpClient.Connected">
             <summary>
             Indicates whether or not the client is connected to the server.
@@ -857,6 +862,48 @@
             Instantiate the object.
             </summary>
         </member>
+        <member name="T:WatsonTcp.WatsonTcpClientSslConfiguration">
+            <summary>
+            Stores the parameters for the <see cref="T:System.Net.Security.SslStream"/> used by clients.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSslConfiguration.CheckCertificateRevocation">
+            <summary>
+            Gets or sets a <see cref="T:System.Boolean"/> value that specifies whether the certificate revocation list
+            is checked during authentication.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSslConfiguration.ClientCertificateSelectionCallback">
+            <summary>
+            Gets or sets a <see cref="T:System.Net.Security.LocalCertificateSelectionCallback"/> delegate responsible for
+            selecting the certificate used for authentication.
+            </summary>
+            <remarks>The default delegate returns the first certificate in the collection</remarks>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSslConfiguration.ServerCertificateValidationCallback">
+            <summary>
+            Gets or sets a <see cref="T:System.Net.Security.RemoteCertificateValidationCallback"/> delegate responsible
+            for validating the certificate supplied by the remote party.
+            </summary>
+            <remarks>
+            The default delegate returns true for all certificates
+            </remarks>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClientSslConfiguration.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:WatsonTcp.WatsonTcpClientSslConfiguration"/>.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClientSslConfiguration.#ctor(WatsonTcp.WatsonTcpClientSslConfiguration)">
+            <summary>
+            Initializes a new instance of <see cref="T:WatsonTcp.WatsonTcpClientSslConfiguration"/>
+            that stores the parameters copied from another configuration.
+            </summary>
+            <param name="configuration">
+            A <see cref="T:WatsonTcp.WatsonTcpClientSslConfiguration"/> from which to copy.
+            </param>
+            <exception cref="T:System.ArgumentNullException" />
+        </member>
         <member name="T:WatsonTcp.WatsonTcpKeepaliveSettings">
             <summary>
             Watson TCP keepalive settings.
@@ -924,6 +971,11 @@
         <member name="P:WatsonTcp.WatsonTcpServer.Keepalive">
             <summary>
             Watson TCP keepalive settings.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServer.SslConfiguration">
+            <summary>
+            Watson TCP server SSL configuration.
             </summary>
         </member>
         <member name="P:WatsonTcp.WatsonTcpServer.Connections">
@@ -1260,6 +1312,47 @@
             <summary>
             Instantiate the object.
             </summary>
+        </member>
+        <member name="T:WatsonTcp.WatsonTcpServerSslConfiguration">
+            <summary>
+            Stores the parameters for the <see cref="T:System.Net.Security.SslStream"/> used by servers.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSslConfiguration.CheckCertificateRevocation">
+            <summary>
+            Gets or sets a <see cref="T:System.Boolean"/> value that specifies whether the certificate revocation list
+            is checked during authentication.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSslConfiguration.ClientCertificateRequired">
+            <summary>
+            Gets or sets a value indicating whether the client is asked for
+            a certificate for authentication.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSslConfiguration.ClientCertificateValidationCallback">
+            <summary>
+            Gets or sets a <see cref="T:System.Net.Security.RemoteCertificateValidationCallback"/> delegate responsible
+            for validating the certificate supplied by the remote party.
+            </summary>
+            <remarks>
+            The default delegate returns true for all certificates
+            </remarks>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServerSslConfiguration.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:WatsonTcp.WatsonTcpServerSslConfiguration"/>.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpServerSslConfiguration.#ctor(WatsonTcp.WatsonTcpServerSslConfiguration)">
+            <summary>
+            Initializes a new instance of the <see cref="T:WatsonTcp.WatsonTcpServerSslConfiguration"/>
+            class that stores the parameters copied from another configuration.
+            </summary>
+            <param name="configuration">
+            A <see cref="T:WatsonTcp.WatsonTcpServerSslConfiguration"/> from which to copy.
+            </param>
+            <exception cref="T:System.ArgumentNullException"/>
         </member>
         <member name="T:WatsonTcp.WatsonTcpStatistics">
             <summary>

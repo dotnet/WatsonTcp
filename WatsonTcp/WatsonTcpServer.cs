@@ -99,6 +99,22 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Watson TCP server SSL configuration.
+        /// </summary>
+        public WatsonTcpServerSslConfiguration SslConfiguration
+        {
+            get
+            {
+                return _SslConfiguration;
+            }
+            set
+            {
+                if (value == null) _SslConfiguration = new WatsonTcpServerSslConfiguration();
+                else _SslConfiguration = value;
+            }
+        }
+
+        /// <summary>
         /// Retrieve the number of current connected clients.
         /// </summary>
         public int Connections
@@ -130,6 +146,7 @@ namespace WatsonTcp
         private WatsonTcpServerCallbacks _Callbacks = new WatsonTcpServerCallbacks();
         private WatsonTcpStatistics _Statistics = new WatsonTcpStatistics();
         private WatsonTcpKeepaliveSettings _Keepalive = new WatsonTcpKeepaliveSettings();
+        private WatsonTcpServerSslConfiguration _SslConfiguration = new WatsonTcpServerSslConfiguration();
 
         private int _Connections = 0;
         private bool _IsListening = false;
@@ -653,6 +670,7 @@ namespace WatsonTcp
                 _Callbacks = null;
                 _Statistics = null;
                 _Keepalive = null;
+                _SslConfiguration = null;
 
                 _ListenerIp = null;
                 _ListenerIpAddress = null;
@@ -708,12 +726,6 @@ namespace WatsonTcp
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "keepalives not supported on this platform, disabled");
                 _Keepalive.EnableTcpKeepAlives = false;
             }
-        }
-
-        private bool AcceptCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            // return true; // Allow untrusted certificates.
-            return _Settings.AcceptInvalidCertificates;
         }
 
         private async Task AcceptConnections()
@@ -783,7 +795,7 @@ namespace WatsonTcp
                     {
                         if (_Settings.AcceptInvalidCertificates)
                         {
-                            client.SslStream = new SslStream(client.NetworkStream, false, new RemoteCertificateValidationCallback(AcceptCertificate));
+                            client.SslStream = new SslStream(client.NetworkStream, false, _SslConfiguration.ClientCertificateValidationCallback);
                         }
                         else
                         {
@@ -833,7 +845,7 @@ namespace WatsonTcp
         {
             try
             { 
-                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, true, _TlsVersion.ToSslProtocols(), !_Settings.AcceptInvalidCertificates).ConfigureAwait(false);
+                await client.SslStream.AuthenticateAsServerAsync(_SslCertificate, _SslConfiguration.ClientCertificateRequired, _TlsVersion.ToSslProtocols(), _SslConfiguration.CheckCertificateRevocation).ConfigureAwait(false);
 
                 if (!client.SslStream.IsEncrypted)
                 {
