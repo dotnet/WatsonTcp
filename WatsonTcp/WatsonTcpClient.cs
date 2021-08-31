@@ -488,7 +488,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string data, Dictionary<object, object> metadata = null)
         {
-            if (String.IsNullOrEmpty(data)) return Send(new byte[0], null);
+            if (String.IsNullOrEmpty(data)) return Send(new byte[0], metadata);
             else return Send(Encoding.UTF8.GetBytes(data), metadata);
         }
          
@@ -530,7 +530,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string data, Dictionary<object, object> metadata = null, CancellationToken token = default)
         {
-            if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0], null);
+            if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0], metadata);
             if (token == default(CancellationToken)) token = _Token;
             return await SendAsync(Encoding.UTF8.GetBytes(data), metadata, 0, token).ConfigureAwait(false);
         }
