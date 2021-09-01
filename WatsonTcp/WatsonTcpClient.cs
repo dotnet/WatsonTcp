@@ -371,7 +371,7 @@ namespace WatsonTcp
                     else
                         _SslStream = new SslStream(_Client.GetStream(), false);
 
-                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, _TlsVersion.ToSslProtocols(), _SslConfiguration.CheckCertificateRevocation);
+                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, _TlsVersion.ToSslProtocols(), !_Settings.AcceptInvalidCertificates);
 
                     if (!_SslStream.IsEncrypted)
                     {

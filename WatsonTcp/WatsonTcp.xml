@@ -867,12 +867,6 @@
             Stores the parameters for the <see cref="T:System.Net.Security.SslStream"/> used by clients.
             </summary>
         </member>
-        <member name="P:WatsonTcp.WatsonTcpClientSslConfiguration.CheckCertificateRevocation">
-            <summary>
-            Gets or sets a <see cref="T:System.Boolean"/> value that specifies whether the certificate revocation list
-            is checked during authentication.
-            </summary>
-        </member>
         <member name="P:WatsonTcp.WatsonTcpClientSslConfiguration.ClientCertificateSelectionCallback">
             <summary>
             Gets or sets a <see cref="T:System.Net.Security.LocalCertificateSelectionCallback"/> delegate responsible for
@@ -1316,12 +1310,6 @@
         <member name="T:WatsonTcp.WatsonTcpServerSslConfiguration">
             <summary>
             Stores the parameters for the <see cref="T:System.Net.Security.SslStream"/> used by servers.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpServerSslConfiguration.CheckCertificateRevocation">
-            <summary>
-            Gets or sets a <see cref="T:System.Boolean"/> value that specifies whether the certificate revocation list
-            is checked during authentication.
             </summary>
         </member>
         <member name="P:WatsonTcp.WatsonTcpServerSslConfiguration.ClientCertificateRequired">

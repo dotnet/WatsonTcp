@@ -12,23 +12,6 @@ namespace WatsonTcp
         #region Public-Members
 
         /// <summary>
-        /// Gets or sets a <see cref="bool"/> value that specifies whether the certificate revocation list
-        /// is checked during authentication.
-        /// </summary>
-        public bool CheckCertificateRevocation
-        {
-            get
-            {
-                return _CheckCertRevocation;
-            }
-
-            set
-            {
-                _CheckCertRevocation = value;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets a <see cref="LocalCertificateSelectionCallback"/> delegate responsible for
         /// selecting the certificate used for authentication.
         /// </summary>
@@ -75,7 +58,6 @@ namespace WatsonTcp
 
         #region Private-Members
 
-        private bool _CheckCertRevocation;
         private LocalCertificateSelectionCallback _ClientCertSelectionCallback;
         private RemoteCertificateValidationCallback _ServerCertValidationCallback;
 
@@ -103,7 +85,6 @@ namespace WatsonTcp
             if (configuration == null)
                 throw new ArgumentNullException("Can not copy from null client SSL configuration");
 
-            _CheckCertRevocation = configuration._CheckCertRevocation;
             _ClientCertSelectionCallback = configuration._ClientCertSelectionCallback;
             _ServerCertValidationCallback = configuration._ServerCertValidationCallback;
         }
