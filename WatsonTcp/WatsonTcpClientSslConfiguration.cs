@@ -105,11 +105,12 @@ namespace WatsonTcp
           string[] acceptableIssuers
         )
         {
-            if (clientCertificates.Count > 0)
+            if (clientCertificates == null || clientCertificates.Count == 0)
             {
-                return clientCertificates[0];
+                return null;
             }
-            return null;
+
+            return clientCertificates[0];
         }
 
         private static bool DefaultValidateServerCertificate(
