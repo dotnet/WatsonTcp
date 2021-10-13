@@ -105,6 +105,11 @@ namespace WatsonTcp
           string[] acceptableIssuers
         )
         {
+            if (clientCertificates == null || clientCertificates.Count == 0)
+            {
+                return null;
+            }
+
             return clientCertificates[0];
         }
 
