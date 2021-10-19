@@ -137,7 +137,7 @@ static void MessageReceived(object sender, MessageReceivedEventArgs args)
 
 static SyncResponse SyncRequestReceived(SyncRequest req)
 {
-    return new SyncResponse("Hello back at you!");
+    return new SyncResponse(req, "Hello back at you!");
 }
 ```
  
@@ -197,7 +197,7 @@ static void ServerDisconnected(object sender, EventArgs args)
 
 static SyncResponse SyncRequestReceived(SyncRequest req)
 {
-    return new SyncResponse("Hello back at you!");
+    return new SyncResponse(req, "Hello back at you!");
 }
 ```
 
