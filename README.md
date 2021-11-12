@@ -87,6 +87,9 @@ using WatsonTcp;
 
 static void Main(string[] args)
 {
+	// Use this for Unity3D
+	WatsonUtils.FixJsonUnity();
+
     WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 9000);
     server.Events.ClientConnected += ClientConnected;
     server.Events.ClientDisconnected += ClientDisconnected;
@@ -147,7 +150,10 @@ using WatsonTcp;
 
 static void Main(string[] args)
 {
-    WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
+	// Use this for Unity3D
+	WatsonUtils.FixJsonUnity();
+    
+	WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
     client.Events.ServerConnected += ServerConnected;
     client.Events.ServerDisconnected += ServerDisconnected;
     client.Events.MessageReceived += MessageReceived; 
