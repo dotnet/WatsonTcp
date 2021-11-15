@@ -179,7 +179,9 @@ namespace WatsonTcp
               
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
-            _ServerPort = serverPort; 
+            _ServerPort = serverPort;
+
+            SerializationHelper.InstantiateConverter(); // Unity fix
         }
 
         /// <summary>
@@ -224,7 +226,9 @@ namespace WatsonTcp
             else
             {
                 _SslCertificateCollection = new X509Certificate2Collection();
-            } 
+            }
+
+            SerializationHelper.InstantiateConverter(); // Unity fix
         }
 
         /// <summary>
@@ -254,6 +258,8 @@ namespace WatsonTcp
             {
                 _SslCertificate
             };
+
+            SerializationHelper.InstantiateConverter(); // Unity fix
         }
 
         #endregion

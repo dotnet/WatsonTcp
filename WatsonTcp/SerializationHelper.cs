@@ -5,6 +5,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 
 namespace WatsonTcp
@@ -15,6 +16,18 @@ namespace WatsonTcp
         {
             TypeNameHandling = TypeNameHandling.None // Prevents CS2328 style attacks if a project is allowing automatic type resolution elsewhere.
         };
+
+        internal static void InstantiateConverter()
+        {
+            try
+            {
+                Activator.CreateInstance<StringEnumConverter>();
+            }
+            catch (Exception)
+            {
+
+            }
+        }
 
         internal static T DeserializeJson<T>(string json)
         {

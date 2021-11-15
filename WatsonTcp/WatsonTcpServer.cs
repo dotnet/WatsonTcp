@@ -211,7 +211,9 @@ namespace WatsonTcp
                 _ListenerIp = listenerIp;
             }
 
-            _ListenerPort = listenerPort; 
+            _ListenerPort = listenerPort;
+
+            SerializationHelper.InstantiateConverter(); // Unity fix
         }
 
         /// <summary>
@@ -264,7 +266,9 @@ namespace WatsonTcp
                 _SslCertificate = new X509Certificate2(pfxCertFile, pfxCertPass);
             }
 
-            _ListenerPort = listenerPort; 
+            _ListenerPort = listenerPort;
+
+            SerializationHelper.InstantiateConverter(); // Unity fix
         }
 
         /// <summary>
@@ -307,7 +311,9 @@ namespace WatsonTcp
                 _ListenerIp = listenerIp;
             }
 
-            _ListenerPort = listenerPort; 
+            _ListenerPort = listenerPort;
+
+            SerializationHelper.InstantiateConverter(); // Unity fix
         }
 
         #endregion
