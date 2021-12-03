@@ -1263,7 +1263,7 @@ namespace WatsonTcp
 
             try
             {
-                SendHeaders(client, msg);
+                //SendHeaders(client, msg);
                 SendDataStream(client, contentLength, stream);
 
                 _Statistics.IncrementSentMessages();
@@ -1317,7 +1317,8 @@ namespace WatsonTcp
 
             try
             {
-                await SendHeadersAsync(client, msg, token).ConfigureAwait(false);
+                
+                //await SendHeadersAsync(client, msg, token).ConfigureAwait(false);
                 await SendDataStreamAsync(client, contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
@@ -1365,7 +1366,7 @@ namespace WatsonTcp
 
             try
             {
-                SendHeaders(client, msg);
+                //SendHeaders(client, msg);
                 SendDataStream(client, contentLength, stream);
 
                 _Statistics.IncrementSentMessages();
