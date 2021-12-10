@@ -1161,6 +1161,12 @@ namespace WatsonTcp
              
             long bytesRemaining = contentLength;
             int bytesRead = 0;
+
+            if (_Settings.StreamBufferSize > _BufferPool.Length)
+            {
+                _BufferPool = new byte[_Settings.StreamBufferSize];
+            }
+
             byte[] buffer = _BufferPool;
               
             while (bytesRemaining > 0)
