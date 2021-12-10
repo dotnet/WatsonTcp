@@ -174,7 +174,8 @@ namespace WatsonTcp
 
         private readonly object _SyncResponseLock = new object();
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>();
-         
+        private byte[] _BufferPool = null;
+
         #endregion
 
         #region Constructors-and-Factories
@@ -214,6 +215,8 @@ namespace WatsonTcp
             _ListenerPort = listenerPort;
 
             SerializationHelper.InstantiateConverter(); // Unity fix
+
+            _BufferPool = new byte[_Settings.StreamBufferSize];
         }
 
         /// <summary>
@@ -269,6 +272,8 @@ namespace WatsonTcp
             _ListenerPort = listenerPort;
 
             SerializationHelper.InstantiateConverter(); // Unity fix
+
+            _BufferPool = new byte[_Settings.StreamBufferSize];
         }
 
         /// <summary>
@@ -314,6 +319,8 @@ namespace WatsonTcp
             _ListenerPort = listenerPort;
 
             SerializationHelper.InstantiateConverter(); // Unity fix
+
+            _BufferPool = new byte[_Settings.StreamBufferSize];
         }
 
         #endregion
@@ -1411,7 +1418,7 @@ namespace WatsonTcp
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
-            byte[] buffer = new byte[_Settings.StreamBufferSize];
+            byte[] buffer = _BufferPool;
              
             while (bytesRemaining > 0)
             {
