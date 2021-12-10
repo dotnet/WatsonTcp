@@ -293,6 +293,7 @@ namespace WatsonTcp
                 _Client = new TcpClient(ipe);
             }
 
+            _Client.NoDelay = _Settings.NoDelay;
             _Statistics = new WatsonTcpStatistics();
 
             IAsyncResult asyncResult = null;

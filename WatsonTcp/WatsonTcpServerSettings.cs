@@ -124,6 +124,11 @@ namespace WatsonTcp
             }
         }
 
+        /// <summary>
+        /// Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is false.
+        /// </summary>
+        public bool NoDelay { get; set; } = false;
+
         #endregion
 
         #region Private-Members

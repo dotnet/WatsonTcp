@@ -761,6 +761,7 @@ namespace WatsonTcp
 
                     TcpClient tcpClient = await _Listener.AcceptTcpClientAsync().ConfigureAwait(false);
                     tcpClient.LingerState.Enabled = false;
+                    tcpClient.NoDelay = _Settings.NoDelay;
 
                     if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives(tcpClient);
 

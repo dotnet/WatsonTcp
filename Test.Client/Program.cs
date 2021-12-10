@@ -216,6 +216,7 @@ namespace TestClient
             // _Client.Settings.IdleServerTimeoutMs = 5000;
             _Client.Settings.DebugMessages = _DebugMessages;
             _Client.Settings.Logger = Logger;
+            _Client.Settings.NoDelay = true;
 
             _Client.Keepalive.EnableTcpKeepAlives = true;
             _Client.Keepalive.TcpKeepAliveInterval = 1;

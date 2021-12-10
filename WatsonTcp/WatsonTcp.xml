@@ -857,6 +857,11 @@
             Value must be 0, or, 1024 or greater.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.NoDelay">
+            <summary>
+            Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is false.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpClientSettings.#ctor">
             <summary>
             Instantiate the object.
@@ -1300,6 +1305,11 @@
         <member name="P:WatsonTcp.WatsonTcpServerSettings.PermittedIPs">
             <summary>
             For Watson TCP server, the list of permitted IP addresses from which connections can be received.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.NoDelay">
+            <summary>
+            Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is false.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServerSettings.#ctor">

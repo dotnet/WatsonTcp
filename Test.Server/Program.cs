@@ -56,6 +56,7 @@ namespace TestServer
                 // _Server.Settings.PresharedKey = "0000000000000000";
                 _Server.Settings.Logger = Logger;
                 _Server.Settings.DebugMessages = _DebugMessages;
+                _Server.Settings.NoDelay = true;
 
                 _Server.Keepalive.EnableTcpKeepAlives = true;
                 _Server.Keepalive.TcpKeepAliveInterval = 1;

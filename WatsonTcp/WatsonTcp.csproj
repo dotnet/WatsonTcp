@@ -3,8 +3,8 @@
   <PropertyGroup>
 	<TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1;net461;net472;net5.0;net6.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	<GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>4.8.14.4</Version>
+	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>4.8.14.5</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -14,7 +14,7 @@
     <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageReleaseNotes>Unity fix (thank you @deathbull)</PackageReleaseNotes>
+    <PackageReleaseNotes>NoDelay property in settings</PackageReleaseNotes>
     <PackageIconUrl></PackageIconUrl>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageIcon>watson.png</PackageIcon>
