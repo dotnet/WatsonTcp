@@ -22,7 +22,7 @@ namespace WatsonTcp
             }
             set
             {
-                if (value < 1) throw new ArgumentException("Read stream buffer size must be greater than zero.");
+                if (value < 1) throw new ArgumentException("Stream buffer size must be greater than zero.");
                 _StreamBufferSize = value;
             }
         }

@@ -774,6 +774,8 @@ namespace WatsonTcp
                     }
 
                     ClientMetadata client = new ClientMetadata(tcpClient);
+                    client.SendBuffer = new byte[_Settings.StreamBufferSize];
+
                     CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_Token, client.Token);
 
                     #endregion
@@ -1411,14 +1413,16 @@ namespace WatsonTcp
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
-            byte[] buffer = new byte[_Settings.StreamBufferSize];
-             
+
+            if (_Settings.StreamBufferSize != client.SendBuffer.Length)
+                client.SendBuffer = new byte[_Settings.StreamBufferSize];
+
             while (bytesRemaining > 0)
             {
-                bytesRead = stream.Read(buffer, 0, buffer.Length);
+                bytesRead = stream.Read(client.SendBuffer, 0, client.SendBuffer.Length);
                 if (bytesRead > 0)
                 {
-                    client.DataStream.Write(buffer, 0, bytesRead);
+                    client.DataStream.Write(client.SendBuffer, 0, bytesRead);
                     bytesRemaining -= bytesRead;
                 }
             }  
@@ -1432,14 +1436,16 @@ namespace WatsonTcp
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
-            byte[] buffer = new byte[_Settings.StreamBufferSize];
-             
+
+            if (_Settings.StreamBufferSize != client.SendBuffer.Length)
+                client.SendBuffer = new byte[_Settings.StreamBufferSize];
+
             while (bytesRemaining > 0)
             {
-                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                bytesRead = await stream.ReadAsync(client.SendBuffer, 0, client.SendBuffer.Length, token).ConfigureAwait(false);
                 if (bytesRead > 0)
                 {
-                    await client.DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                    await client.DataStream.WriteAsync(client.SendBuffer, 0, bytesRead, token).ConfigureAwait(false);
                     bytesRemaining -= bytesRead;
                 }
             } 

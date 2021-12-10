@@ -65,6 +65,7 @@ namespace WatsonTcp
             }
         }
 
+        internal byte[] SendBuffer { get; set; } = new byte[65536];
         internal Task DataReceiver { get; set; } = null;
 
         internal SemaphoreSlim WriteLock = new SemaphoreSlim(1, 1);
@@ -78,7 +79,7 @@ namespace WatsonTcp
         private SslStream _SslStream = null;
         private Stream _DataStream = null;
         private string _IpPort = null;
-         
+
         internal ClientMetadata(TcpClient tcp)
         {
             if (tcp == null) throw new ArgumentNullException(nameof(tcp));

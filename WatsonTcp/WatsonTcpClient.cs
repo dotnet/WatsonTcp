@@ -158,6 +158,7 @@ namespace WatsonTcp
         private DateTime _LastActivity = DateTime.Now;
         private bool _IsTimeout = false;
 
+        private byte[] _SendBuffer = new byte[65536];
         private readonly object _SyncResponseLock = new object();
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>(); 
 
@@ -180,6 +181,7 @@ namespace WatsonTcp
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
+            _SendBuffer = new byte[_Settings.StreamBufferSize];
 
             SerializationHelper.InstantiateConverter(); // Unity fix
         }
@@ -206,6 +208,7 @@ namespace WatsonTcp
             _TlsVersion = tlsVersion;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
+            _SendBuffer = new byte[_Settings.StreamBufferSize];
 
             if (!String.IsNullOrEmpty(pfxCertFile))
             {
@@ -253,6 +256,7 @@ namespace WatsonTcp
             _SslCertificate = cert;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
+            _SendBuffer = new byte[_Settings.StreamBufferSize];
 
             _SslCertificateCollection = new X509Certificate2Collection
             {
@@ -1155,14 +1159,16 @@ namespace WatsonTcp
              
             long bytesRemaining = contentLength;
             int bytesRead = 0;
-            byte[] buffer = new byte[_Settings.StreamBufferSize];
-              
+
+            if (_Settings.StreamBufferSize != _SendBuffer.Length)
+                _SendBuffer = new byte[_Settings.StreamBufferSize];
+
             while (bytesRemaining > 0)
             { 
-                bytesRead = stream.Read(buffer, 0, buffer.Length);  
+                bytesRead = stream.Read(_SendBuffer, 0, _SendBuffer.Length);  
                 if (bytesRead > 0)
                 {
-                    _DataStream.Write(buffer, 0, bytesRead);
+                    _DataStream.Write(_SendBuffer, 0, bytesRead);
                     bytesRemaining -= bytesRead;
                 } 
             } 
@@ -1176,14 +1182,16 @@ namespace WatsonTcp
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
-            byte[] buffer = new byte[_Settings.StreamBufferSize];
-             
+
+            if (_Settings.StreamBufferSize != _SendBuffer.Length)
+                _SendBuffer = new byte[_Settings.StreamBufferSize];
+
             while (bytesRemaining > 0)
             {
-                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                bytesRead = await stream.ReadAsync(_SendBuffer, 0, _SendBuffer.Length, token).ConfigureAwait(false);
                 if (bytesRead > 0)
                 {
-                    await _DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                    await _DataStream.WriteAsync(_SendBuffer, 0, bytesRead, token).ConfigureAwait(false);
                     bytesRemaining -= bytesRead;
                 }
             }  
