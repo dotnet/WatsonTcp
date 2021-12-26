@@ -94,7 +94,12 @@
             Disconnect due to authentication failure.
             </summary>
         </member>
-        <member name="F:WatsonTcp.Encryption.Passphrase">
+        <member name="T:WatsonTcp.Encryption">
+            <summary>
+            Encryption metadata for securing payload.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.Encryption.Passphrase">
             <summary>
             Passphrase that must be consistent between clients and this server for encrypted communication.
             </summary>
@@ -104,22 +109,32 @@
             Algorithm mechanism used to encrypt payload between clients and this server for encrypted communication.
             </summary>
         </member>
-        <member name="T:WatsonTcp.EncryptionType">
+        <member name="T:WatsonTcp.EncryptionAlgorithm">
             <summary>
             The type of encryption.
             </summary>
         </member>
-        <member name="F:WatsonTcp.EncryptionType.None">
+        <member name="F:WatsonTcp.EncryptionAlgorithm.None">
             <summary>
             No encryption
             </summary>
         </member>
-        <member name="F:WatsonTcp.EncryptionType.Aes">
+        <member name="F:WatsonTcp.EncryptionAlgorithm.Aes">
             <summary>
-            AES256 encryption
+            Aes256 encryption
             </summary>
         </member>
-        <member name="F:WatsonTcp.EncryptionType.TripleDes">
+        <member name="F:WatsonTcp.EncryptionAlgorithm.Rijndael">
+            <summary>
+            Rijndael encryption
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.EncryptionAlgorithm.Rc2">
+            <summary>
+            RC2 encryption
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.EncryptionAlgorithm.TripleDes">
             <summary>
             TripleDes encryption
             </summary>
@@ -412,9 +427,9 @@
             Preshared key for connection authentication.
             </summary>
         </member>
-        <member name="P:WatsonTcp.WatsonMessage.Encryption">
+        <member name="P:WatsonTcp.WatsonMessage.EncryptionAlgorithm">
             <summary>
-            The type of encryption used in the message.
+            The type of encryption algorithm used in the message.
             </summary>
         </member>
         <member name="F:WatsonTcp.WatsonMessage.Status">
@@ -472,7 +487,7 @@
             Do not use.
             </summary>
         </member>
-        <member name="M:WatsonTcp.WatsonMessage.#ctor(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream,System.Boolean,System.Boolean,System.Nullable{System.DateTime},WatsonTcp.Encryption,System.String,System.Action{WatsonTcp.Severity,System.String})">
+        <member name="M:WatsonTcp.WatsonMessage.#ctor(System.Collections.Generic.Dictionary{System.Object,System.Object},System.Int64,System.IO.Stream,System.Boolean,System.Boolean,System.Nullable{System.DateTime},WatsonTcp.EncryptionAlgorithm,System.String,System.Action{WatsonTcp.Severity,System.String})">
             <summary>
             Construct a new message to send.
             </summary>
@@ -482,7 +497,7 @@
             <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
             <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
             <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param> 
-            <param name="encryption">The type of encryption to use.</param> 
+            <param name="encryption">The type of encryption algorithm to use.</param> 
             <param name="convGuid">Conversation GUID.</param>
             <param name="logger">Logger method.</param>
         </member>
