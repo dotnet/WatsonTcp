@@ -1505,6 +1505,14 @@ namespace WatsonTcp
                         encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
                         WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
                         break;
+                    case EncryptionAlgorithm.Rijndael:
+                        encryptedData = EncryptionHelper.Encrypt<RijndaelManaged>(streamData, key, salt);
+                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                        break;
+                    case EncryptionAlgorithm.Rc2:
+                        encryptedData = EncryptionHelper.Encrypt<RC2CryptoServiceProvider>(streamData, key, salt);
+                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), _Settings.Encryption.Algorithm, null);
                 }
@@ -1566,6 +1574,14 @@ namespace WatsonTcp
                         break;
                     case EncryptionAlgorithm.TripleDes:
                         encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                        break;
+                    case EncryptionAlgorithm.Rijndael:
+                        encryptedData = EncryptionHelper.Encrypt<RijndaelManaged>(streamData, key, salt);
+                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                        break;
+                    case EncryptionAlgorithm.Rc2:
+                        encryptedData = EncryptionHelper.Encrypt<RC2CryptoServiceProvider>(streamData, key, salt);
                         WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
                         break;
                     default:
