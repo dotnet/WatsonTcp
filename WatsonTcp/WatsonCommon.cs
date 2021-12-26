@@ -147,7 +147,7 @@ namespace WatsonTcp
             return hex.ToString();
         }
          
-        internal static void BytesToStream(byte[] data, int start, out int contentLength, out Stream stream)
+        internal static void BytesToStream(byte[] data, int start, out long contentLength, out Stream stream)
         {
             contentLength = 0;
             stream = new MemoryStream(new byte[0]);
@@ -156,7 +156,7 @@ namespace WatsonTcp
             {
                 contentLength = (data.Length - start);
                 stream = new MemoryStream();
-                stream.Write(data, start, contentLength);
+                stream.Write(data, start, (int) contentLength); // safe to do?
                 stream.Seek(0, SeekOrigin.Begin);
             }
         }

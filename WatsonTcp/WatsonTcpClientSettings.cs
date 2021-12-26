@@ -70,6 +70,28 @@ namespace WatsonTcp
         /// Preshared key that must be consistent between clients and this server.
         /// </summary>
         public string PresharedKey = null;
+        
+        /// <summary>
+        /// The type of encryption used in the message.
+        /// </summary>
+        public Encryption Encryption
+        {
+            get
+            {
+                return _Encryption;
+            }
+            set
+            {
+                if (value == null)
+                {
+                    _Encryption = new Encryption();
+                }
+                else
+                {
+                    _Encryption = value;
+                }
+            }
+        }
 
         /// <summary>
         /// For Watson TCP client, the number of seconds to wait before timing out a connection attempt.  Default is 5 seconds.  Value must be greater than zero.
@@ -167,6 +189,8 @@ namespace WatsonTcp
         private int _IdleServerTimeoutMs = 0;
         private int _IdleServerEvaluationIntervalMs = 1000;
         private int _LocalPort = 0;
+
+        private Encryption _Encryption = null;
 
         #endregion
 

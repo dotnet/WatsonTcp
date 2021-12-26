@@ -24,7 +24,7 @@ namespace TestClient
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<object, object> metadata; 
+            Dictionary<object, object> metadata;
             bool success;
 
             while (runForever)
@@ -52,6 +52,7 @@ namespace TestClient
                         Console.WriteLine("  disconnect          disconnect from the server"); 
                         Console.WriteLine("  psk                 set the preshared key");
                         Console.WriteLine("  auth                authenticate using the preshared key");
+                        Console.WriteLine("  enc                 enable/disable encryption");
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
                         Console.WriteLine("  debug               enable/disable debug");
@@ -145,6 +146,30 @@ namespace TestClient
 
                     case "auth":
                         _Client.Authenticate(_PresharedKey);
+                        break;
+                    
+                    case "enc":
+                        string answer = InputString("Encryption algorithm:", "aes", false);
+
+                        switch (answer)
+                        {
+                            case "aes":
+                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
+
+                                _Client.Settings.Encryption.Algorithm = EncryptionType.Aes;
+                                _Client.Settings.Encryption.Passphrase = answer;
+                                break;
+                            case "tripledes":
+                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
+
+                                _Client.Settings.Encryption.Algorithm = EncryptionType.TripleDes;
+                                _Client.Settings.Encryption.Passphrase = answer;
+                                break;
+                            default:
+                                _Client.Settings.Encryption.Algorithm = EncryptionType.None;
+                                _Client.Settings.Encryption.Passphrase = string.Empty;
+                                return;
+                        }
                         break;
 
                     case "stats":

@@ -26,6 +26,28 @@ namespace WatsonTcp
                 _StreamBufferSize = value;
             }
         }
+        
+        /// <summary>
+        /// The type of encryption used in the message.
+        /// </summary>
+        public Encryption Encryption
+        {
+            get
+            {
+                return _Encryption;
+            }
+            set
+            {
+                if (value == null)
+                {
+                    _Encryption = new Encryption();
+                }
+                else
+                {
+                    _Encryption = value;
+                }
+            }
+        }
 
         /// <summary>
         /// Maximum content length for streams that are proxied through a MemoryStream.
@@ -139,6 +161,7 @@ namespace WatsonTcp
         private int _MaxConnections = 4096;
         private int _IdleClientTimeoutSeconds = 0;
         private List<string> _PermittedIPs = new List<string>();
+        private Encryption _Encryption = null;
 
         #endregion 
 

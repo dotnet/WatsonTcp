@@ -105,6 +105,7 @@ namespace TestServer
                         Console.WriteLine("  remove              disconnect client");
                         Console.WriteLine("  remove all          disconnect all clients");
                         Console.WriteLine("  psk                 set preshared key");
+                        Console.WriteLine("  enc                 enable/disable encryption");
                         Console.WriteLine("  stats               display server statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
                         Console.WriteLine("  debug               enable/disable debug");
@@ -227,6 +228,30 @@ namespace TestServer
                         _Server.Settings.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
 
+                    case "enc":
+                        string answer = InputString("Encryption algorithm:", "aes", false);
+
+                        switch (answer)
+                        {
+                            case "aes":
+                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
+
+                                _Server.Settings.Encryption.Algorithm = EncryptionType.Aes;
+                                _Server.Settings.Encryption.Passphrase = answer;
+                                break;
+                            case "tripledes":
+                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
+
+                                _Server.Settings.Encryption.Algorithm = EncryptionType.TripleDes;
+                                _Server.Settings.Encryption.Passphrase = answer;
+                                break;
+                            default:
+                                _Server.Settings.Encryption.Algorithm = EncryptionType.None;
+                                _Server.Settings.Encryption.Passphrase = string.Empty;
+                                return;
+                        }
+                        break;
+                    
                     case "stats":
                         Console.WriteLine(_Server.Statistics.ToString());
                         break;
