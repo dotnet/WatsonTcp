@@ -451,7 +451,7 @@ namespace WatsonTcp
             }
 
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, _Settings.Encryption, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, _Settings.Encryption.Algorithm, null, (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendInternal(client, msg, contentLength, stream);
         }
 
@@ -518,7 +518,7 @@ namespace WatsonTcp
             }
 
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, _Settings.Encryption, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, _Settings.Encryption.Algorithm, null, (_Settings.DebugMessages ? _Settings.Logger : null));
             return await SendInternalAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
         }
             
@@ -581,7 +581,7 @@ namespace WatsonTcp
             }
             if (stream == null) stream = new MemoryStream(new byte[0]);
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, _Settings.Encryption, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, _Settings.Encryption.Algorithm, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendAndWaitInternal(client, msg, timeoutMs, contentLength, stream);
         }
 
@@ -1055,7 +1055,7 @@ namespace WatsonTcp
                                         _Events.HandleAuthenticationSucceeded(this, new AuthenticationSucceededEventArgs(client.IpPort));
                                         data = Encoding.UTF8.GetBytes("Authentication successful");
                                         WatsonCommon.BytesToStream(data, 0, out contentLength, out authStream);
-                                        authMsg = new WatsonMessage(null, contentLength, authStream, false, false, null, _Settings.Encryption, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+                                        authMsg = new WatsonMessage(null, contentLength, authStream, false, false, null, _Settings.Encryption.Algorithm, null, (_Settings.DebugMessages ? _Settings.Logger : null));
                                         authMsg.Status = MessageStatus.AuthSuccess;
                                         SendInternal(client, authMsg, 0, null);
                                         continue;
@@ -1110,7 +1110,7 @@ namespace WatsonTcp
                     
                     byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
-                    if (msg.Encryption.Algorithm != EncryptionAlgorithm.None)
+                    if (msg.EncryptionAlgorithm != EncryptionAlgorithm.None)
                     {
                         byte[] key = null;
                         byte[] salt = null;
@@ -1129,7 +1129,7 @@ namespace WatsonTcp
                         }
                         
                         byte[] decryptedData;
-                        switch (msg.Encryption.Algorithm)
+                        switch (msg.EncryptionAlgorithm)
                         {
                             case EncryptionAlgorithm.Aes:
                                 decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
@@ -1150,7 +1150,7 @@ namespace WatsonTcp
                                 msgData = decryptedData;
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), msg.Encryption.Algorithm, null);
+                                throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), msg.EncryptionAlgorithm, null);
                         }
                     }
                      
@@ -1179,7 +1179,7 @@ namespace WatsonTcp
                                     false,
                                     true,
                                     msg.Expiration.Value,
-                                    msg.Encryption,
+                                    msg.EncryptionAlgorithm,
                                     msg.ConversationGuid,
                                     (_Settings.DebugMessages ? _Settings.Logger : null)); 
                                 SendInternal(client, respMsg, contentLength, stream);

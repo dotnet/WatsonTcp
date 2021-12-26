@@ -53,26 +53,9 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// The type of encryption used in the message.
+        /// The type of encryption algorithm used in the message.
         /// </summary>
-        public Encryption Encryption
-        {
-            get
-            {
-                return _Encryption;
-            }
-            set
-            {
-                if (value == null)
-                {
-                    _Encryption = null;
-                }
-                else
-                {
-                    _Encryption = value;
-                }
-            }
-        }
+        public EncryptionAlgorithm EncryptionAlgorithm { get; set; }
 
         /// <summary>
         /// Status of the message.   
@@ -186,7 +169,6 @@ namespace WatsonTcp
 
         private int _ReadStreamBuffer = 65536;
         private byte[] _PresharedKey = null;
-        private Encryption _Encryption = null;
         private Dictionary<object, object> _Metadata = null;
         private Stream _DataStream = null;
 
@@ -211,7 +193,7 @@ namespace WatsonTcp
         /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
         /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param> 
-        /// <param name="encryption">The type of encryption to use.</param> 
+        /// <param name="encryption">The type of encryption algorithm to use.</param> 
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
         internal WatsonMessage(
@@ -221,7 +203,7 @@ namespace WatsonTcp
             bool syncRequest, 
             bool syncResponse, 
             DateTime? expiration,
-            Encryption encryption,
+            EncryptionAlgorithm encryption,
             string convGuid,
             Action<Severity, string> logger)
         {
@@ -240,7 +222,7 @@ namespace WatsonTcp
             if (syncRequest) SyncRequest = true;
             if (syncResponse) SyncResponse = true;
             Expiration = expiration;
-            Encryption = encryption;
+            EncryptionAlgorithm = encryption;
             ConversationGuid = convGuid; 
             if (SyncRequest != null && SyncRequest.Value) SenderTimestamp = DateTime.Now;
 
@@ -371,7 +353,7 @@ namespace WatsonTcp
             ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
             ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
             ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
-            ret += "  Encryption     : " + Enum.GetName(typeof(EncryptionAlgorithm), Encryption) + Environment.NewLine;
+            ret += "  Encryption     : " + Enum.GetName(typeof(EncryptionAlgorithm), EncryptionAlgorithm) + Environment.NewLine;
             ret += "  Conversation      : " + ConversationGuid + Environment.NewLine; 
 
             if (Metadata != null)

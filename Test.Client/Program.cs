@@ -156,17 +156,29 @@ namespace TestClient
                             case "aes":
                                 answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
 
-                                _Client.Settings.Encryption.Algorithm = EncryptionType.Aes;
+                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.Aes;
                                 _Client.Settings.Encryption.Passphrase = answer;
                                 break;
                             case "tripledes":
                                 answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
 
-                                _Client.Settings.Encryption.Algorithm = EncryptionType.TripleDes;
+                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.TripleDes;
+                                _Client.Settings.Encryption.Passphrase = answer;
+                                break;
+                            case "rijandel":
+                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
+
+                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.Rijndael;
+                                _Client.Settings.Encryption.Passphrase = answer;
+                                break;
+                            case "rc2":
+                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
+
+                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.Rc2;
                                 _Client.Settings.Encryption.Passphrase = answer;
                                 break;
                             default:
-                                _Client.Settings.Encryption.Algorithm = EncryptionType.None;
+                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.None;
                                 _Client.Settings.Encryption.Passphrase = string.Empty;
                                 return;
                         }
