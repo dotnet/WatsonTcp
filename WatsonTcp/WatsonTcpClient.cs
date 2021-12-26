@@ -833,8 +833,8 @@ namespace WatsonTcp
                         }
 
                         key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                        salt = Encoding.UTF8.GetBytes($"{_Settings.Encryption.Passphrase}__salted");
-
+                        salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{msg.ConversationGuid}{_SourceIp}"));
+                        
                         if (key.Length < 32)
                         {
                             throw new ArgumentOutOfRangeException(nameof(_Settings.Encryption.Passphrase));
@@ -1018,7 +1018,7 @@ namespace WatsonTcp
             try
             { 
                 SendHeaders(msg); 
-                SendDataStream(contentLength, stream);
+                SendDataStream(contentLength, msg.ConversationGuid, stream);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1085,7 +1085,7 @@ namespace WatsonTcp
             try
             { 
                 await SendHeadersAsync(msg, token).ConfigureAwait(false); 
-                await SendDataStreamAsync(contentLength, stream, token).ConfigureAwait(false);
+                await SendDataStreamAsync(contentLength, msg.ConversationGuid, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1145,7 +1145,7 @@ namespace WatsonTcp
             try
             {
                 SendHeaders(msg);
-                SendDataStream(contentLength, stream);
+                SendDataStream(contentLength, msg.ConversationGuid, stream);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1198,7 +1198,7 @@ namespace WatsonTcp
             await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
          
-        private void SendDataStream(long contentLength, Stream stream)
+        private void SendDataStream(long contentLength, string guid, Stream stream)
         {
             if (contentLength <= 0) return;
              
@@ -1219,8 +1219,8 @@ namespace WatsonTcp
                 }
 
                 key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                salt = Encoding.UTF8.GetBytes($"{_Settings.Encryption.Passphrase}__salted");
-
+                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{guid}{_SourceIp}"));
+                
                 if (key.Length < 32)
                 {
                     throw new ArgumentOutOfRangeException(nameof(_Settings.Encryption.Passphrase));
@@ -1262,7 +1262,7 @@ namespace WatsonTcp
             _DataStream.Flush(); 
         }
 
-        private async Task SendDataStreamAsync(long contentLength, Stream stream, CancellationToken token)
+        private async Task SendDataStreamAsync(long contentLength, string guid, Stream stream, CancellationToken token)
         {
             if (contentLength <= 0) return;
 
@@ -1283,8 +1283,8 @@ namespace WatsonTcp
                 }
 
                 key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                salt = Encoding.UTF8.GetBytes($"{_Settings.Encryption.Passphrase}__salted");
-
+                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{guid}{_SourceIp}"));
+                
                 if (key.Length < 32)
                 {
                     throw new ArgumentOutOfRangeException(nameof(_Settings.Encryption.Passphrase));
