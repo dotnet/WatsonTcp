@@ -4,7 +4,7 @@ using System.Text;
 
 namespace WatsonTcp
 {
-    internal class EncryptionHelper
+    internal static class EncryptionHelper
     {
         internal static byte[] Encrypt<T>(byte[] data, byte[] key, byte[] salt)
             where T : SymmetricAlgorithm, new()

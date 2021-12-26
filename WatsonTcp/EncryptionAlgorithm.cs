@@ -8,7 +8,7 @@ namespace WatsonTcp
     /// The type of encryption.
     /// </summary>
     [JsonConverter(typeof(StringEnumConverter))]
-    public enum EncryptionType
+    public enum EncryptionAlgorithm
     {
         /// <summary>
         /// No encryption
@@ -16,10 +16,20 @@ namespace WatsonTcp
         [EnumMember(Value = "None")]
         None,
         /// <summary>
-        /// AES256 encryption
+        /// Aes256 encryption
         /// </summary>
         [EnumMember(Value = "Aes")]
         Aes,
+        /// <summary>
+        /// Rijndael encryption
+        /// </summary>
+        [EnumMember(Value = "Rijndael")]
+        Rijndael,
+        /// <summary>
+        /// RC2 encryption
+        /// </summary>
+        [EnumMember(Value = "RC2")]
+        Rc2,
         /// <summary>
         /// TripleDes encryption
         /// </summary>

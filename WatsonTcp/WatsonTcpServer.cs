@@ -1110,7 +1110,7 @@ namespace WatsonTcp
                     
                     byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
-                    if (msg.Encryption != null)
+                    if (msg.Encryption.Algorithm != EncryptionAlgorithm.None)
                     {
                         byte[] key = null;
                         byte[] salt = null;
@@ -1131,18 +1131,26 @@ namespace WatsonTcp
                         byte[] decryptedData;
                         switch (msg.Encryption.Algorithm)
                         {
-                            case EncryptionType.Aes:
+                            case EncryptionAlgorithm.Aes:
                                 decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
                                 msgData = decryptedData;
                                 break;
-                            case EncryptionType.None:
+                            case EncryptionAlgorithm.None:
                                 break;
-                            case EncryptionType.TripleDes:
+                            case EncryptionAlgorithm.TripleDes:
                                 decryptedData = EncryptionHelper.Decrypt<TripleDESCryptoServiceProvider>(msgData, key, salt);
                                 msgData = decryptedData;
                                 break;
+                            case EncryptionAlgorithm.Rijndael:
+                                decryptedData = EncryptionHelper.Decrypt<RijndaelManaged>(msgData, key, salt);
+                                msgData = decryptedData;
+                                break;
+                            case EncryptionAlgorithm.Rc2:
+                                decryptedData = EncryptionHelper.Decrypt<RC2CryptoServiceProvider>(msgData, key, salt);
+                                msgData = decryptedData;
+                                break;
                             default:
-                                throw new ArgumentOutOfRangeException(nameof(EncryptionType), msg.Encryption.Algorithm, null);
+                                throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), msg.Encryption.Algorithm, null);
                         }
                     }
                      
@@ -1464,7 +1472,7 @@ namespace WatsonTcp
             if (_Settings.StreamBufferSize != client.SendBuffer.Length)
                 client.SendBuffer = new byte[_Settings.StreamBufferSize];
             
-            if (_Settings.Encryption.Algorithm != EncryptionType.None)
+            if (_Settings.Encryption.Algorithm != EncryptionAlgorithm.None)
             {
                 byte[] key = null;
                 byte[] salt = null;
@@ -1487,18 +1495,18 @@ namespace WatsonTcp
                 
                 switch (_Settings.Encryption.Algorithm)
                 {
-                    case EncryptionType.Aes:
+                    case EncryptionAlgorithm.Aes:
                         encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
                         WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
                         break;
-                    case EncryptionType.None:
+                    case EncryptionAlgorithm.None:
                         break;
-                    case EncryptionType.TripleDes:
+                    case EncryptionAlgorithm.TripleDes:
                         encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
                         WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(EncryptionType), _Settings.Encryption.Algorithm, null);
+                        throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), _Settings.Encryption.Algorithm, null);
                 }
             }
 
@@ -1528,7 +1536,7 @@ namespace WatsonTcp
             if (_Settings.StreamBufferSize != client.SendBuffer.Length)
                 client.SendBuffer = new byte[_Settings.StreamBufferSize];
             
-            if (_Settings.Encryption.Algorithm != EncryptionType.None)
+            if (_Settings.Encryption.Algorithm != EncryptionAlgorithm.None)
             {
                 byte[] key = null;
                 byte[] salt = null;
@@ -1550,18 +1558,18 @@ namespace WatsonTcp
                 byte[] encryptedData;
                 switch (_Settings.Encryption.Algorithm)
                 {
-                    case EncryptionType.Aes:
+                    case EncryptionAlgorithm.Aes:
                         encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
                         WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
                         break;
-                    case EncryptionType.None:
+                    case EncryptionAlgorithm.None:
                         break;
-                    case EncryptionType.TripleDes:
+                    case EncryptionAlgorithm.TripleDes:
                         encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
                         WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(EncryptionType), _Settings.Encryption.Algorithm, null);
+                        throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), _Settings.Encryption.Algorithm, null);
                 }
             }
 

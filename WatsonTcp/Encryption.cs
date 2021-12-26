@@ -8,7 +8,7 @@ namespace WatsonTcp
         /// <summary>
         /// Algorithm mechanism used to encrypt payload between clients and this server for encrypted communication.
         /// </summary>
-        public EncryptionType Algorithm = EncryptionType.None;
+        public EncryptionAlgorithm Algorithm = EncryptionAlgorithm.None;
         #endregion
 
         #region Internal-Members
