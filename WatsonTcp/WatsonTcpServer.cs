@@ -1311,7 +1311,7 @@ namespace WatsonTcp
             try
             {
                 SendHeaders(client, msg);
-                SendDataStream(client, contentLength, msg.ConversationGuid, stream);
+                SendDataStream(client, msg);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1365,7 +1365,7 @@ namespace WatsonTcp
             try
             {
                 await SendHeadersAsync(client, msg, token).ConfigureAwait(false);
-                await SendDataStreamAsync(client, contentLength, msg.ConversationGuid, stream, token).ConfigureAwait(false);
+                await SendDataStreamAsync(client, msg, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1413,7 +1413,7 @@ namespace WatsonTcp
             try
             {
                 SendHeaders(client, msg);
-                SendDataStream(client, contentLength, msg.ConversationGuid, stream);
+                SendDataStream(client, msg);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1451,8 +1451,11 @@ namespace WatsonTcp
             await client.DataStream.FlushAsync(token).ConfigureAwait(false);
         }
          
-        private void SendDataStream(ClientMetadata client, long contentLength, string guid, Stream stream)
+        private void SendDataStream(ClientMetadata client, WatsonMessage msg)
         {
+            Stream stream = msg.DataStream;
+            long contentLength = msg.ContentLength;
+            
             if (contentLength <= 0) return;
 
             long bytesRemaining = contentLength;
@@ -1472,7 +1475,7 @@ namespace WatsonTcp
                 }
 
                 key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{guid}{client.IpPort}"));
+                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{msg.ConversationGuid}{client.IpPort}"));
                 
                 if (key.Length < 32)
                 {
@@ -1481,6 +1484,7 @@ namespace WatsonTcp
 
                 byte[] streamData;
                 byte[] encryptedData;
+                
                 switch (_Settings.Encryption.Algorithm)
                 {
                     case EncryptionType.Aes:
@@ -1515,8 +1519,11 @@ namespace WatsonTcp
             client.DataStream.Flush();
         }
 
-        private async Task SendDataStreamAsync(ClientMetadata client, long contentLength, string guid, Stream stream, CancellationToken token)
+        private async Task SendDataStreamAsync(ClientMetadata client, WatsonMessage msg, CancellationToken token)
         {
+            Stream stream = msg.DataStream;
+            long contentLength = msg.ContentLength;
+            
             if (contentLength <= 0) return;
 
             long bytesRemaining = contentLength;
@@ -1536,7 +1543,7 @@ namespace WatsonTcp
                 }
 
                 key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{guid}{client.IpPort}"));
+                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{msg.ConversationGuid}{client.IpPort}"));
                     
                 if (key.Length < 32)
                 {
