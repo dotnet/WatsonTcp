@@ -353,7 +353,7 @@ namespace WatsonTcp
             ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
             ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
             ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
-            ret += "  Encryption     : " + Enum.GetName(typeof(EncryptionAlgorithm), EncryptionAlgorithm) + Environment.NewLine;
+            ret += "  Encryption        : " + Enum.GetName(typeof(EncryptionAlgorithm), EncryptionAlgorithm) + Environment.NewLine;
             ret += "  Conversation      : " + ConversationGuid + Environment.NewLine; 
 
             if (Metadata != null)

@@ -74,21 +74,21 @@ namespace WatsonTcp
         /// <summary>
         /// The type of encryption used in the message.
         /// </summary>
-        public Encryption Encryption
+        public EncryptionSettings Encryption
         {
             get
             {
-                return _Encryption;
+                return _EncryptionSettings;
             }
             set
             {
                 if (value == null)
                 {
-                    _Encryption = new Encryption();
+                    _EncryptionSettings = new EncryptionSettings();
                 }
                 else
                 {
-                    _Encryption = value;
+                    _EncryptionSettings = value;
                 }
             }
         }
@@ -190,7 +190,7 @@ namespace WatsonTcp
         private int _IdleServerEvaluationIntervalMs = 1000;
         private int _LocalPort = 0;
 
-        private Encryption _Encryption = null;
+        private EncryptionSettings _EncryptionSettings = null;
 
         #endregion
 

@@ -94,21 +94,6 @@
             Disconnect due to authentication failure.
             </summary>
         </member>
-        <member name="T:WatsonTcp.Encryption">
-            <summary>
-            Encryption metadata for securing payload.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.Encryption.Passphrase">
-            <summary>
-            Passphrase that must be consistent between clients and this server for encrypted communication.
-            </summary>
-        </member>
-        <member name="F:WatsonTcp.Encryption.Algorithm">
-            <summary>
-            Algorithm mechanism used to encrypt payload between clients and this server for encrypted communication.
-            </summary>
-        </member>
         <member name="T:WatsonTcp.EncryptionAlgorithm">
             <summary>
             The type of encryption.
@@ -137,6 +122,21 @@
         <member name="F:WatsonTcp.EncryptionAlgorithm.TripleDes">
             <summary>
             TripleDes encryption
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.EncryptionSettings">
+            <summary>
+            Encryption metadata for securing payload.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.EncryptionSettings.Passphrase">
+            <summary>
+            Passphrase that must be consistent between clients and this server for encrypted communication.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.EncryptionSettings.Algorithm">
+            <summary>
+            Algorithm mechanism used to encrypt payload between clients and this server for encrypted communication.
             </summary>
         </member>
         <member name="T:WatsonTcp.ExceptionEventArgs">
@@ -1130,7 +1130,7 @@
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
             <param name="data">String containing data.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="metadata">Dictionary containing me tadata.</param>
             <param name="start">Start position within the supplied array.</param>
             <param name="token">Cancellation token to cancel the request.</param>
             <returns>Task with Boolean indicating if the message was sent successfully.</returns>

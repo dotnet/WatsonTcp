@@ -3,7 +3,7 @@ namespace WatsonTcp
     /// <summary>
     /// Encryption metadata for securing payload.
     /// </summary>
-    public class Encryption
+    public class EncryptionSettings
     {
         /// <summary>
         /// Passphrase that must be consistent between clients and this server for encrypted communication.
