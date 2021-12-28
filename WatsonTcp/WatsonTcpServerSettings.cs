@@ -40,7 +40,7 @@ namespace WatsonTcp
             {
                 if (value == null)
                 {
-                    _EncryptionSettings = new EncryptionSettings();
+                    _EncryptionSettings = new EncryptionSettings() { Algorithm = EncryptionAlgorithm.None, Passphrase = string.Empty };
                 }
                 else
                 {
@@ -161,6 +161,7 @@ namespace WatsonTcp
         private int _MaxConnections = 4096;
         private int _IdleClientTimeoutSeconds = 0;
         private List<string> _PermittedIPs = new List<string>();
+
         private EncryptionSettings _EncryptionSettings = null;
 
         #endregion 

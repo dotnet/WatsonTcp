@@ -134,7 +134,7 @@
             Passphrase that must be consistent between clients and this server for encrypted communication.
             </summary>
         </member>
-        <member name="F:WatsonTcp.EncryptionSettings.Algorithm">
+        <member name="P:WatsonTcp.EncryptionSettings.Algorithm">
             <summary>
             Algorithm mechanism used to encrypt payload between clients and this server for encrypted communication.
             </summary>
@@ -1130,7 +1130,7 @@
             </summary>
             <param name="ipPort">IP:port of the recipient client.</param>
             <param name="data">String containing data.</param>
-            <param name="metadata">Dictionary containing me tadata.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
             <param name="start">Start position within the supplied array.</param>
             <param name="token">Cancellation token to cancel the request.</param>
             <returns>Task with Boolean indicating if the message was sent successfully.</returns>

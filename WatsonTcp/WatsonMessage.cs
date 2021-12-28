@@ -55,7 +55,17 @@ namespace WatsonTcp
         /// <summary>
         /// The type of encryption algorithm used in the message.
         /// </summary>
-        public EncryptionAlgorithm EncryptionAlgorithm { get; set; }
+        public EncryptionAlgorithm EncryptionAlgorithm
+        {
+            get
+            {
+                return _EncryptionAlgorithm;
+            }
+            set
+            {
+                _EncryptionAlgorithm = value;
+            }
+        }
 
         /// <summary>
         /// Status of the message.   
@@ -172,6 +182,8 @@ namespace WatsonTcp
         private Dictionary<object, object> _Metadata = null;
         private Stream _DataStream = null;
 
+        private EncryptionAlgorithm _EncryptionAlgorithm = EncryptionAlgorithm.None;
+
         #endregion
 
         #region Constructors-and-Factories
@@ -227,7 +239,7 @@ namespace WatsonTcp
             if (SyncRequest != null && SyncRequest.Value) SenderTimestamp = DateTime.Now;
 
             _DataStream = stream;
-            _Logger = logger; 
+            _Logger = logger;
         }
 
         /// <summary>
@@ -301,6 +313,7 @@ namespace WatsonTcp
                 SyncResponse = msg.SyncResponse;
                 SenderTimestamp = msg.SenderTimestamp;
                 Expiration = msg.Expiration;
+                EncryptionAlgorithm = msg.EncryptionAlgorithm;
                 ConversationGuid = msg.ConversationGuid; 
 
                 _Logger?.Invoke(Severity.Debug, _Header + "header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(headerBytes).Trim()); 

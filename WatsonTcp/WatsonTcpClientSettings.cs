@@ -84,7 +84,7 @@ namespace WatsonTcp
             {
                 if (value == null)
                 {
-                    _EncryptionSettings = new EncryptionSettings();
+                    _EncryptionSettings = new EncryptionSettings() { Algorithm = EncryptionAlgorithm.None, Passphrase = string.Empty };
                 }
                 else
                 {

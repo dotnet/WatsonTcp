@@ -698,6 +698,84 @@ namespace WatsonTcp
                 _MonitorSyncResponses = null; 
             } 
         }
+        private void EncryptionProcess(WatsonMessage msg)
+        {
+            long contentLength = 0;
+            Stream stream = null;
+
+            byte[] key = null;
+            byte[] salt = null;
+                
+            key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
+            salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash(msg.ConversationGuid));
+                
+            byte[] streamData = WatsonCommon.ReadStreamFully(msg.DataStream);
+            byte[] encryptedData;
+
+            switch (_Settings.Encryption.Algorithm)
+            {
+                case EncryptionAlgorithm.Aes:
+                    encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                    break;
+                case EncryptionAlgorithm.None:
+                    break;
+                case EncryptionAlgorithm.TripleDes:
+                    encryptedData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                    break;
+                case EncryptionAlgorithm.Rijndael:
+                    encryptedData = EncryptionHelper.Encrypt<RijndaelManaged>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                    break;
+                case EncryptionAlgorithm.Rc2:
+                    encryptedData = EncryptionHelper.Encrypt<RC2CryptoServiceProvider>(streamData, key, salt);
+                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), _Settings.Encryption.Algorithm, null);
+            }
+
+            msg.ContentLength = contentLength;             
+        }
+
+        private async Task<byte[]> DecryptionProcess(WatsonMessage msg)
+        {
+            byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
+
+            byte[] key = null;
+            byte[] salt = null;
+
+            key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
+            salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash(msg.ConversationGuid));
+            
+            byte[] decryptedData;
+            switch (msg.EncryptionAlgorithm)
+            {
+                case EncryptionAlgorithm.Aes:
+                    decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
+                    msgData = decryptedData;
+                    break;
+                case EncryptionAlgorithm.None:
+                    break;
+                case EncryptionAlgorithm.TripleDes:
+                    decryptedData = EncryptionHelper.Decrypt<TripleDESCryptoServiceProvider>(msgData, key, salt);
+                    msgData = decryptedData;
+                    break;
+                case EncryptionAlgorithm.Rijndael:
+                    decryptedData = EncryptionHelper.Decrypt<RijndaelManaged>(msgData, key, salt);
+                    msgData = decryptedData;
+                    break;
+                case EncryptionAlgorithm.Rc2:
+                    decryptedData = EncryptionHelper.Decrypt<RC2CryptoServiceProvider>(msgData, key, salt);
+                    msgData = decryptedData;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), msg.EncryptionAlgorithm, null);
+            }
+
+            return msgData;
+        }
 
         #region Connection
 
@@ -755,6 +833,8 @@ namespace WatsonTcp
                     #endregion
 
                     #region Read-Message
+                    
+                    Console.WriteLine(_DataStream.Length);
 
                     await _ReadLock.WaitAsync(_Token);
                     WatsonMessage msg = new WatsonMessage(_DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
@@ -820,52 +900,16 @@ namespace WatsonTcp
 
                     #region Process-Message
                     
-                    byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
-
-                    if (msg.EncryptionAlgorithm != EncryptionAlgorithm.None)
+                    byte[] msgData;
+                    if (_Settings.Encryption != null && msg.EncryptionAlgorithm != EncryptionAlgorithm.None)
                     {
-                        byte[] key = null;
-                        byte[] salt = null;
-                        
-                        if (string.IsNullOrEmpty(_Settings.Encryption.Passphrase))
-                        {
-                            throw new ArgumentNullException(_Settings.Encryption.Passphrase);
-                        }
-
-                        key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                        salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{msg.ConversationGuid}{_SourceIp}"));
-                        
-                        if (key.Length < 32)
-                        {
-                            throw new ArgumentOutOfRangeException(nameof(_Settings.Encryption.Passphrase));
-                        }
-                        
-                        byte[] decryptedData;
-                        switch (msg.EncryptionAlgorithm)
-                        {
-                            case EncryptionAlgorithm.Aes:
-                                decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
-                                msgData = decryptedData;
-                                break;
-                            case EncryptionAlgorithm.None:
-                                break;
-                            case EncryptionAlgorithm.TripleDes:
-                                decryptedData = EncryptionHelper.Decrypt<TripleDESCryptoServiceProvider>(msgData, key, salt);
-                                msgData = decryptedData;
-                                break;
-                            case EncryptionAlgorithm.Rijndael:
-                                decryptedData = EncryptionHelper.Decrypt<RijndaelManaged>(msgData, key, salt);
-                                msgData = decryptedData;
-                                break;
-                            case EncryptionAlgorithm.Rc2:
-                                decryptedData = EncryptionHelper.Decrypt<RC2CryptoServiceProvider>(msgData, key, salt);
-                                msgData = decryptedData;
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), msg.EncryptionAlgorithm, null);
-                        }
+                        msgData = await DecryptionProcess(msg).ConfigureAwait(false);
                     }
-                    
+                    else
+                    {
+                        msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
+                    }
+
                     if (msg.SyncRequest != null && msg.SyncRequest.Value)
                     { 
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
@@ -1024,9 +1068,14 @@ namespace WatsonTcp
             _WriteLock.Wait();
 
             try
-            { 
+            {
+                if (_Settings.Encryption != null && msg.EncryptionAlgorithm == EncryptionAlgorithm.None)
+                {
+                    EncryptionProcess(msg);
+                }
+                
                 SendHeaders(msg); 
-                SendDataStream(contentLength, msg.ConversationGuid, stream);
+                SendDataStream(msg);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1091,9 +1140,14 @@ namespace WatsonTcp
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             try
-            { 
+            {
+                if (_Settings.Encryption != null && msg.EncryptionAlgorithm == EncryptionAlgorithm.None)
+                {
+                    EncryptionProcess(msg);
+                }
+                
                 await SendHeadersAsync(msg, token).ConfigureAwait(false); 
-                await SendDataStreamAsync(contentLength, msg.ConversationGuid, stream, token).ConfigureAwait(false);
+                await SendDataStreamAsync(msg, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1152,8 +1206,13 @@ namespace WatsonTcp
 
             try
             {
+                if (_Settings.Encryption != null && msg.EncryptionAlgorithm == EncryptionAlgorithm.None)
+                {
+                    EncryptionProcess(msg);
+                }
+                
                 SendHeaders(msg);
-                SendDataStream(contentLength, msg.ConversationGuid, stream);
+                SendDataStream(msg);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1206,60 +1265,18 @@ namespace WatsonTcp
             await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
          
-        private void SendDataStream(long contentLength, string guid, Stream stream)
+        private void SendDataStream(WatsonMessage msg)
         {
+            Stream stream = msg.DataStream;
+            long contentLength = msg.ContentLength;
+            
             if (contentLength <= 0) return;
-             
+
             long bytesRemaining = contentLength;
             int bytesRead = 0;
 
             if (_Settings.StreamBufferSize != _SendBuffer.Length)
                 _SendBuffer = new byte[_Settings.StreamBufferSize];
-
-            if (_Settings.Encryption.Algorithm != EncryptionAlgorithm.None)
-            {
-                byte[] key = null;
-                byte[] salt = null;
-                
-                if (string.IsNullOrEmpty(_Settings.Encryption.Passphrase))
-                {
-                    throw new ArgumentNullException(_Settings.Encryption.Passphrase);
-                }
-
-                key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{guid}{_SourceIp}"));
-                
-                if (key.Length < 32)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(_Settings.Encryption.Passphrase));
-                }
-
-                byte[] streamData = WatsonCommon.ReadStreamFully(stream);
-                byte[] encryptedData;
-                switch (_Settings.Encryption.Algorithm)
-                {
-                   case EncryptionAlgorithm.Aes:
-                       encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
-                       WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                       break;
-                   case EncryptionAlgorithm.None:
-                       break;
-                   case EncryptionAlgorithm.TripleDes:
-                       encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
-                       WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                       break;
-                   case EncryptionAlgorithm.Rijndael:
-                       encryptedData = EncryptionHelper.Encrypt<RijndaelManaged>(streamData, key, salt);
-                       WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                       break;
-                   case EncryptionAlgorithm.Rc2:
-                       encryptedData = EncryptionHelper.Encrypt<RC2CryptoServiceProvider>(streamData, key, salt);
-                       WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                       break;
-                   default:
-                       throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), _Settings.Encryption.Algorithm, null);
-                }
-            }
 
             while (bytesRemaining > 0)
             { 
@@ -1274,60 +1291,18 @@ namespace WatsonTcp
             _DataStream.Flush(); 
         }
 
-        private async Task SendDataStreamAsync(long contentLength, string guid, Stream stream, CancellationToken token)
+        private async Task SendDataStreamAsync(WatsonMessage msg, CancellationToken token)
         {
+            Stream stream = msg.DataStream;
+            long contentLength = msg.ContentLength;
+            
             if (contentLength <= 0) return;
-
+            
             long bytesRemaining = contentLength;
             int bytesRead = 0;
 
             if (_Settings.StreamBufferSize != _SendBuffer.Length)
                 _SendBuffer = new byte[_Settings.StreamBufferSize];
-
-            if (_Settings.Encryption.Algorithm != EncryptionAlgorithm.None)
-            {
-                byte[] key = null;
-                byte[] salt = null;
-
-                if (string.IsNullOrEmpty(_Settings.Encryption.Passphrase))
-                {
-                    throw new ArgumentNullException(_Settings.Encryption.Passphrase);
-                }
-
-                key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-                salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash($"{guid}{_SourceIp}"));
-                
-                if (key.Length < 32)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(_Settings.Encryption.Passphrase));
-                }
-                
-                byte[] streamData = WatsonCommon.ReadStreamFully(stream);
-                byte[] encryptedData;
-                switch (_Settings.Encryption.Algorithm)
-                {
-                    case EncryptionAlgorithm.Aes:
-                        encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
-                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                        break;
-                    case EncryptionAlgorithm.None:
-                        break;
-                    case EncryptionAlgorithm.TripleDes:
-                        encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
-                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                        break;
-                    case EncryptionAlgorithm.Rijndael:
-                        encryptedData = EncryptionHelper.Encrypt<RijndaelManaged>(streamData, key, salt);
-                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                        break;
-                    case EncryptionAlgorithm.Rc2:
-                        encryptedData = EncryptionHelper.Encrypt<RC2CryptoServiceProvider>(streamData, key, salt);
-                        WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), _Settings.Encryption.Algorithm, null);
-                }
-            }
             
             while (bytesRemaining > 0)
             {

@@ -149,37 +149,24 @@ namespace TestClient
                         break;
                     
                     case "enc":
+                        string passphrase = "!evRhC#t2CMw-C$38+HrGD2c?pNfj7HH?Wt";
                         string answer = InputString("Encryption algorithm:", "aes", false);
 
                         switch (answer)
                         {
                             case "aes":
-                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
-
-                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.Aes;
-                                _Client.Settings.Encryption.Passphrase = answer;
+                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Aes, passphrase);
                                 break;
                             case "tripledes":
-                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
-
-                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.TripleDes;
-                                _Client.Settings.Encryption.Passphrase = answer;
+                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.TripleDes, passphrase);
                                 break;
                             case "rijandel":
-                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
-
-                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.Rijndael;
-                                _Client.Settings.Encryption.Passphrase = answer;
+                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Rijndael, passphrase);
                                 break;
                             case "rc2":
-                                answer = InputString("Encryption passphrase:", $"{Guid.NewGuid():N}", false);
-
-                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.Rc2;
-                                _Client.Settings.Encryption.Passphrase = answer;
+                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Rc2, passphrase);
                                 break;
                             default:
-                                _Client.Settings.Encryption.Algorithm = EncryptionAlgorithm.None;
-                                _Client.Settings.Encryption.Passphrase = string.Empty;
                                 return;
                         }
                         break;
