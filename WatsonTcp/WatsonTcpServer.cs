@@ -165,6 +165,7 @@ namespace WatsonTcp
         private ConcurrentDictionary<string, DateTime> _ClientsLastSeen = new ConcurrentDictionary<string, DateTime>();
         private ConcurrentDictionary<string, DateTime> _ClientsKicked = new ConcurrentDictionary<string, DateTime>();
         private ConcurrentDictionary<string, DateTime> _ClientsTimedout = new ConcurrentDictionary<string, DateTime>();
+        private ConcurrentDictionary<string, DateTime> _ClientsThrottled = new ConcurrentDictionary<string, DateTime>();
 
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
@@ -1029,7 +1030,12 @@ namespace WatsonTcp
                         await Task.Delay(30, token).ConfigureAwait(false);
                         continue;
                     }
-                     
+
+                    if (_Settings.MaxMessagesPerSecond > 0)
+                    {
+                        client.MessageCount += 1;
+                    }
+
                     if (!String.IsNullOrEmpty(_Settings.PresharedKey))
                     {
                         if (_UnauthenticatedClients.ContainsKey(client.IpPort))
@@ -1093,6 +1099,26 @@ namespace WatsonTcp
 
                             DisconnectClient(client.IpPort, MessageStatus.AuthFailure);
                             break;
+                        }
+                        
+                        if (_Settings.MaxMessagesPerSecond > 0 && client.MessageCount > 0)
+                        {
+                            DateTime lastSeenTimestamp = DateTime.Now.AddSeconds(-1 * _Settings.MaxMessagesPerSecond);
+                            
+                            foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
+                            {
+                                if (_Settings.MaxMessagesPerSecond < client.MessageCount &&
+                                    lastSeenTimestamp < curr.Value)
+                                {
+                                    _ClientsThrottled.TryAdd(curr.Key, DateTime.Now);
+                                    _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to throttle");
+                                    DisconnectClient(curr.Key, MessageStatus.Throttle);
+                                }
+                                else
+                                {
+                                    client.MessageCount -= 1;
+                                }
+                            }
                         }
                     }
 

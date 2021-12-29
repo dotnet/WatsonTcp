@@ -91,6 +91,19 @@ namespace WatsonTcp
             }
         }
 
+        public int MaxMessagesPerSecond
+        {
+            get
+            {
+                return _MaxMessagesPerSecond;
+            }
+            set
+            {
+                if (value < 0) throw new ArgumentException("MaxMessagesPerSecond must be zero or greater.");
+                _MaxMessagesPerSecond = value;
+            }
+        }
+
         /// <summary>
         /// For Watson TCP server, specify the maximum number of connections the server will accept.
         /// Default is 4096.  Value must be greater than zero.
@@ -138,6 +151,7 @@ namespace WatsonTcp
 
         private int _MaxConnections = 4096;
         private int _IdleClientTimeoutSeconds = 0;
+        private int _MaxMessagesPerSecond = 0;
         private List<string> _PermittedIPs = new List<string>();
 
         #endregion 

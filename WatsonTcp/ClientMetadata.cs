@@ -64,6 +64,18 @@ namespace WatsonTcp
                 return _IpPort; 
             }
         }
+        
+        internal int MessageCount
+        {
+            get 
+            { 
+                return _MessageCount; 
+            }
+            set
+            {
+                _MessageCount = value;
+            }
+        }
 
         internal byte[] SendBuffer { get; set; } = new byte[65536];
         internal Task DataReceiver { get; set; } = null;
@@ -79,6 +91,8 @@ namespace WatsonTcp
         private SslStream _SslStream = null;
         private Stream _DataStream = null;
         private string _IpPort = null;
+
+        private int _MessageCount = 0;
 
         internal ClientMetadata(TcpClient tcp)
         {
