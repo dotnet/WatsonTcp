@@ -907,6 +907,11 @@ namespace WatsonTcp
             _Clients.TryAdd(client.IpPort, client);
             _ClientsLastSeen.TryAdd(client.IpPort, DateTime.Now);
 
+            if (_Settings.MaxMessagesPerSecond > 0)
+            {
+                _ClientsThrottled.TryAdd(client.IpPort, DateTime.Now);
+            }
+
             #endregion
 
             #region Request-Authentication
@@ -1097,25 +1102,24 @@ namespace WatsonTcp
                             DisconnectClient(client.IpPort, MessageStatus.AuthFailure);
                             break;
                         }
-                        
-                        if (_Settings.MaxMessagesPerSecond > 0 && client.MessageCount > 0)
+
+                        if (_Settings.MaxMessagesPerSecond > 0)
                         {
                             client.MessageCount += 1;
                             
-                            DateTime lastSeenTimestamp = DateTime.Now.AddSeconds(-1);
-                            foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
+                            DateTime timestamp = DateTime.Now.AddSeconds(-1);
+                            foreach (KeyValuePair<string, DateTime> curr in _ClientsThrottled)
                             {
                                 if (client.MessageCount > _Settings.MaxMessagesPerSecond &&
-                                    lastSeenTimestamp <= curr.Value)
+                                    Math.Abs((timestamp - curr.Value).TotalSeconds) <= 1)
                                 {
-                                    _ClientsThrottled.TryAdd(curr.Key, DateTime.Now);
                                     _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to throttle");
                                     DisconnectClient(curr.Key, MessageStatus.Throttle);
+                                    break;
                                 }
-                                else
-                                {
-                                    client.MessageCount -= 1;
-                                }
+
+                                client.MessageCount -= 1;
+                                _ClientsThrottled.AddOrUpdate(client.IpPort, DateTime.Now, (key, value) => DateTime.Now);
                             }
                         }
                     }
