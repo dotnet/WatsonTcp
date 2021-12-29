@@ -70,6 +70,6 @@ namespace WatsonTcp
         /// Timeout
         /// </summary>
         [EnumMember(Value = "Throttle")]
-        Throttle = 10
+        Throttle = 11
     }
 }
