@@ -343,6 +343,7 @@ namespace WatsonTcp
             if (_ClientsLastSeen == null) _ClientsLastSeen = new ConcurrentDictionary<string, DateTime>();
             if (_ClientsKicked == null) _ClientsKicked = new ConcurrentDictionary<string, DateTime>();
             if (_ClientsTimedout == null) _ClientsTimedout = new ConcurrentDictionary<string, DateTime>();
+            if (_ClientsThrottled == null) _ClientsThrottled = new ConcurrentDictionary<string, DateTime>();
 
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
@@ -690,6 +691,7 @@ namespace WatsonTcp
                 _ClientsLastSeen = null;
                 _ClientsKicked = null;
                 _ClientsTimedout = null;
+                _ClientsThrottled = null;
 
                 _TokenSource = null;
 
@@ -1104,7 +1106,7 @@ namespace WatsonTcp
                             foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
                             {
                                 if (client.MessageCount > _Settings.MaxMessagesPerSecond &&
-                                    lastSeenTimestamp < curr.Value)
+                                    lastSeenTimestamp <= curr.Value)
                                 {
                                     _ClientsThrottled.TryAdd(curr.Key, DateTime.Now);
                                     _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to throttle");
