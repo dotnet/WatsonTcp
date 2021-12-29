@@ -1105,14 +1105,15 @@ namespace WatsonTcp
                         
                         if (_Settings.MaxMessagesPerSecond > 0)
                         {
-                            client.MessageCount += 1;
-                            
-                            DateTime timestamp = DateTime.Now.AddSeconds(-1);
-                            foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
+                            client.MessageCount++;
+                    
+                            DateTime timestamp = DateTime.Now;
+                            KeyValuePair<string, DateTime> curr = _ClientsThrottled
+                                .First(x => x.Key == client.IpPort);
+                        
+                            if (client.MessageCount >= _Settings.MaxMessagesPerSecond &&
+                                Math.Abs((timestamp - curr.Value).TotalSeconds) <= 1)
                             {
-                                if (client.MessageCount <= _Settings.MaxMessagesPerSecond ||
-                                    !(Math.Abs((timestamp - curr.Value).TotalSeconds) <= 1)) continue;
-                            
                                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to throttle");
                                 DisconnectClient(curr.Key, MessageStatus.Throttle);
                                 break;
