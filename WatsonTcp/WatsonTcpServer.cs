@@ -1102,24 +1102,20 @@ namespace WatsonTcp
                             DisconnectClient(client.IpPort, MessageStatus.AuthFailure);
                             break;
                         }
-
+                        
                         if (_Settings.MaxMessagesPerSecond > 0)
                         {
                             client.MessageCount += 1;
                             
                             DateTime timestamp = DateTime.Now.AddSeconds(-1);
-                            foreach (KeyValuePair<string, DateTime> curr in _ClientsThrottled)
+                            foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
                             {
-                                if (client.MessageCount > _Settings.MaxMessagesPerSecond &&
-                                    Math.Abs((timestamp - curr.Value).TotalSeconds) <= 1)
-                                {
-                                    _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to throttle");
-                                    DisconnectClient(curr.Key, MessageStatus.Throttle);
-                                    break;
-                                }
-
-                                client.MessageCount -= 1;
-                                _ClientsThrottled.AddOrUpdate(client.IpPort, DateTime.Now, (key, value) => DateTime.Now);
+                                if (client.MessageCount <= _Settings.MaxMessagesPerSecond ||
+                                    !(Math.Abs((timestamp - curr.Value).TotalSeconds) <= 1)) continue;
+                            
+                                _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to throttle");
+                                DisconnectClient(curr.Key, MessageStatus.Throttle);
+                                break;
                             }
                         }
                     }
@@ -1222,6 +1218,12 @@ namespace WatsonTcp
                             _Settings.Logger?.Invoke(Severity.Error, _Header + "event handler not set for either MessageReceived or StreamReceived");
                             break;
                         }
+                    }
+
+                    if (_Settings.MaxMessagesPerSecond > 0)
+                    {
+                        client.MessageCount -= 1;
+                        _ClientsThrottled.AddOrUpdate(client.IpPort, DateTime.Now, (key, value) => DateTime.Now);
                     }
 
                     _Statistics.IncrementReceivedMessages();
