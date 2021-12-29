@@ -189,6 +189,11 @@
             Timeout
             </summary>
         </member>
+        <member name="F:WatsonTcp.MessageStatus.Throttle">
+            <summary>
+            Timeout
+            </summary>
+        </member>
         <member name="T:WatsonTcp.Mode">
             <summary>
             Mode.
