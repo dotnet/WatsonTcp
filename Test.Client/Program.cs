@@ -24,7 +24,7 @@ namespace TestClient
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<object, object> metadata;
+            Dictionary<object, object> metadata; 
             bool success;
 
             while (runForever)
@@ -52,7 +52,6 @@ namespace TestClient
                         Console.WriteLine("  disconnect          disconnect from the server"); 
                         Console.WriteLine("  psk                 set the preshared key");
                         Console.WriteLine("  auth                authenticate using the preshared key");
-                        Console.WriteLine("  enc                 enable/disable encryption");
                         Console.WriteLine("  stats               display client statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
                         Console.WriteLine("  debug               enable/disable debug");
@@ -146,29 +145,6 @@ namespace TestClient
 
                     case "auth":
                         _Client.Authenticate(_PresharedKey);
-                        break;
-                    
-                    case "enc":
-                        string passphrase = "!evRhC#t2CMw-C$38+HrGD2c?pNfj7HH?Wt";
-                        string answer = InputString("Encryption algorithm:", "aes", false);
-
-                        switch (answer)
-                        {
-                            case "aes":
-                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Aes, passphrase);
-                                break;
-                            case "tripledes":
-                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.TripleDes, passphrase);
-                                break;
-                            case "rijandel":
-                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Rijndael, passphrase);
-                                break;
-                            case "rc2":
-                                _Client.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Rc2, passphrase);
-                                break;
-                            default:
-                                return;
-                        }
                         break;
 
                     case "stats":

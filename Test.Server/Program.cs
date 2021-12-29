@@ -105,7 +105,6 @@ namespace TestServer
                         Console.WriteLine("  remove              disconnect client");
                         Console.WriteLine("  remove all          disconnect all clients");
                         Console.WriteLine("  psk                 set preshared key");
-                        Console.WriteLine("  enc                 enable/disable encryption");
                         Console.WriteLine("  stats               display server statistics");
                         Console.WriteLine("  stats reset         reset statistics other than start time and uptime"); 
                         Console.WriteLine("  debug               enable/disable debug");
@@ -228,29 +227,6 @@ namespace TestServer
                         _Server.Settings.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
                         break;
 
-                    case "enc":
-                        string passphrase = "!evRhC#t2CMw-C$38+HrGD2c?pNfj7HH?Wt";
-                        string answer = InputString("Encryption algorithm:", "aes", false);
-
-                        switch (answer)
-                        {
-                            case "aes":
-                                _Server.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Aes, passphrase);
-                                break;
-                            case "tripledes":
-                                _Server.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.TripleDes, passphrase);
-                                break;
-                            case "rijandel":
-                                _Server.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Rijndael, passphrase);
-                                break;
-                            case "rc2":
-                                _Server.Settings.Encryption = new EncryptionSettings(EncryptionAlgorithm.Rc2, passphrase);
-                                break;
-                            default:
-                                return;
-                        }
-                        break;
-                    
                     case "stats":
                         Console.WriteLine(_Server.Statistics.ToString());
                         break;

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -49,21 +48,6 @@ namespace WatsonTcp
                     _PresharedKey = new byte[16];
                     Buffer.BlockCopy(value, 0, _PresharedKey, 0, 16); 
                 }
-            }
-        }
-
-        /// <summary>
-        /// The type of encryption algorithm used in the message.
-        /// </summary>
-        public EncryptionAlgorithm EncryptionAlgorithm
-        {
-            get
-            {
-                return _EncryptionAlgorithm;
-            }
-            set
-            {
-                _EncryptionAlgorithm = value;
             }
         }
 
@@ -182,8 +166,6 @@ namespace WatsonTcp
         private Dictionary<object, object> _Metadata = null;
         private Stream _DataStream = null;
 
-        private EncryptionAlgorithm _EncryptionAlgorithm = EncryptionAlgorithm.None;
-
         #endregion
 
         #region Constructors-and-Factories
@@ -205,7 +187,6 @@ namespace WatsonTcp
         /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
         /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param> 
-        /// <param name="encryption">The type of encryption algorithm to use.</param> 
         /// <param name="convGuid">Conversation GUID.</param>
         /// <param name="logger">Logger method.</param>
         internal WatsonMessage(
@@ -214,9 +195,8 @@ namespace WatsonTcp
             Stream stream, 
             bool syncRequest, 
             bool syncResponse, 
-            DateTime? expiration,
-            EncryptionAlgorithm encryption,
-            string convGuid,
+            DateTime? expiration, 
+            string convGuid,  
             Action<Severity, string> logger)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
@@ -234,12 +214,11 @@ namespace WatsonTcp
             if (syncRequest) SyncRequest = true;
             if (syncResponse) SyncResponse = true;
             Expiration = expiration;
-            EncryptionAlgorithm = encryption;
             ConversationGuid = convGuid; 
             if (SyncRequest != null && SyncRequest.Value) SenderTimestamp = DateTime.Now;
 
             _DataStream = stream;
-            _Logger = logger;
+            _Logger = logger; 
         }
 
         /// <summary>
@@ -313,7 +292,6 @@ namespace WatsonTcp
                 SyncResponse = msg.SyncResponse;
                 SenderTimestamp = msg.SenderTimestamp;
                 Expiration = msg.Expiration;
-                EncryptionAlgorithm = msg.EncryptionAlgorithm;
                 ConversationGuid = msg.ConversationGuid; 
 
                 _Logger?.Invoke(Severity.Debug, _Header + "header processing complete" + Environment.NewLine + Encoding.UTF8.GetString(headerBytes).Trim()); 
@@ -366,7 +344,6 @@ namespace WatsonTcp
             ret += "  SyncRequest       : " + SyncRequest.ToString() + Environment.NewLine;
             ret += "  SyncResponse      : " + SyncResponse.ToString() + Environment.NewLine;
             ret += "  ExpirationUtc     : " + (Expiration != null ? Expiration.Value.ToString(_DateTimeFormat) : "null") + Environment.NewLine;
-            ret += "  Encryption        : " + Enum.GetName(typeof(EncryptionAlgorithm), EncryptionAlgorithm) + Environment.NewLine;
             ret += "  Conversation      : " + ConversationGuid + Environment.NewLine; 
 
             if (Metadata != null)

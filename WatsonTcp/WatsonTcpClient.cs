@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -9,7 +8,6 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -159,7 +157,7 @@ namespace WatsonTcp
 
         private DateTime _LastActivity = DateTime.Now;
         private bool _IsTimeout = false;
-        
+
         private byte[] _SendBuffer = new byte[65536];
         private readonly object _SyncResponseLock = new object();
         private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>(); 
@@ -532,7 +530,7 @@ namespace WatsonTcp
         public bool Send(byte[] data, Dictionary<object, object> metadata = null, int start = 0)
         {
             if (data == null) data = new byte[0];
-            WatsonCommon.BytesToStream(data, start, out long contentLength, out Stream stream);
+            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return Send(contentLength, stream, metadata);
         }
 
@@ -547,7 +545,7 @@ namespace WatsonTcp
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]); 
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, _Settings.Encryption.Algorithm, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendInternal(msg, contentLength, stream);
         }
         
@@ -577,7 +575,7 @@ namespace WatsonTcp
         {
             if (token == default(CancellationToken)) token = _Token;
             if (data == null) data = new byte[0];
-            WatsonCommon.BytesToStream(data, start, out long contentLength, out Stream stream);
+            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return await SendAsync(contentLength, stream, metadata, token).ConfigureAwait(false);
         }
          
@@ -594,7 +592,7 @@ namespace WatsonTcp
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (token == default(CancellationToken)) token = _Token;
             if (stream == null) stream = new MemoryStream(new byte[0]);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, _Settings.Encryption.Algorithm, null, (_Settings.DebugMessages ? _Settings.Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, false, false, null, null, (_Settings.DebugMessages ? _Settings.Logger : null));
             return await SendInternalAsync(msg, contentLength, stream, token).ConfigureAwait(false);
         }
          
@@ -625,7 +623,7 @@ namespace WatsonTcp
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (data == null) data = new byte[0];
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonCommon.BytesToStream(data, start, out long contentLength, out Stream stream);
+            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return SendAndWait(timeoutMs, contentLength, stream, metadata);
         }
 
@@ -643,7 +641,7 @@ namespace WatsonTcp
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (stream == null) stream = new MemoryStream(new byte[0]);
             DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, _Settings.Encryption.Algorithm, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
+            WatsonMessage msg = new WatsonMessage(metadata, contentLength, stream, true, false, expiration, Guid.NewGuid().ToString(), (_Settings.DebugMessages ? _Settings.Logger : null));
             return SendAndWaitInternal(msg, timeoutMs, contentLength, stream);
         }
          
@@ -697,84 +695,6 @@ namespace WatsonTcp
                 _DataReceiver = null;
                 _MonitorSyncResponses = null; 
             } 
-        }
-        private void EncryptionProcess(WatsonMessage msg)
-        {
-            long contentLength = 0;
-            Stream stream = null;
-
-            byte[] key = null;
-            byte[] salt = null;
-                
-            key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-            salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash(msg.ConversationGuid));
-                
-            byte[] streamData = WatsonCommon.ReadStreamFully(msg.DataStream);
-            byte[] encryptedData;
-
-            switch (_Settings.Encryption.Algorithm)
-            {
-                case EncryptionAlgorithm.Aes:
-                    encryptedData = EncryptionHelper.Encrypt<AesCryptoServiceProvider>(streamData, key, salt);
-                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                    break;
-                case EncryptionAlgorithm.None:
-                    break;
-                case EncryptionAlgorithm.TripleDes:
-                    encryptedData = EncryptionHelper.Encrypt<TripleDESCryptoServiceProvider>(streamData, key, salt);
-                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                    break;
-                case EncryptionAlgorithm.Rijndael:
-                    encryptedData = EncryptionHelper.Encrypt<RijndaelManaged>(streamData, key, salt);
-                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                    break;
-                case EncryptionAlgorithm.Rc2:
-                    encryptedData = EncryptionHelper.Encrypt<RC2CryptoServiceProvider>(streamData, key, salt);
-                    WatsonCommon.BytesToStream(encryptedData, 0, out contentLength, out stream);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), _Settings.Encryption.Algorithm, null);
-            }
-
-            msg.ContentLength = contentLength;             
-        }
-
-        private async Task<byte[]> DecryptionProcess(WatsonMessage msg)
-        {
-            byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
-
-            byte[] key = null;
-            byte[] salt = null;
-
-            key = Encoding.UTF8.GetBytes(_Settings.Encryption.Passphrase);
-            salt = Encoding.UTF8.GetBytes(EncryptionHelper.Sha256Hash(msg.ConversationGuid));
-            
-            byte[] decryptedData;
-            switch (msg.EncryptionAlgorithm)
-            {
-                case EncryptionAlgorithm.Aes:
-                    decryptedData = EncryptionHelper.Decrypt<AesCryptoServiceProvider>(msgData, key, salt);
-                    msgData = decryptedData;
-                    break;
-                case EncryptionAlgorithm.None:
-                    break;
-                case EncryptionAlgorithm.TripleDes:
-                    decryptedData = EncryptionHelper.Decrypt<TripleDESCryptoServiceProvider>(msgData, key, salt);
-                    msgData = decryptedData;
-                    break;
-                case EncryptionAlgorithm.Rijndael:
-                    decryptedData = EncryptionHelper.Decrypt<RijndaelManaged>(msgData, key, salt);
-                    msgData = decryptedData;
-                    break;
-                case EncryptionAlgorithm.Rc2:
-                    decryptedData = EncryptionHelper.Decrypt<RC2CryptoServiceProvider>(msgData, key, salt);
-                    msgData = decryptedData;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(EncryptionAlgorithm), msg.EncryptionAlgorithm, null);
-            }
-
-            return msgData;
         }
 
         #region Connection
@@ -833,8 +753,6 @@ namespace WatsonTcp
                     #endregion
 
                     #region Read-Message
-                    
-                    Console.WriteLine(_DataStream.Length);
 
                     await _ReadLock.WaitAsync(_Token);
                     WatsonMessage msg = new WatsonMessage(_DataStream, (_Settings.DebugMessages ? _Settings.Logger : null));
@@ -899,21 +817,11 @@ namespace WatsonTcp
                     #endregion
 
                     #region Process-Message
-                    
-                    byte[] msgData;
-                    if (_Settings.Encryption != null && msg.EncryptionAlgorithm != EncryptionAlgorithm.None)
-                    {
-                        msgData = await DecryptionProcess(msg).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
-                    }
 
                     if (msg.SyncRequest != null && msg.SyncRequest.Value)
                     { 
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
-                        // byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
                          
                         if (DateTime.Now < expiration)
                         { 
@@ -926,8 +834,8 @@ namespace WatsonTcp
                                  
                             SyncResponse syncResp = _Callbacks.HandleSyncRequestReceived(syncReq);
                             if (syncResp != null)
-                            {
-                                WatsonCommon.BytesToStream(syncResp.Data, 0, out long contentLength, out Stream stream);
+                            { 
+                                WatsonCommon.BytesToStream(syncResp.Data, 0, out int contentLength, out Stream stream);
                                 WatsonMessage respMsg = new WatsonMessage( 
                                     syncResp.Metadata,
                                     contentLength,
@@ -935,7 +843,6 @@ namespace WatsonTcp
                                     false,
                                     true,
                                     msg.Expiration.Value,
-                                    msg.EncryptionAlgorithm,
                                     msg.ConversationGuid,  
                                     (_Settings.DebugMessages ? _Settings.Logger : null)); 
                                 SendInternal(respMsg, contentLength, stream);
@@ -950,7 +857,7 @@ namespace WatsonTcp
                     { 
                         // No need to amend message expiration; it is copied from the request, which was set by this node
                         // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
-                        // byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
+                        byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
                         if (DateTime.Now < msg.Expiration.Value)
                         {
@@ -966,11 +873,11 @@ namespace WatsonTcp
                     }
                     else
                     {
-                        // byte[] msgData = null;
+                        byte[] msgData = null;
 
                         if (_Events.IsUsingMessages)
                         { 
-                            // msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
+                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
                             MessageReceivedEventArgs args = new MessageReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msgData);
                             await Task.Run(() => _Events.HandleMessageReceived(this, args));
                         }
@@ -981,17 +888,13 @@ namespace WatsonTcp
 
                             if (msg.ContentLength >= _Settings.MaxProxiedStreamSize)
                             {
-                                WatsonCommon.BytesToStream(msgData, 0, out long _, out Stream stream);
-
-                                ws = new WatsonStream(msg.ContentLength, stream);
+                                ws = new WatsonStream(msg.ContentLength, msg.DataStream);
                                 sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws); 
                                 _Events.HandleStreamReceived(this, sr);
                             }
                             else
                             {
-                                WatsonCommon.BytesToStream(msgData, 0, out long _, out Stream stream);
-                                
-                                MemoryStream ms = WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, stream, _Settings.StreamBufferSize);
+                                MemoryStream ms = WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize);
                                 ws = new WatsonStream(msg.ContentLength, ms);
                                 sr = new StreamReceivedEventArgs((_ServerIp + ":" + _ServerPort), msg.Metadata, msg.ContentLength, ws); 
                                 Task unawaited = Task.Run(() => _Events.HandleStreamReceived(this, sr), _Token);
@@ -1068,14 +971,9 @@ namespace WatsonTcp
             _WriteLock.Wait();
 
             try
-            {
-                if (_Settings.Encryption != null && msg.EncryptionAlgorithm == EncryptionAlgorithm.None)
-                {
-                    EncryptionProcess(msg);
-                }
-                
+            { 
                 SendHeaders(msg); 
-                SendDataStream(msg);
+                SendDataStream(contentLength, stream);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1140,14 +1038,9 @@ namespace WatsonTcp
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             try
-            {
-                if (_Settings.Encryption != null && msg.EncryptionAlgorithm == EncryptionAlgorithm.None)
-                {
-                    EncryptionProcess(msg);
-                }
-                
+            { 
                 await SendHeadersAsync(msg, token).ConfigureAwait(false); 
-                await SendDataStreamAsync(msg, token).ConfigureAwait(false);
+                await SendDataStreamAsync(contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1206,13 +1099,8 @@ namespace WatsonTcp
 
             try
             {
-                if (_Settings.Encryption != null && msg.EncryptionAlgorithm == EncryptionAlgorithm.None)
-                {
-                    EncryptionProcess(msg);
-                }
-                
                 SendHeaders(msg);
-                SendDataStream(msg);
+                SendDataStream(contentLength, stream);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1265,13 +1153,10 @@ namespace WatsonTcp
             await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
          
-        private void SendDataStream(WatsonMessage msg)
+        private void SendDataStream(long contentLength, Stream stream)
         {
-            Stream stream = msg.DataStream;
-            long contentLength = msg.ContentLength;
-            
             if (contentLength <= 0) return;
-
+             
             long bytesRemaining = contentLength;
             int bytesRead = 0;
 
@@ -1291,19 +1176,16 @@ namespace WatsonTcp
             _DataStream.Flush(); 
         }
 
-        private async Task SendDataStreamAsync(WatsonMessage msg, CancellationToken token)
+        private async Task SendDataStreamAsync(long contentLength, Stream stream, CancellationToken token)
         {
-            Stream stream = msg.DataStream;
-            long contentLength = msg.ContentLength;
-            
             if (contentLength <= 0) return;
-            
+
             long bytesRemaining = contentLength;
             int bytesRead = 0;
 
             if (_Settings.StreamBufferSize != _SendBuffer.Length)
                 _SendBuffer = new byte[_Settings.StreamBufferSize];
-            
+
             while (bytesRemaining > 0)
             {
                 bytesRead = await stream.ReadAsync(_SendBuffer, 0, _SendBuffer.Length, token).ConfigureAwait(false);
@@ -1422,5 +1304,5 @@ namespace WatsonTcp
         #endregion
 
         #endregion
-    }   
+    }
 }
