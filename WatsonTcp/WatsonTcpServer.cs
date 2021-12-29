@@ -1031,11 +1031,6 @@ namespace WatsonTcp
                         continue;
                     }
 
-                    if (_Settings.MaxMessagesPerSecond > 0)
-                    {
-                        client.MessageCount += 1;
-                    }
-
                     if (!String.IsNullOrEmpty(_Settings.PresharedKey))
                     {
                         if (_UnauthenticatedClients.ContainsKey(client.IpPort))
@@ -1103,11 +1098,12 @@ namespace WatsonTcp
                         
                         if (_Settings.MaxMessagesPerSecond > 0 && client.MessageCount > 0)
                         {
-                            DateTime lastSeenTimestamp = DateTime.Now.AddSeconds(-1 * _Settings.MaxMessagesPerSecond);
+                            client.MessageCount += 1;
                             
+                            DateTime lastSeenTimestamp = DateTime.Now.AddSeconds(-1);
                             foreach (KeyValuePair<string, DateTime> curr in _ClientsLastSeen)
                             {
-                                if (_Settings.MaxMessagesPerSecond < client.MessageCount &&
+                                if (client.MessageCount > _Settings.MaxMessagesPerSecond &&
                                     lastSeenTimestamp < curr.Value)
                                 {
                                     _ClientsThrottled.TryAdd(curr.Key, DateTime.Now);
