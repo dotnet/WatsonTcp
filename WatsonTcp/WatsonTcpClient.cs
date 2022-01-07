@@ -347,7 +347,8 @@ namespace WatsonTcp
                 }
                 finally
                 {
-                    waitHandle.Close();
+                    // https://social.msdn.microsoft.com/Forums/en-US/313cf28c-2a6d-498e-8188-7a0639dbd552/tcpclientbeginconnect-issue?forum=netfxnetcom
+                    // waitHandle.Close();
                 }
 
                 #endregion TCP
@@ -414,7 +415,8 @@ namespace WatsonTcp
                 }
                 finally
                 {
-                    waitHandle.Close();
+                    // https://social.msdn.microsoft.com/Forums/en-US/313cf28c-2a6d-498e-8188-7a0639dbd552/tcpclientbeginconnect-issue?forum=netfxnetcom
+                    // waitHandle.Close();
                 }
 
                 #endregion SSL
