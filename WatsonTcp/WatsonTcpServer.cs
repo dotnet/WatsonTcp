@@ -608,7 +608,8 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="ipPort">IP:port of the client.</param>
         /// <param name="status">Reason for the disconnect.  This is conveyed to the client.</param>
-        public void DisconnectClient(string ipPort, MessageStatus status = MessageStatus.Removed)
+        /// <param name="sendNotice">Flag indicating whether or not a message warning of the disconnection should be sent.</param>
+        public void DisconnectClient(string ipPort, MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
             if (!_Clients.TryGetValue(ipPort, out ClientMetadata client))
@@ -619,9 +620,12 @@ namespace WatsonTcp
             {
                 if (!_ClientsTimedout.ContainsKey(ipPort)) _ClientsKicked.TryAdd(ipPort, DateTime.Now);
 
-                WatsonMessage removeMsg = new WatsonMessage();
-                removeMsg.Status = status;
-                SendInternal(client, removeMsg, 0, null);
+                if (sendNotice)
+                {
+                    WatsonMessage removeMsg = new WatsonMessage();
+                    removeMsg.Status = status;
+                    SendInternal(client, removeMsg, 0, null);
+                }
 
                 client.Dispose();
                 _Clients.TryRemove(ipPort, out _);
@@ -632,13 +636,14 @@ namespace WatsonTcp
         /// Disconnects all connected clients.
         /// </summary>
         /// <param name="status">Reason for the disconnect.  This is conveyed to each client.</param>
-        public void DisconnectClients(MessageStatus status = MessageStatus.Removed)
+        /// <param name="sendNotice">Flag indicating whether or not a message warning of the disconnection should be sent.</param>
+        public void DisconnectClients(MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
         {
             if (_Clients != null && _Clients.Count > 0)
             {
                 foreach (KeyValuePair<string, ClientMetadata> currClient in _Clients)
                 {
-                    DisconnectClient(currClient.Value.IpPort, status);
+                    DisconnectClient(currClient.Value.IpPort, status, sendNotice);
                 }
             } 
         }

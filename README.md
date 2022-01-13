@@ -338,6 +338,10 @@ Some important notes about TCP keepalives:
 
 If you wish to have WatsonTcpServer automatically disconnect clients that have been idle for a period of time, set ```WatsonTcpServer.IdleClientTimeoutSeconds``` to a positive integer.  Receiving a message from a client automatically resets their timeout.  Client timeouts are evaluated every 5 seconds by Watson, so the disconnection may not be precise (for instance, if you use 7 seconds as your disconnect interval).
 
+## Donations
+
+If you would like to financially support my efforts, first of all, thank you!  Please refer to DONATIONS.md.
+
 ## Version History
 
 Please refer to CHANGELOG.md for details.
