@@ -438,17 +438,18 @@ namespace WatsonTcp
             _Events.HandleServerConnected(this, new ConnectionEventArgs((_ServerIp + ":" + _ServerPort)));
             _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
         }
-         
+
         /// <summary>
         /// Disconnect from the server.
         /// </summary>
-        public void Disconnect()
+        /// <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
+        public void Disconnect(bool sendNotice = true)
         {
             if (!Connected) throw new InvalidOperationException("Not connected to the server.");
 
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
-            if (Connected)
+            if (Connected && sendNotice)
             {
                 WatsonMessage msg = new WatsonMessage();
                 msg.Status = MessageStatus.Shutdown;
@@ -482,12 +483,12 @@ namespace WatsonTcp
 
             while (_DataReceiver?.Status == TaskStatus.Running)
             {
-                Task.Delay(1).Wait();
+                Task.Delay(10).Wait();
             }
 
             while (_IdleServerMonitor?.Status == TaskStatus.Running)
             {
-                Task.Delay(1).Wait();
+                Task.Delay(10).Wait();
             }
 
             Connected = false;

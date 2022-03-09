@@ -608,7 +608,7 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="ipPort">IP:port of the client.</param>
         /// <param name="status">Reason for the disconnect.  This is conveyed to the client.</param>
-        /// <param name="sendNotice">Flag indicating whether or not a message warning of the disconnection should be sent.</param>
+        /// <param name="sendNotice">Flag to indicate whether the client should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
         public void DisconnectClient(string ipPort, MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
         {
             if (String.IsNullOrEmpty(ipPort)) throw new ArgumentNullException(nameof(ipPort));
@@ -636,7 +636,7 @@ namespace WatsonTcp
         /// Disconnects all connected clients.
         /// </summary>
         /// <param name="status">Reason for the disconnect.  This is conveyed to each client.</param>
-        /// <param name="sendNotice">Flag indicating whether or not a message warning of the disconnection should be sent.</param>
+        /// <param name="sendNotice">Flag to indicate whether the client should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
         public void DisconnectClients(MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
         {
             if (_Clients != null && _Clients.Count > 0)

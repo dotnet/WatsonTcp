@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29306.81
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WatsonTcp", "WatsonTcp\WatsonTcp.csproj", "{716CCC25-BF6D-40FA-B256-DAABCA5F977B}"
 EndProject
@@ -37,7 +37,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Deadlock", "Test.Deadl
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.NonExistentServer", "Test.NonExistentServer\Test.NonExistentServer.csproj", "{6A05ED7D-031F-46C9-9DD8-960B88AEDD24}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Metadata", "Test.Metadata\Test.Metadata.csproj", "{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Metadata", "Test.Metadata\Test.Metadata.csproj", "{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Reconnect", "Test.Reconnect\Test.Reconnect.csproj", "{C0945149-6A2C-4199-B076-BCC072D03593}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -117,6 +119,10 @@ Global
 		{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0945149-6A2C-4199-B076-BCC072D03593}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0945149-6A2C-4199-B076-BCC072D03593}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0945149-6A2C-4199-B076-BCC072D03593}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0945149-6A2C-4199-B076-BCC072D03593}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
