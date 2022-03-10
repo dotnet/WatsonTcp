@@ -185,12 +185,12 @@ static void MessageReceived(object sender, MessageReceivedEventArgs args)
     Console.WriteLine("Message from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
 }
 
-static void ServerConnected(object sender, EventArgs args)
+static void ServerConnected(object sender, ConnectionEventArgs args)
 {
     Console.WriteLine("Server " + args.IpPort + " connected");
 }
 
-static void ServerDisconnected(object sender, EventArgs args)
+static void ServerDisconnected(object sender, DisconnectionEventArgs args)
 {
     Console.WriteLine("Server " + args.IpPort + " disconnected");
 }
