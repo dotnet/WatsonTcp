@@ -152,7 +152,6 @@ namespace WatsonTcp
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
         private Task _DataReceiver = null;
-        private Task _MonitorSyncResponses = null;
         private Task _IdleServerMonitor = null;
 
         private DateTime _LastActivity = DateTime.Now;
@@ -160,7 +159,7 @@ namespace WatsonTcp
 
         private byte[] _SendBuffer = new byte[65536];
         private readonly object _SyncResponseLock = new object();
-        private Dictionary<string, SyncResponse> _SyncResponses = new Dictionary<string, SyncResponse>(); 
+        private event EventHandler<SyncResponseReceivedEventArgs> SyncResponseReceived;
 
         #endregion
 
@@ -434,7 +433,6 @@ namespace WatsonTcp
 
             _DataReceiver = Task.Run(() => DataReceiver(), _Token);
             _IdleServerMonitor = Task.Run(() => IdleServerMonitor(), _Token);
-            _MonitorSyncResponses = Task.Run(() => MonitorForExpiredSyncResponses(), _Token);
             _Events.HandleServerConnected(this, new ConnectionEventArgs((_ServerIp + ":" + _ServerPort)));
             _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
         }
@@ -696,7 +694,6 @@ namespace WatsonTcp
                 _ReadLock = null;
 
                 _DataReceiver = null;
-                _MonitorSyncResponses = null; 
             } 
         }
 
@@ -866,7 +863,7 @@ namespace WatsonTcp
                         {
                             lock (_SyncResponseLock)
                             {
-                                _SyncResponses.Add(msg.ConversationGuid, new SyncResponse(msg.Expiration.Value, msg.Metadata, msgData));
+                                SyncResponseReceived?.Invoke(this,new SyncResponseReceivedEventArgs(msg,msgData));
                             }
                         }
                         else
@@ -1098,10 +1095,28 @@ namespace WatsonTcp
                 throw new InvalidOperationException("Client is not connected to the server.");
             }
               
-            _WriteLock.Wait(); 
+            _WriteLock.Wait();
+
+            SyncResponse ret = null;
+            AutoResetEvent Responded = new AutoResetEvent(false);
+
+            //Create a new handler specially for this Conversation.
+            EventHandler<SyncResponseReceivedEventArgs> handler = (sender, e) =>
+            {
+                if (e.message.ConversationGuid == msg.ConversationGuid)
+                {
+                    ret = new SyncResponse(e.message.Expiration.Value, e.message.Metadata, e.Data);
+                    Responded.Set();
+                }
+            };
+
+            //Subscribe                
+            SyncResponseReceived += handler;
 
             try
             {
+                
+
                 SendHeaders(msg);
                 SendDataStream(contentLength, stream);
 
@@ -1136,10 +1151,23 @@ namespace WatsonTcp
                     Connected = false;
                     Dispose();
                 }
-            } 
+            }
 
-            SyncResponse ret = GetSyncResponse(msg.ConversationGuid, msg.Expiration.Value); 
-            return ret;
+            //Wait for Responded.Set() to be called
+            Responded.WaitOne(new TimeSpan(0,0,0,0, timeoutMs));
+
+            //Unsubscribe                
+            SyncResponseReceived -= handler;
+
+            if (ret != null)
+            {
+                return ret;
+            }
+            else
+            {
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
+                throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+            }
         }
 
         private void SendHeaders(WatsonMessage msg)
@@ -1205,85 +1233,6 @@ namespace WatsonTcp
         #endregion
 
         #region Tasks
-
-        private async Task MonitorForExpiredSyncResponses()
-        {
-            try
-            {
-                while (true)
-                {
-                    await Task.Delay(1000, _Token).ConfigureAwait(false);
-
-                    lock (_SyncResponseLock)
-                    {
-                        if (_SyncResponses.Any(s =>
-                            s.Value.ExpirationUtc < DateTime.Now
-                            ))
-                        {
-                            Dictionary<string, SyncResponse> expired = _SyncResponses.Where(s =>
-                                s.Value.ExpirationUtc < DateTime.Now
-                                ).ToDictionary(dict => dict.Key, dict => dict.Value);
-
-                            foreach (KeyValuePair<string, SyncResponse> curr in expired)
-                            {
-                                _Settings.Logger?.Invoke(Severity.Debug, _Header + "expiring response " + curr.Key.ToString());
-                                _SyncResponses.Remove(curr.Key);
-                            }
-                        }
-                    } 
-                }
-            }
-            catch (TaskCanceledException)
-            {
-
-            }
-            catch (OperationCanceledException)
-            {
-
-            }
-        }
-
-        private SyncResponse GetSyncResponse(string guid, DateTime expirationUtc)
-        {
-            SyncResponse ret = null;
-
-            try
-            {
-                while (true)
-                {
-                    lock (_SyncResponseLock)
-                    {
-                        if (_SyncResponses.ContainsKey(guid))
-                        {
-                            ret = _SyncResponses[guid];
-                            _SyncResponses.Remove(guid);
-                            break;
-                        }
-                    }
-
-                    if (DateTime.Now >= expirationUtc) break;
-                    Task.Delay(50).Wait(_Token);
-                }
-
-                if (ret != null)
-                {
-                    return ret;
-                }
-                else
-                {
-                    _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
-                    throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                return null;
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
-        }
 
         private async Task IdleServerMonitor()
         {
