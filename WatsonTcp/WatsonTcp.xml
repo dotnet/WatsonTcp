@@ -345,6 +345,11 @@
             <param name="metadata">Metadata to attach to the response.</param>
             <param name="data">Data to send as a response.</param>
         </member>
+        <member name="T:WatsonTcp.SyncResponseReceivedEventArgs">
+            <summary>
+            Internal EventArgs for passing arguments for SyncResponseReceived event.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.TlsExtensions">
             <summary>
             TLS extensions.
