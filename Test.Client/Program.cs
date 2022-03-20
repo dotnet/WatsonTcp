@@ -435,7 +435,10 @@ namespace TestClient
 
             try
             {
+                System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+                stopwatch.Start();
                 SyncResponse resp = _Client.SendAndWait(timeoutMs, userInput, metadata);
+                stopwatch.Stop();
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -446,6 +449,7 @@ namespace TestClient
                 }
 
                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
+                Console.WriteLine("Server responded in {0} ms/{1} ticks.",stopwatch.ElapsedMilliseconds,stopwatch.ElapsedTicks);
             }
             catch (Exception e)
             {
