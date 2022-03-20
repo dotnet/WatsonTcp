@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using WatsonTcp;
@@ -435,7 +436,7 @@ namespace TestClient
 
             try
             {
-                System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+                Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
                 SyncResponse resp = _Client.SendAndWait(timeoutMs, userInput, metadata);
                 stopwatch.Stop();

@@ -9,12 +9,45 @@ namespace WatsonTcp
     /// </summary>
     internal class SyncResponseReceivedEventArgs
     {
+        #region Public-Members
+
+        /// <summary>
+        /// Message.
+        /// </summary>
+        public WatsonMessage Message { get; set; } = null;
+
+        /// <summary>
+        /// Data.
+        /// </summary>
+        public byte[] Data { get; set; } = null;
+
+        #endregion
+
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        /// <summary>
+        /// Instantiate.
+        /// </summary>
+        /// <param name="msg">Message.</param>
+        /// <param name="data">Data.</param>
         public SyncResponseReceivedEventArgs(WatsonMessage msg, byte[] data)
         {
-            message = msg;
+            Message = msg;
             Data = data;
         }
-        public WatsonMessage message;
-        public byte[] Data;
+
+        #endregion
+
+        #region Public-Methods
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }

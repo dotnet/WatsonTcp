@@ -350,6 +350,23 @@
             Internal EventArgs for passing arguments for SyncResponseReceived event.
             </summary>
         </member>
+        <member name="P:WatsonTcp.SyncResponseReceivedEventArgs.Message">
+            <summary>
+            Message.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.SyncResponseReceivedEventArgs.Data">
+            <summary>
+            Data.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.SyncResponseReceivedEventArgs.#ctor(WatsonTcp.WatsonMessage,System.Byte[])">
+            <summary>
+            Instantiate.
+            </summary>
+            <param name="msg">Message.</param>
+            <param name="data">Data.</param>
+        </member>
         <member name="T:WatsonTcp.TlsExtensions">
             <summary>
             TLS extensions.

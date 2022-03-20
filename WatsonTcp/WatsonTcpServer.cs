@@ -172,7 +172,7 @@ namespace WatsonTcp
         private Task _MonitorClients = null;
 
         private readonly object _SyncResponseLock = new object();
-        private event EventHandler<SyncResponseReceivedEventArgs> SyncResponseReceived;
+        private event EventHandler<SyncResponseReceivedEventArgs> _SyncResponseReceived;
 
         #endregion
 
@@ -1153,7 +1153,7 @@ namespace WatsonTcp
                         {
                             lock (_SyncResponseLock)
                             {
-                                SyncResponseReceived?.Invoke(this, new SyncResponseReceivedEventArgs(msg, msgData));
+                                _SyncResponseReceived?.Invoke(this, new SyncResponseReceivedEventArgs(msg, msgData));
                             }
                         }
                         else
@@ -1373,15 +1373,15 @@ namespace WatsonTcp
             //Create a new handler specially for this Conversation.
             EventHandler<SyncResponseReceivedEventArgs> handler = (sender, e) =>
             {
-                if (e.message.ConversationGuid == msg.ConversationGuid)
+                if (e.Message.ConversationGuid == msg.ConversationGuid)
                 {
-                    ret = new SyncResponse(e.message.Expiration.Value, e.message.Metadata, e.Data);
+                    ret = new SyncResponse(e.Message.Expiration.Value, e.Message.Metadata, e.Data);
                     Responded.Set();
                 }
             };
 
-            //Subscribe                
-            SyncResponseReceived += handler;
+            // Subscribe                
+            _SyncResponseReceived += handler;
 
             try
             {
@@ -1407,11 +1407,11 @@ namespace WatsonTcp
             }
 
 
-            //Wait for Responded.Set() to be called
+            // Wait for Responded.Set() to be called
             Responded.WaitOne(new TimeSpan(0, 0, 0, 0, timeoutMs));
 
-            //Unsubscribe                
-            SyncResponseReceived -= handler;
+            // Unsubscribe                
+            _SyncResponseReceived -= handler;
 
             if (ret != null)
             {
