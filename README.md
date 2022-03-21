@@ -46,6 +46,10 @@ MyClass instance = myVal.ToObject<MyClass>();
 
 This is not necessary if you are using simple types (int, string, etc).  Simply cast to the simple type.
 
+**IMPORTANT**
+
+Identifying the demarcation between message header and payload is CPU intensive and requires evaluation of the tail end of an internally-managed buffer.  This process of evaluation is performed for *each byte read* until the end of the header is reached.  Thus, is it recommended that the metadata property be used sparingly and with very small amounts of data (less than 1KB).  When used with large amounts of data, CPU utilization will increase dramatically and response time will be very slow.   
+
 ### Local vs External Connections
 
 **IMPORTANT**
