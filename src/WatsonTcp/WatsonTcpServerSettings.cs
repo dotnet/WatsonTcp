@@ -125,7 +125,7 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// For Watson TCP server, the list of blocked IP addresses from which connections cannot be received.
+        /// For Watson TCP server, the list of blocked IP addresses from which connections will be declined.
         /// </summary>
         public List<string> BlockedIPs
         {
