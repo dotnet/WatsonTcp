@@ -773,6 +773,12 @@ namespace WatsonTcp
                         tcpClient.Close();
                         continue;
                     }
+                    if (_Settings.BlockedIPs.Count > 0 && _Settings.BlockedIPs.Contains(clientIp))
+                    {
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "rejecting connection from " + clientIp + " (blocked)");
+                        tcpClient.Close();
+                        continue;
+                    }
 
                     ClientMetadata client = new ClientMetadata(tcpClient);
                     client.SendBuffer = new byte[_Settings.StreamBufferSize];
