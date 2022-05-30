@@ -125,6 +125,22 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// For Watson TCP server, the list of blocked IP addresses from which connections cannot be received.
+        /// </summary>
+        public List<string> BlockedIPs
+        {
+            get
+            {
+                return _BlockedIPs;
+            }
+            set
+            {
+                if (value == null) _BlockedIPs = new List<string>();
+                else _BlockedIPs = value;
+            }
+        }
+
+        /// <summary>
         /// Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is false.
         /// </summary>
         public bool NoDelay { get; set; } = false;
@@ -139,6 +155,7 @@ namespace WatsonTcp
         private int _MaxConnections = 4096;
         private int _IdleClientTimeoutSeconds = 0;
         private List<string> _PermittedIPs = new List<string>();
+        private List<string> _BlockedIPs = new List<string>();
 
         #endregion 
 
