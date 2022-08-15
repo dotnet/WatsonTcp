@@ -39,7 +39,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.NonExistentServer", "T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Metadata", "Test.Metadata\Test.Metadata.csproj", "{6BD8CCED-516F-4FFA-84A3-210F4B0D3EFE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Reconnect", "Test.Reconnect\Test.Reconnect.csproj", "{C0945149-6A2C-4199-B076-BCC072D03593}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Reconnect", "Test.Reconnect\Test.Reconnect.csproj", "{C0945149-6A2C-4199-B076-BCC072D03593}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.PartialStream", "Test.PartialStream\Test.PartialStream.csproj", "{955C92D0-9DA7-43F5-890A-B0E98BE1A92C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -123,6 +125,10 @@ Global
 		{C0945149-6A2C-4199-B076-BCC072D03593}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0945149-6A2C-4199-B076-BCC072D03593}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0945149-6A2C-4199-B076-BCC072D03593}.Release|Any CPU.Build.0 = Release|Any CPU
+		{955C92D0-9DA7-43F5-890A-B0E98BE1A92C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{955C92D0-9DA7-43F5-890A-B0E98BE1A92C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{955C92D0-9DA7-43F5-890A-B0E98BE1A92C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{955C92D0-9DA7-43F5-890A-B0E98BE1A92C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

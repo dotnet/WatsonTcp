@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+	<TargetFrameworks>netcoreapp3.1;net461;net472;net5.0;net6.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WatsonTcp\WatsonTcp.csproj" />
+  </ItemGroup>
+
+</Project>

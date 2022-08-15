@@ -1452,11 +1452,17 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             int bytesRead = 0;
 
-            if (_Settings.StreamBufferSize != client.SendBuffer.Length)
-                client.SendBuffer = new byte[_Settings.StreamBufferSize];
-
             while (bytesRemaining > 0)
             {
+                if (bytesRemaining >= _Settings.StreamBufferSize)
+                {
+                    client.SendBuffer = new byte[_Settings.StreamBufferSize];
+                }
+                else
+                {
+                    client.SendBuffer = new byte[bytesRemaining];
+                }
+
                 bytesRead = stream.Read(client.SendBuffer, 0, client.SendBuffer.Length);
                 if (bytesRead > 0)
                 {
@@ -1475,11 +1481,17 @@ namespace WatsonTcp
             long bytesRemaining = contentLength;
             int bytesRead = 0;
 
-            if (_Settings.StreamBufferSize != client.SendBuffer.Length)
-                client.SendBuffer = new byte[_Settings.StreamBufferSize];
-
             while (bytesRemaining > 0)
             {
+                if (bytesRemaining >= _Settings.StreamBufferSize)
+                {
+                    client.SendBuffer = new byte[_Settings.StreamBufferSize];
+                }
+                else
+                {
+                    client.SendBuffer = new byte[bytesRemaining];
+                }
+
                 bytesRead = await stream.ReadAsync(client.SendBuffer, 0, client.SendBuffer.Length, token).ConfigureAwait(false);
                 if (bytesRead > 0)
                 {
@@ -1528,8 +1540,7 @@ namespace WatsonTcp
 
             }
         }
-
-        
+                
         #endregion
 
         #endregion
