@@ -6,12 +6,11 @@ namespace Test.Reconnect
 {
     class Program
     {
-        static WatsonTcpClient _Client = null;
         static readonly Random _Random = new Random();
 
         static void Main(string[] args)
         {
-            _Client = new WatsonTcpClient("127.0.0.1", 9000);
+            WatsonTcpClient _Client = new WatsonTcpClient("127.0.0.1", 9000);
             _Client.Events.MessageReceived += (s, e) =>
             {
                 Console.WriteLine(e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
