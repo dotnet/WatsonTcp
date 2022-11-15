@@ -674,6 +674,11 @@ namespace WatsonTcp
                     }
                 }
 
+                if (_SslCertificate != null)
+                {
+                    _SslCertificate.Dispose();
+                }
+
                 _Settings = null;
                 _Events = null;
                 _Callbacks = null;

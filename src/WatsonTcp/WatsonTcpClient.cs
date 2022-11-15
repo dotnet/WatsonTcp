@@ -663,6 +663,11 @@ namespace WatsonTcp
 
                 if (Connected) Disconnect();
 
+                if (_SslCertificate != null)
+                {
+                    _SslCertificate.Dispose();
+                }
+
                 if (_WriteLock != null)
                 {
                     _WriteLock.Dispose();
