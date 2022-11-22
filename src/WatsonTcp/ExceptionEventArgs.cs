@@ -9,12 +9,12 @@ namespace WatsonTcp
     /// </summary>
     public class ExceptionEventArgs
     {
-        internal ExceptionEventArgs(Exception e)
+        internal ExceptionEventArgs(Exception e, string json)
         {
             if (e == null) throw new ArgumentNullException(nameof(e));
 
             Exception = e;
-            Json = SerializationHelper.SerializeJson(e, true);
+            Json = json;
         }
 
         /// <summary>

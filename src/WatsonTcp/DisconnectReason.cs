@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text; 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Converters;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Runtime.Serialization;
 
 namespace WatsonTcp
@@ -11,7 +10,7 @@ namespace WatsonTcp
     /// <summary>
     /// Reason why a client disconnected.
     /// </summary>
-    [JsonConverter(typeof(StringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum DisconnectReason
     {
         /// <summary>

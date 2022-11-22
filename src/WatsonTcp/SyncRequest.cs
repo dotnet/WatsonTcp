@@ -9,10 +9,12 @@ namespace WatsonTcp
     /// </summary>
     public class SyncRequest
     {
+        #region Public-Members
+
         /// <summary>
-        /// IP:port from which the request was received.
+        /// Client metadata.
         /// </summary>
-        public string IpPort { get; }
+        public ClientMetadata Client { get; }
          
         /// <summary>
         /// The time at which the request expires.
@@ -22,18 +24,37 @@ namespace WatsonTcp
         /// <summary>
         /// Metadata attached to the request.
         /// </summary>
-        public Dictionary<object, object> Metadata { get; }
+        public Dictionary<string, object> Metadata { get; }
 
         /// <summary>
         /// Request data.
         /// </summary>
         public byte[] Data { get; }
 
-        internal string ConversationGuid { get; }
+        /// <summary>
+        /// Conversation GUID.
+        /// </summary>
+        public Guid ConversationGuid { get; } = Guid.NewGuid();
 
-        internal SyncRequest(string ipPort, string convGuid, DateTime expirationUtc, Dictionary<object, object> metadata, byte[] data)
+        #endregion
+
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        /// <summary>
+        /// Instantiate.
+        /// </summary>
+        /// <param name="client">Client metadata.</param>
+        /// <param name="convGuid">Conversation GUID.</param>
+        /// <param name="expirationUtc">Expiration UTC timestamp.</param>
+        /// <param name="metadata">Metadata.</param>
+        /// <param name="data">Data.</param>
+        public SyncRequest(ClientMetadata client, Guid convGuid, DateTime expirationUtc, Dictionary<string, object> metadata, byte[] data)
         {
-            IpPort = ipPort;
+            Client = client;
             ConversationGuid = convGuid;
             ExpirationUtc = expirationUtc;
             Metadata = metadata;
@@ -44,5 +65,15 @@ namespace WatsonTcp
                 Buffer.BlockCopy(data, 0, Data, 0, data.Length);
             }
         }
+
+        #endregion
+
+        #region Public-Methods
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }

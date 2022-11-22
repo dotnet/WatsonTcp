@@ -9,20 +9,40 @@ namespace WatsonTcp
     /// </summary>
     public class DisconnectionEventArgs : EventArgs
     {
-        internal DisconnectionEventArgs(string ipPort, DisconnectReason reason)
-        {
-            IpPort = ipPort;
-            Reason = reason;
-        }
+        #region Public-Members
 
         /// <summary>
-        /// The IP:port of the endpoint for which the disconnection was detected.
+        /// Client metadata.
         /// </summary>
-        public string IpPort { get; }
+        public ClientMetadata Client { get; } = null;
 
         /// <summary>
         /// The reason for the disconnection.
         /// </summary>
         public DisconnectReason Reason { get; }
+
+        #endregion
+
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        internal DisconnectionEventArgs(ClientMetadata client = null, DisconnectReason reason = DisconnectReason.Normal)
+        {
+            Client = client;
+            Reason = reason;
+        }
+
+        #endregion
+
+        #region Public-Methods
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }

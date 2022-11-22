@@ -96,7 +96,7 @@ namespace WatsonTcp
         #region Constructors-and-Factories
 
         /// <summary>
-        /// Instantiate the object.
+        /// Instantiate.
         /// </summary>
         public WatsonTcpServerEvents()
         {
@@ -177,7 +177,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                logger?.Invoke(Severity.Error, "Event handler exception in " + handler + ": " + Environment.NewLine + SerializationHelper.SerializeJson(e, true));
+                logger?.Invoke(Severity.Error, "Event handler exception in " + handler + ": " + Environment.NewLine + e.ToString());
             }
         }
 

@@ -22,7 +22,7 @@ namespace TestMultiThread
 
         private static WatsonTcpServer _Server; 
         private static WatsonTcpClient _Client; 
-        private static string _ClientIpPort = null;
+        private static Guid _LastGuid = Guid.Empty;
         private static bool _UseStreams = true;
 
         private static int _ServerPort = 8000;
@@ -129,7 +129,11 @@ namespace TestMultiThread
             _Client.Settings.Logger = ClientLogger;
             _Client.Connect();
 
-            while (String.IsNullOrEmpty(_ClientIpPort)) ;
+            while (_LastGuid == Guid.Empty)
+            {
+                Task.Delay(100).Wait();
+                // wait
+            }
 
             Thread.Sleep(2000);
 
@@ -191,19 +195,19 @@ namespace TestMultiThread
                 if (waitVal % 3 == 0)
                 {
                     Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending large message");
-                    _Server.Send(_ClientIpPort, _DataLargeBytes);
+                    _Server.Send(_LastGuid, _DataLargeBytes);
                 }
                 else if (waitVal % 2 == 0)
                 {
                     Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending small message");
-                    _Server.Send(_ClientIpPort, _DataSmallBytes);
+                    _Server.Send(_LastGuid, _DataSmallBytes);
                 }
                 else
                 {
                     Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
                     try
                     {
-                        SyncResponse syncResponse = _Server.SendAndWait(_SendAndWaitInterval, _ClientIpPort, _DataSmallBytes);
+                        SyncResponse syncResponse = _Server.SendAndWait(_SendAndWaitInterval, _LastGuid, _DataSmallBytes);
                         Console.WriteLine("[server] Sync response received");
                     }
                     catch (Exception e)
@@ -218,13 +222,13 @@ namespace TestMultiThread
 
         private static void ServerClientConnected(object sender, ConnectionEventArgs args) 
         {
-            Console.WriteLine("[server] connection from " + args.IpPort);
-            _ClientIpPort = args.IpPort;
+            Console.WriteLine("[server] connection from " + args.Client.ToString());
+            _LastGuid = args.Client.Guid;
         }
          
         private static void ServerClientDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine("[server] disconnection from " + args.IpPort + ": " + args.Reason.ToString());
+            Console.WriteLine("[server] disconnection from " + args.Client.ToString() + ": " + args.Reason.ToString());
         }
 
         private static void ServerMsgReceived(object sender, MessageReceivedEventArgs args)

@@ -7,8 +7,43 @@ using System.Threading.Tasks;
 
 namespace WatsonTcp
 {
-    internal class ClientMetadata : IDisposable
-    { 
+    /// <summary>
+    /// Client metadata.
+    /// </summary>
+    public class ClientMetadata : IDisposable
+    {
+        #region Public-Members
+
+        /// <summary>
+        /// Globally-unique identifier for the connection.
+        /// </summary>
+        public Guid Guid { get; } = Guid.NewGuid();
+
+        /// <summary>
+        /// IP:port for the connection.
+        /// </summary>
+        public string IpPort
+        {
+            get
+            {
+                return _IpPort;
+            }
+        }
+
+        /// <summary>
+        /// Name for the client, managed by the developer (you).
+        /// </summary>
+        public string Name { get; set; } = null;
+
+        /// <summary>
+        /// Metadata for the client, managed by the developer (you).
+        /// </summary>
+        public object Metadata { get; set; } = null; 
+
+        #endregion
+
+        #region Internal-Members
+
         internal TcpClient TcpClient
         {
             get 
@@ -57,14 +92,6 @@ namespace WatsonTcp
             }
         }
          
-        internal string IpPort
-        {
-            get 
-            { 
-                return _IpPort; 
-            }
-        }
-
         internal byte[] SendBuffer { get; set; } = new byte[65536];
         internal Task DataReceiver { get; set; } = null;
 
@@ -73,12 +100,20 @@ namespace WatsonTcp
 
         internal CancellationTokenSource TokenSource = new CancellationTokenSource();
         internal CancellationToken Token;
-         
+
+        #endregion
+
+        #region Private-Members
+
         private TcpClient _TcpClient = null;
         private NetworkStream _NetworkStream = null;
         private SslStream _SslStream = null;
         private Stream _DataStream = null;
         private string _IpPort = null;
+
+        #endregion
+
+        #region Constructors-and-Factories
 
         internal ClientMetadata(TcpClient tcp)
         {
@@ -90,7 +125,11 @@ namespace WatsonTcp
             NetworkStream = tcp.GetStream();
             Token = TokenSource.Token;
         }
-          
+
+        #endregion
+
+        #region Public-Methods
+
         /// <summary>
         /// Tear down the object and dispose of resources.
         /// </summary>
@@ -125,6 +164,25 @@ namespace WatsonTcp
             {
                 Task.Delay(30).Wait();
             }
-        } 
+        }
+
+        /// <summary>
+        /// Human-readable representation of the object.
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            string ret = "[";
+            ret += Guid.ToString() + "|" + IpPort;
+            if (!String.IsNullOrEmpty(Name)) ret += "|" + Name;
+            ret += "]";
+            return ret;
+        }
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }

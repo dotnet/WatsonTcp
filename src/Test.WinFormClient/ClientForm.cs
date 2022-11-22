@@ -41,12 +41,12 @@ namespace Test.WinFormClient
 
         private void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Logger(Severity.Debug, args.IpPort + " connected");
+            Logger(Severity.Debug, "Server connected");
         }
 
         private void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Logger(Severity.Debug, args.IpPort + " disconnected: " + args.Reason.ToString());
+            Logger(Severity.Debug, "Server disconnected: " + args.Reason.ToString());
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -71,7 +71,7 @@ namespace Test.WinFormClient
 
         private void MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Logger(Severity.Debug, "Message from " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
+            Logger(Severity.Debug, "Message from server: " + Encoding.UTF8.GetString(e.Data));
         }
     }
 }

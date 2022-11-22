@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using GetSomeInput;
 using WatsonTcp;
 
 namespace TestClientStream
@@ -21,14 +22,14 @@ namespace TestClientStream
 
         private static void Main(string[] args)
         {
-            serverIp = InputString("Server IP:", "127.0.0.1", false);
-            serverPort = InputInteger("Server port:", 9000, true, false);
-            useSsl = InputBoolean("Use SSL:", false);
+            serverIp = Inputty.GetString("Server IP:", "127.0.0.1", false);
+            serverPort = Inputty.GetInteger("Server port:", 9000, true, false);
+            useSsl = Inputty.GetBoolean("Use SSL:", false);
 
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<object, object> metadata;
+            Dictionary<string, object> metadata;
             bool success;
 
             while (runForever)
@@ -83,7 +84,7 @@ namespace TestClientStream
                         break;
 
                     case "send md":
-                        metadata = InputDictionary();
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
@@ -104,7 +105,7 @@ namespace TestClientStream
                         break;
 
                     case "sendasync md":
-                        metadata = InputDictionary();
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
@@ -143,7 +144,7 @@ namespace TestClientStream
                         break;
 
                     case "psk":
-                        presharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        presharedKey = Inputty.GetString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "auth":
@@ -169,10 +170,10 @@ namespace TestClientStream
             }
             else
             {
-                certFile = InputString("Certificate file:", "test.pfx", false);
-                certPass = InputString("Certificate password:", "password", false);
-                acceptInvalidCerts = InputBoolean("Accept Invalid Certs:", true);
-                mutualAuthentication = InputBoolean("Mutually authenticate:", true);
+                certFile = Inputty.GetString("Certificate file:", "test.pfx", false);
+                certPass = Inputty.GetString("Certificate password:", "password", false);
+                acceptInvalidCerts = Inputty.GetBoolean("Accept Invalid Certs:", true);
+                mutualAuthentication = Inputty.GetBoolean("Mutually authenticate:", true);
 
                 client = new WatsonTcpClient(serverIp, serverPort, certFile, certPass);
                 client.Settings.AcceptInvalidCertificates = acceptInvalidCerts;
@@ -189,135 +190,6 @@ namespace TestClientStream
             client.Settings.Logger = Logger;
             // client.Debug = true;
             client.Connect();
-        }
-
-        private static bool InputBoolean(string question, bool yesDefault)
-        {
-            Console.Write(question);
-
-            if (yesDefault) Console.Write(" [Y/n]? ");
-            else Console.Write(" [y/N]? ");
-
-            string userInput = Console.ReadLine();
-
-            if (String.IsNullOrEmpty(userInput))
-            {
-                if (yesDefault) return true;
-                return false;
-            }
-
-            userInput = userInput.ToLower();
-
-            if (yesDefault)
-            {
-                if (
-                    (String.Compare(userInput, "n") == 0)
-                    || (String.Compare(userInput, "no") == 0)
-                   )
-                {
-                    return false;
-                }
-
-                return true;
-            }
-            else
-            {
-                if (
-                    (String.Compare(userInput, "y") == 0)
-                    || (String.Compare(userInput, "yes") == 0)
-                   )
-                {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        private static string InputString(string question, string defaultAnswer, bool allowNull)
-        {
-            while (true)
-            {
-                Console.Write(question);
-
-                if (!String.IsNullOrEmpty(defaultAnswer))
-                {
-                    Console.Write(" [" + defaultAnswer + "]");
-                }
-
-                Console.Write(" ");
-
-                string userInput = Console.ReadLine();
-
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    if (!String.IsNullOrEmpty(defaultAnswer)) return defaultAnswer;
-                    if (allowNull) return null;
-                    else continue;
-                }
-
-                return userInput;
-            }
-        }
-
-        private static int InputInteger(string question, int defaultAnswer, bool positiveOnly, bool allowZero)
-        {
-            while (true)
-            {
-                Console.Write(question);
-                Console.Write(" [" + defaultAnswer + "] ");
-
-                string userInput = Console.ReadLine();
-
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    return defaultAnswer;
-                }
-
-                int ret = 0;
-                if (!Int32.TryParse(userInput, out ret))
-                {
-                    Console.WriteLine("Please enter a valid integer.");
-                    continue;
-                }
-
-                if (ret == 0)
-                {
-                    if (allowZero)
-                    {
-                        return 0;
-                    }
-                }
-
-                if (ret < 0)
-                {
-                    if (positiveOnly)
-                    {
-                        Console.WriteLine("Please enter a value greater than zero.");
-                        continue;
-                    }
-                }
-
-                return ret;
-            }
-        }
-
-        private static Dictionary<object, object> InputDictionary()
-        {
-            Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
-
-            Dictionary<object, object> ret = new Dictionary<object, object>();
-
-            while (true)
-            {
-                Console.Write("Key   : ");
-                string key = Console.ReadLine();
-                if (String.IsNullOrEmpty(key)) return ret;
-
-                Console.Write("Value : ");
-                string val = Console.ReadLine();
-                ret.Add(key, val);
-            }
         }
 
         private static void LogException(string method, Exception e)
@@ -338,7 +210,7 @@ namespace TestClientStream
         {
             try
             {
-                Console.Write("Stream from " + args.IpPort + " [" + args.ContentLength + " bytes]: ");
+                Console.Write("Stream from server [" + args.ContentLength + " bytes]: ");
 
                 int bytesRead = 0;
                 int bufferSize = 65536;
@@ -372,7 +244,7 @@ namespace TestClientStream
                 if (args.Metadata != null && args.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in args.Metadata)
+                    foreach (KeyValuePair<string, object> curr in args.Metadata)
                     {
                         Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                     }
@@ -386,20 +258,20 @@ namespace TestClientStream
 
         private static SyncResponse SyncRequestReceived(SyncRequest req)
         {
-            Console.Write("Message received from " + req.IpPort + ": ");
+            Console.Write("Message received from server: ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
             else Console.WriteLine("[null]");
 
             if (req.Metadata != null && req.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in req.Metadata)
+                foreach (KeyValuePair<string, object> curr in req.Metadata)
                 {
                     Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                 }
             }
 
-            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
+            Dictionary<string, object> retMetadata = new Dictionary<string, object>();
             retMetadata.Add("foo", "bar");
             retMetadata.Add("bar", "baz");
 
@@ -414,7 +286,7 @@ namespace TestClientStream
             Console.WriteLine("");
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(presharedKey)) presharedKey = InputString("Preshared key:", "1234567812345678", false);
+            if (String.IsNullOrEmpty(presharedKey)) presharedKey = Inputty.GetString("Preshared key:", "1234567812345678", false);
             return presharedKey;
         }
          
@@ -430,19 +302,19 @@ namespace TestClientStream
 
         private static void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Console.WriteLine(args.IpPort + " connected");
+            Console.WriteLine("Server connected");
         }
 
         private static void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
+            Console.WriteLine("Server disconnected: " + args.Reason.ToString());
         }
 
         private static void SendAndWait()
         {
-            string userInput = InputString("Data:", null, false);
-            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
-            Dictionary<object, object> metadata = new Dictionary<object, object>();
+            string userInput = Inputty.GetString("Data:", null, false);
+            int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
+            Dictionary<string, object> metadata = new Dictionary<string, object>();
             metadata.Add("foo", "bar");
 
             try
@@ -451,7 +323,7 @@ namespace TestClientStream
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    foreach (KeyValuePair<string, object> curr in resp.Metadata)
                     {
                         Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                     }
@@ -467,7 +339,7 @@ namespace TestClientStream
 
         private static void SendAndWaitEmpty()
         {
-            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+            int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
 
             Dictionary<object, object> dict = new Dictionary<object, object>();
             dict.Add("foo", "bar");
@@ -478,7 +350,7 @@ namespace TestClientStream
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    foreach (KeyValuePair<string, object> curr in resp.Metadata)
                     {
                         Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                     }

@@ -42,7 +42,7 @@ namespace WatsonTcp
         #region Constructors-and-Factories
 
         /// <summary>
-        /// Instantiate the object.
+        /// Instantiate.
         /// </summary>
         public WatsonTcpClientCallbacks()
         {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using GetSomeInput;
 using WatsonTcp;
 
 namespace TestClient
@@ -25,12 +26,12 @@ namespace TestClient
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<object, object> metadata; 
+            Dictionary<string, object> metadata; 
             bool success;
 
             while (runForever)
             {
-                string userInput = InputString("Command [? for help]:", null, false);
+                string userInput = Inputty.GetString("Command [? for help]:", null, false);
                 
                 switch (userInput)
                 {
@@ -67,37 +68,37 @@ namespace TestClient
                         break;
 
                     case "send":
-                        userInput = InputString("Data:", null, false);
+                        userInput = Inputty.GetString("Data:", null, false);
                         if (!_Client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
                     case "send offset":
-                        userInput = InputString("Data:", null, false);
-                        int offset = InputInteger("Offset:", 0, true, true);
+                        userInput = Inputty.GetString("Data:", null, false);
+                        int offset = Inputty.GetInteger("Offset:", 0, true, true);
                         if (!_Client.Send(Encoding.UTF8.GetBytes(userInput), null, offset)) Console.WriteLine("Failed");
                         break;
 
                     case "send md":
-                        userInput = InputString("Data:", null, false);
-                        metadata = InputDictionary();
+                        userInput = Inputty.GetString("Data:", null, false);
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");
                         if (!_Client.Send(Encoding.UTF8.GetBytes(userInput), metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "send md large":
-                        metadata = new Dictionary<object, object>();
-                        for (int i = 0; i < 100000; i++) metadata.Add(i, i);
+                        metadata = new Dictionary<string, object>();
+                        for (int i = 0; i < 100000; i++) metadata.Add(i.ToString(), i);
                         if (!_Client.Send("Hello!", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
-                        userInput = InputString("Data:", null, false);
+                        userInput = Inputty.GetString("Data:", null, false);
                         success = _Client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync md":
-                        userInput = InputString("Data:", null, false);
-                        metadata = InputDictionary();
+                        userInput = Inputty.GetString("Data:", null, false);
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
                         success = _Client.SendAsync(Encoding.UTF8.GetBytes(userInput), metadata).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
@@ -107,7 +108,7 @@ namespace TestClient
                         break;
 
                     case "sendempty":
-                        metadata = InputDictionary();
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
                         success = _Client.Send("", metadata);
                         if (!success) Console.WriteLine("Failed");
                         break;
@@ -141,7 +142,7 @@ namespace TestClient
                         break;
                          
                     case "psk":
-                        _PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        _PresharedKey = Inputty.GetString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "auth":
@@ -169,22 +170,22 @@ namespace TestClient
 
         private static void InitializeClient()
         {
-            _ServerIp = InputString("Server IP:", "localhost", false);
-            _ServerPort = InputInteger("Server port:", 9000, true, false);
-            _Ssl = InputBoolean("Use SSL:", false);
+            _ServerIp = Inputty.GetString("Server IP:", "localhost", false);
+            _ServerPort = Inputty.GetInteger("Server port:", 9000, true, false);
+            _Ssl = Inputty.GetBoolean("Use SSL:", false);
              
             if (_Ssl)
             {
-                bool supplyCert = InputBoolean("Supply SSL certificate:", false);
+                bool supplyCert = Inputty.GetBoolean("Supply SSL certificate:", false);
 
                 if (supplyCert)
                 {
-                    _CertFile = InputString("Certificate file:", "test.pfx", false);
-                    _CertPass = InputString("Certificate password:", "password", false);
+                    _CertFile = Inputty.GetString("Certificate file:", "test.pfx", false);
+                    _CertPass = Inputty.GetString("Certificate password:", "password", false);
                 }
 
-                _AcceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
-                _MutualAuth = InputBoolean("Mutually authenticate:", false); 
+                _AcceptInvalidCerts = Inputty.GetBoolean("Accept invalid certs:", true);
+                _MutualAuth = Inputty.GetBoolean("Mutually authenticate:", false); 
             }
 
             ConnectClient();
@@ -210,6 +211,7 @@ namespace TestClient
             _Client.Events.ServerConnected += ServerConnected;
             _Client.Events.ServerDisconnected += ServerDisconnected;
             _Client.Events.MessageReceived += MessageReceived;
+            _Client.Events.ExceptionEncountered += ExceptionEncountered;
 
             _Client.Callbacks.SyncRequestReceived = SyncRequestReceived;
             _Client.Callbacks.AuthenticationRequested = AuthenticationRequested;
@@ -227,133 +229,10 @@ namespace TestClient
             _Client.Connect();
         }
 
-        private static bool InputBoolean(string question, bool yesDefault)
+        private static void ExceptionEncountered(object sender, ExceptionEventArgs e)
         {
-            Console.Write(question);
-
-            if (yesDefault) Console.Write(" [Y/n]? ");
-            else Console.Write(" [y/N]? ");
-
-            string userInput = Console.ReadLine();
-
-            if (String.IsNullOrEmpty(userInput))
-            {
-                if (yesDefault) return true;
-                return false;
-            }
-
-            userInput = userInput.ToLower();
-
-            if (yesDefault)
-            {
-                if (
-                    (String.Compare(userInput, "n") == 0)
-                    || (String.Compare(userInput, "no") == 0)
-                   )
-                {
-                    return false;
-                }
-
-                return true;
-            }
-            else
-            {
-                if (
-                    (String.Compare(userInput, "y") == 0)
-                    || (String.Compare(userInput, "yes") == 0)
-                   )
-                {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        private static string InputString(string question, string defaultAnswer, bool allowNull)
-        {
-            while (true)
-            {
-                Console.Write(question);
-
-                if (!String.IsNullOrEmpty(defaultAnswer))
-                {
-                    Console.Write(" [" + defaultAnswer + "]");
-                }
-
-                Console.Write(" ");
-
-                string userInput = Console.ReadLine();
-
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    if (!String.IsNullOrEmpty(defaultAnswer)) return defaultAnswer;
-                    if (allowNull) return null;
-                    else continue;
-                }
-
-                return userInput;
-            }
-        }
-
-        private static int InputInteger(string question, int defaultAnswer, bool positiveOnly, bool allowZero)
-        {
-            while (true)
-            {
-                Console.Write(question);
-                Console.Write(" [" + defaultAnswer + "] ");
-
-                string userInput = Console.ReadLine();
-
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    return defaultAnswer;
-                }
-
-                int ret = 0;
-                if (!Int32.TryParse(userInput, out ret))
-                {
-                    Console.WriteLine("Please enter a valid integer.");
-                    continue;
-                }
-
-                if (ret == 0)
-                {
-                    if (allowZero)
-                    {
-                        return 0;
-                    }
-                }
-
-                if (ret < 0)
-                {
-                    if (positiveOnly)
-                    {
-                        Console.WriteLine("Please enter a value greater than zero.");
-                        continue;
-                    }
-                }
-
-                return ret;
-            }
-        }
-
-        private static Dictionary<object, object> InputDictionary()
-        {
-            Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
-
-            Dictionary<object, object> ret = new Dictionary<object, object>();
-
-            while (true)
-            {
-                Console.Write("Key   : ");
-                string key = Console.ReadLine();
-                if (String.IsNullOrEmpty(key)) return ret;
-
-                Console.Write("Value : ");
-                string val = Console.ReadLine();
-                ret.Add(key, val);
-            }
+            Console.WriteLine("*** Exception ***");
+            Console.WriteLine(e.Json);
         }
 
         private static string AuthenticationRequested()
@@ -363,7 +242,7 @@ namespace TestClient
             Console.WriteLine("");
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(_PresharedKey)) _PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+            if (String.IsNullOrEmpty(_PresharedKey)) _PresharedKey = Inputty.GetString("Preshared key:", "1234567812345678", false);
             return _PresharedKey;
         }
          
@@ -379,14 +258,14 @@ namespace TestClient
          
         private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            Console.Write("Message from " + args.IpPort + ": ");
+            Console.Write("Message from server: ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
             if (args.Metadata != null && args.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in args.Metadata)
+                foreach (KeyValuePair<string, object> curr in args.Metadata)
                 {
                     Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                 }
@@ -395,20 +274,20 @@ namespace TestClient
 
         private static SyncResponse SyncRequestReceived(SyncRequest req)
         {
-            Console.Write("Message received from " + req.IpPort + ": ");
+            Console.Write("Message received from server: ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
             else Console.WriteLine("[null]");
 
             if (req.Metadata != null && req.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in req.Metadata)
+                foreach (KeyValuePair<string, object> curr in req.Metadata)
                 {
                     Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                 }
             }
 
-            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
+            Dictionary<string, object> retMetadata = new Dictionary<string, object>();
             retMetadata.Add("foo", "bar");
             retMetadata.Add("bar", "baz");
 
@@ -419,19 +298,19 @@ namespace TestClient
 
         private static void ServerConnected(object sender, ConnectionEventArgs args) 
         {
-            Console.WriteLine(args.IpPort + " connected"); 
+            Console.WriteLine("Server connected"); 
         }
 
         private static void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
+            Console.WriteLine("Server disconnected: " + args.Reason.ToString());
         }
 
         private static void SendAndWait()
         {
-            string userInput = InputString("Data:", null, false);
-            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
-            Dictionary<object, object> metadata = new Dictionary<object, object>();
+            string userInput = Inputty.GetString("Data:", null, false);
+            int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
+            Dictionary<string, object> metadata = new Dictionary<string, object>();
             metadata.Add("foo", "bar");
 
             try
@@ -443,7 +322,7 @@ namespace TestClient
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    foreach (KeyValuePair<string, object> curr in resp.Metadata)
                     {
                         Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                     }
@@ -460,9 +339,9 @@ namespace TestClient
 
         private static void SendAndWaitEmpty()
         { 
-            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+            int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
 
-            Dictionary<object, object> dict = new Dictionary<object, object>();
+            Dictionary<string, object> dict = new Dictionary<string, object>();
             dict.Add("foo", "bar");
 
             try
@@ -471,7 +350,7 @@ namespace TestClient
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    foreach (KeyValuePair<string, object> curr in resp.Metadata)
                     {
                         Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                     }

@@ -15,7 +15,7 @@ namespace Test.WinFormServer
 {
     public partial class ServerForm : Form
     {
-        private string _ClientIpPort = null;
+        private Guid _LastGuid = Guid.Empty;
         private WatsonTcpServer _Server = null;
         delegate void _LogDelegate(Severity sev, string msg);
         
@@ -37,27 +37,27 @@ namespace Test.WinFormServer
          
         private void OnClientDisconnected(object sender, DisconnectionEventArgs e)
         {
-            Logger(Severity.Debug, "Client " + e.IpPort + " disconnected: " + e.Reason.ToString());
-            _ClientIpPort = string.Empty;
+            Logger(Severity.Debug, "Client " + e.Client.ToString() + " disconnected: " + e.Reason.ToString());
+            _LastGuid = Guid.Empty;
         }
 
         private void OnClientConnected(object sender, ConnectionEventArgs e)
         {
-            Logger(Severity.Debug, "Client " + e.IpPort + " connected");
-            _ClientIpPort = e.IpPort;
+            Logger(Severity.Debug, "Client " + e.Client.ToString() + " connected");
+            _LastGuid = e.Client.Guid;
         }
 
         private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Logger(Severity.Debug, "Client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
+            Logger(Severity.Debug, "Client " + e.Client.ToString() + ": " + Encoding.UTF8.GetString(e.Data));
         }
 
         private void bSend_Click(object sender, EventArgs e)
         {
-            if (!String.IsNullOrEmpty(_ClientIpPort))
+            if (_LastGuid != Guid.Empty)
             {
-                _Server.Send(_ClientIpPort, "Hello world!");
-                Logger(Severity.Debug, "Sent 'Hello world!' to client " + _ClientIpPort);
+                _Server.Send(_LastGuid, "Hello world!");
+                Logger(Severity.Debug, "Sent 'Hello world!' to client " + _LastGuid.ToString());
             }
             else
             {

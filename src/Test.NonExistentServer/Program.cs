@@ -36,17 +36,17 @@ namespace Test.NonExistentServer
 
         static void ServerConnected(object sender, ConnectionEventArgs args)
         {
-            Console.WriteLine(args.IpPort + " connected");
+            Console.WriteLine("Server connected");
         }
 
         static void ServerDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine(args.IpPort + " disconnected: " + args.Reason.ToString());
+            Console.WriteLine("Server disconnected: " + args.Reason.ToString());
         }
 
         static void MessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            Console.WriteLine("Message received from " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
+            Console.WriteLine("Message received from server: " + Encoding.UTF8.GetString(e.Data));
         }
     } 
 }

@@ -7,67 +7,67 @@ namespace Test.Deadlock
 {
     class Program
     {
-        static string serverHostname = "127.0.0.1";
-        static int serverPort = 8000;
-        static WatsonTcpServer server = null;
-        static WatsonTcpClient client = null;
-        static string clientIpPort = null;
+        static string _ServerHostname = "127.0.0.1";
+        static int _ServerPort = 8000;
+        static WatsonTcpServer _Server = null;
+        static WatsonTcpClient _Client = null;
+        static Guid _ClientGuid = Guid.Empty;
 
         static void Main(string[] args)
         {
-            using (server = new WatsonTcpServer(serverHostname, serverPort))
+            using (_Server = new WatsonTcpServer(_ServerHostname, _ServerPort))
             {
-                server.Events.ClientConnected += (s, e) =>
+                _Server.Events.ClientConnected += (s, e) =>
                 {
-                    Console.WriteLine("Client connected to server: " + e.IpPort);
-                    clientIpPort = e.IpPort;
+                    Console.WriteLine("Client connected to server: " + e.Client.ToString());
+                    _ClientGuid = e.Client.Guid;
                 };
 
-                server.Events.ClientDisconnected += (s, e) =>
+                _Server.Events.ClientDisconnected += (s, e) =>
                 {
-                    Console.WriteLine("Client disconnected from server: " + e.IpPort);
-                    clientIpPort = null;
+                    Console.WriteLine("Client disconnected from server: " + e.Client.ToString());
+                    _ClientGuid = Guid.Empty;
                 };
 
-                server.Events.MessageReceived += (s, e) =>
+                _Server.Events.MessageReceived += (s, e) =>
                 {
-                    Console.WriteLine("Server received message from client " + e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
+                    Console.WriteLine("Server received message from client " + e.Client.ToString() + ": " + Encoding.UTF8.GetString(e.Data));
                 };
 
-                server.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
+                _Server.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
                 {
-                    Console.WriteLine("Server received sync message from client " + req.IpPort + ": " + Encoding.UTF8.GetString(req.Data));
+                    Console.WriteLine("Server received sync message from client " + req.Client.ToString() + ": " + Encoding.UTF8.GetString(req.Data));
                     return new SyncResponse(req, "Here's your response from the server!");
                 };
 
-                server.Settings.Logger = ServerLogger;
-                server.Start();
+                _Server.Settings.Logger = ServerLogger;
+                _Server.Start();
 
-                using (client = new WatsonTcpClient(serverHostname, serverPort))
+                using (_Client = new WatsonTcpClient(_ServerHostname, _ServerPort))
                 {
-                    client.Events.ServerConnected += (s, e) =>
+                    _Client.Events.ServerConnected += (s, e) =>
                     {
                         Console.WriteLine("Client connected to server");
                     };
 
-                    client.Events.ServerDisconnected += (s, e) =>
+                    _Client.Events.ServerDisconnected += (s, e) =>
                     {
                         Console.WriteLine("Client disconnected from server");
                     };
 
-                    client.Events.MessageReceived += (s, e) =>
+                    _Client.Events.MessageReceived += (s, e) =>
                     {
                         Console.WriteLine("Client received message from server: " + Encoding.UTF8.GetString(e.Data));
                     };
 
-                    client.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
+                    _Client.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
                     {
                         Console.WriteLine("Client received sync message from server: " + Encoding.UTF8.GetString(req.Data));
                         return new SyncResponse(req, "Here's your response from the client!");
                     };
 
-                    client.Settings.Logger = ClientLogger;
-                    client.Connect();
+                    _Client.Settings.Logger = ClientLogger;
+                    _Client.Connect();
 
                     while (true)
                     {
@@ -93,14 +93,14 @@ namespace Test.Deadlock
         {
             try
             {
-                SyncResponse resp = server.SendAndWait(5000, clientIpPort, "Here's your request from the server!");
+                SyncResponse resp = _Server.SendAndWait(5000, _ClientGuid, "Here's your request from the server!");
                 if (resp == null)
                 {
                     Console.WriteLine("Server did not receive response from client");
                 }
                 else
                 {
-                    Console.WriteLine("Server received response from " + clientIpPort + ": " + Encoding.UTF8.GetString(resp.Data));
+                    Console.WriteLine("Server received response from " + _ClientGuid.ToString() + ": " + Encoding.UTF8.GetString(resp.Data));
                 }
             }
             catch (Exception e)
@@ -113,7 +113,7 @@ namespace Test.Deadlock
         {
             try
             {
-                SyncResponse resp = client.SendAndWait(5000, "Here's your request from the client!");
+                SyncResponse resp = _Client.SendAndWait(5000, "Here's your request from the client!");
                 if (resp == null)
                 {
                     Console.WriteLine("Client did not receive response from server");

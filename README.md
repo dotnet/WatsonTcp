@@ -11,9 +11,17 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - If you want a library that doesn't use framing, but has a similar implementation, use [SuperSimpleTcp](https://github.com/jchristn/supersimpletcp)
 - If you want a library that doesn't use framing and provides explicit control over how much data to read, use [CavemanTcp](https://github.com/jchristn/cavemantcp)
 
-## New in v4.8.11
+## New in v5.0.x
 
-- TLS extensions, thank you @cee-sharp
+- Breaking changes
+- Migrate from using ```IpPort``` as a client key to using ```Guid```
+- Removal of ```Newtonsoft.Json``` as a dependency
+- Separate ```WatsonMessageBuilder``` class to reduce code bloat
+- ```ClientMetadata``` now includes ```Guid```
+- ```ListClients``` now returns list of ```ClientMetadata``` instead of list of ```IpPort```
+- Mark ```Send*``` methods that use ```ipPort``` as obsolete (pending removal in future release)
+- Restrict message metadata dictionary to ```<string, object>```
+- Targeting for .NET 7.0
 
 ## Test Applications
 
@@ -39,9 +47,9 @@ It is important to note the following:
 
 ## Including Metadata with a Message
 
-Should you with to include metadata with any message, use the ```Send``` or ```SendAsync``` method that allows you to pass in metadata (```Dictionary<object, object>```).  Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.
+Should you with to include metadata with any message, use the ```Send``` or ```SendAsync``` method that allows you to pass in metadata (```Dictionary<string, object>```).  Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.  Keys must be of type ```string```.
  
-Note: if you use a class instance as either the key or value, you'll need to deserialize on the receiving end from JSON.  
+Note: if you use a class instance as either the value, you'll need to deserialize on the receiving end from JSON.  
 ```
 object myVal = args.Metadata["myKey"];
 MyClass instance = myVal.ToObject<MyClass>();
@@ -81,7 +89,7 @@ Special thanks to the following people for their support and contributions to th
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
 @DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz @nirajgenius 
 @cee-sharp @jeverz @cbarraco @DenisBalan @Markonius @Ahmed310 @markashleybell @thechosensausage
-@JVemon @eatyouroats
+@JVemon @eatyouroats @bendablegears
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
@@ -103,23 +111,23 @@ static void Main(string[] args)
     server.Start();
 
     // list clients
-    IEnumerable<string> clients = server.ListClients();
+    IEnumerable<ClientMetadata> clients = server.ListClients();
 
     // send a message
-    server.Send("[IP:port]", "Hello, client!");
+    server.Send([guid], "Hello, client!");
 
     // send a message with metadata
-    Dictionary<object, object> md = new Dictionary<object, object>();
+    Dictionary<string, object> md = new Dictionary<string, object>();
     md.Add("foo", "bar");
-    server.Send("[IP:port]", "Hello, client!  Here's some metadata!", md);
+    server.Send([guid], "Hello, client!  Here's some metadata!", md);
 
     // send async!
-    await server.SendAsync("[IP:port", "Hello, client!  I'm async!");
+    await server.SendAsync([guid], "Hello, client!  I'm async!");
 
     // send and wait for a response
     try
     {
-        SyncResponse resp = server.SendAndWait("[IP:port", 5000, "Hey, say hello back within 5 seconds!");
+        SyncResponse resp = server.SendAndWait([guid], 5000, "Hey, say hello back within 5 seconds!");
         Console.WriteLine("My friend says: " + Encoding.UTF8.GetString(resp.Data));
     }
     catch (TimeoutException)
@@ -130,17 +138,17 @@ static void Main(string[] args)
 
 static void ClientConnected(object sender, ConnectionEventArgs args)
 {
-    Console.WriteLine("Client connected: " + args.IpPort);
+    Console.WriteLine("Client connected: " + args.Client.ToString());
 }
 
 static void ClientDisconnected(object sender, DisconnectionEventArgs args)
 {
-    Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
+    Console.WriteLine("Client disconnected: " + args.Client.ToString() + ": " + args.Reason.ToString());
 }
 
 static void MessageReceived(object sender, MessageReceivedEventArgs args)
 {
-    Console.WriteLine("Message from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
+    Console.WriteLine("Message from " + args.Client.ToString() + ": " + Encoding.UTF8.GetString(args.Data));
 }
 
 static SyncResponse SyncRequestReceived(SyncRequest req)
@@ -169,7 +177,7 @@ static void Main(string[] args)
     client.Send("Hello!");
 
     // send a message with metadata
-    Dictionary<object, object> md = new Dictionary<object, object>();
+    Dictionary<string, object> md = new Dictionary<string, object>();
     md.Add("foo", "bar");
     client.Send("Hello, client!  Here's some metadata!", md);
 
@@ -190,17 +198,17 @@ static void Main(string[] args)
 
 static void MessageReceived(object sender, MessageReceivedEventArgs args)
 {
-    Console.WriteLine("Message from " + args.IpPort + ": " + Encoding.UTF8.GetString(args.Data));
+    Console.WriteLine("Message from server: " + Encoding.UTF8.GetString(args.Data));
 }
 
 static void ServerConnected(object sender, ConnectionEventArgs args)
 {
-    Console.WriteLine("Server " + args.IpPort + " connected");
+    Console.WriteLine("Server connected");
 }
 
 static void ServerDisconnected(object sender, DisconnectionEventArgs args)
 {
-    Console.WriteLine("Server " + args.IpPort + " disconnected");
+    Console.WriteLine("Server disconnected");
 }
 
 static SyncResponse SyncRequestReceived(SyncRequest req)
@@ -256,7 +264,7 @@ static void StreamReceived(object sender, StreamReceivedEventArgs args)
         }
     }
 
-    Console.WriteLine("Stream received from " + args.IpPort + ": " + Encoding.UTF8.GetString(ms.ToArray())); 
+    Console.WriteLine("Stream received from " + args.Client.ToString() + ": " + Encoding.UTF8.GetString(ms.ToArray())); 
 }
 
 // client
@@ -285,7 +293,7 @@ static void StreamReceived(object sender, StreamReceivedEventArgs args)
         }
     }
 
-    Console.WriteLine("Stream received from " + args.IpPort + ": " + Encoding.UTF8.GetString(ms.ToArray())); 
+    Console.WriteLine("Stream received from server: " + Encoding.UTF8.GetString(ms.ToArray())); 
 }
 ```
 

@@ -9,14 +9,38 @@ namespace WatsonTcp
     /// </summary>
     public class AuthenticationSucceededEventArgs
     {
-        internal AuthenticationSucceededEventArgs(string ipPort)
-        {
-            IpPort = ipPort;
-        }
+        #region Public-Members
 
         /// <summary>
-        /// The IP:port of the client.
+        /// Client metadata.
         /// </summary>
-        public string IpPort { get; }
+        public ClientMetadata Client { get; }
+
+        #endregion
+
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        /// <summary>
+        /// Instantiate.
+        /// </summary>
+        /// <param name="client">Client metadata.</param>
+        public AuthenticationSucceededEventArgs(ClientMetadata client)
+        {
+            Client = client;
+        }
+
+        #endregion
+
+        #region Public-Methods
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }

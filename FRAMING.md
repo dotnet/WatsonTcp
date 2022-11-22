@@ -38,12 +38,12 @@ Authorization: hello@world.com[\r\n]
 
 ## WatsonTcp
 ```
-{"len":1234,"s":"Normal",...other fields...}[\r\n]
+{"len":1234,"status":"Normal",...other fields...}[\r\n]
 [\r\n]
 [data]
 ```
 
-As you can see in examples above, the content length (i.e. length prefixing) is contained in the header's ```ContentLength``` parameter, and a delimeter exists between metadata and data (a carriage return and newline followed by another carriage return and newline, i.e. [\r\n\r\n]).
+As you can see in examples above, the content length (i.e. length prefixing) is contained in the header's ```len``` parameter, and a delimeter exists between metadata and data (a carriage return and newline followed by another carriage return and newline, i.e. [\r\n\r\n]).
 
 ## What Changed?
 
@@ -64,7 +64,7 @@ While this framing model was bandwidth efficient (fewer bytes consumed on the ne
 If you're building an application that will need to integrate with WatsonTcp, let me know!  Here are some basic guidelines to follow that should allow for a successful integration:
 
 - Maintain a persistent TCP connection with WatsonTcp
-- Create a header JSON object of the form: ```{"len":n,"s":"Normal"}``` where the ```len``` is the number of data bytes and ```s``` is the status of ```Normal```
+- Create a header JSON object of the form: ```{"len":n,"status":"Normal"}``` where the ```len``` is the number of data bytes and ```status``` is the status of ```Normal```
 - Include any other pertinent parameters as found in the ```WatsonMessage``` class
 - Do NOT use pretty serialization of the header object (this introduces additional ```\r\n``` into the data)
 - Encode the header object to bytes and send it, followed by ```\r\n\r\n```

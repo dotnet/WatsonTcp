@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using GetSomeInput;
 using WatsonTcp;
 
 namespace TestServer
@@ -19,13 +20,13 @@ namespace TestServer
         private static bool _DebugMessages = true;
         private static bool _AcceptInvalidCerts = true;
         private static bool _MutualAuth = true;
-        private static string _LastIpPort = null;
+        private static Guid _LastGuid = Guid.Empty;
 
         private static void Main(string[] args)
         {
-            _ServerIp = InputString("Server IP:", "localhost", false);
-            _ServerPort = InputInteger("Server port:", 9000, true, false);
-            _Ssl = InputBoolean("Use SSL:", false);
+            _ServerIp = Inputty.GetString("Server IP:", "localhost", false);
+            _ServerPort = Inputty.GetInteger("Server port:", 9000, true, false);
+            _Ssl = Inputty.GetBoolean("Use SSL:", false);
 
             try
             {
@@ -35,10 +36,10 @@ namespace TestServer
                 }
                 else
                 {
-                    _CertFile = InputString("Certificate file:", "test.pfx", false);
-                    _CertPass = InputString("Certificate password:", "password", false);
-                    _AcceptInvalidCerts = InputBoolean("Accept invalid certs:", true);
-                    _MutualAuth = InputBoolean("Mutually authenticate:", false);
+                    _CertFile = Inputty.GetString("Certificate file:", "test.pfx", false);
+                    _CertPass = Inputty.GetString("Certificate password:", "password", false);
+                    _AcceptInvalidCerts = Inputty.GetBoolean("Accept invalid certs:", true);
+                    _MutualAuth = Inputty.GetBoolean("Mutually authenticate:", false);
 
                     _Server = new WatsonTcpServer(_ServerIp, _ServerPort, _CertFile, _CertPass);
                     _Server.Settings.AcceptInvalidCertificates = _AcceptInvalidCerts;
@@ -50,6 +51,7 @@ namespace TestServer
                 _Server.Events.MessageReceived += MessageReceived;
                 _Server.Events.ServerStarted += ServerStarted;
                 _Server.Events.ServerStopped += ServerStopped;
+                _Server.Events.ExceptionEncountered += ExceptionEncountered;
 
                 _Server.Callbacks.SyncRequestReceived = SyncRequestReceived;
                 
@@ -73,15 +75,15 @@ namespace TestServer
             _Server.Start();
 
             bool runForever = true;
-            List<string> clients;
-            string ipPort;
+            List<ClientMetadata> clients;
+            Guid guid;
             MessageStatus reason = MessageStatus.Removed;
-            Dictionary<object, object> metadata;
+            Dictionary<string, object> metadata;
             bool success = false;
 
             while (runForever)
             {
-                string userInput = InputString("Command [? for help]:", null, false);
+                string userInput = Inputty.GetString("Command [? for help]:", null, false);
                  
                 switch (userInput)
                 {
@@ -131,11 +133,14 @@ namespace TestServer
                         clients = _Server.ListClients().ToList();
                         if (clients != null && clients.Count > 0)
                         {
+                            Console.WriteLine("");
                             Console.WriteLine("Clients");
-                            foreach (string curr in clients)
+                            Console.WriteLine("-------");
+                            foreach (ClientMetadata curr in clients)
                             {
-                                Console.WriteLine("  " + curr);
+                                Console.WriteLine(curr.Guid.ToString() + ": " + curr.IpPort);
                             }
+                            Console.WriteLine("");
                         }
                         else
                         {
@@ -148,54 +153,54 @@ namespace TestServer
                         break;
 
                     case "send":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        userInput = InputString("Data:", null, false);
-                        if (!_Server.Send(ipPort, userInput)) Console.WriteLine("Failed");
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        userInput = Inputty.GetString("Data:", null, false);
+                        if (!_Server.Send(guid, userInput)) Console.WriteLine("Failed");
                         break;
 
                     case "send offset":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        userInput = InputString("Data:", null, false);
-                        int offset = InputInteger("Offset:", 0, true, true);
-                        if (!_Server.Send(ipPort, Encoding.UTF8.GetBytes(userInput), null, offset)) Console.WriteLine("Failed");
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        userInput = Inputty.GetString("Data:", null, false);
+                        int offset = Inputty.GetInteger("Offset:", 0, true, true);
+                        if (!_Server.Send(guid, Encoding.UTF8.GetBytes(userInput), null, offset)) Console.WriteLine("Failed");
                         break;
 
                     case "send10":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        userInput = InputString("Data:", null, false);
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        userInput = Inputty.GetString("Data:", null, false);
                         for (int i = 0; i < 10; i++)
                         {
                             Console.WriteLine("Sending " + i);
-                            if (!_Server.Send(ipPort, userInput + "[" + i.ToString() + "]")) Console.WriteLine("Failed");
+                            if (!_Server.Send(guid, userInput + "[" + i.ToString() + "]")) Console.WriteLine("Failed");
                         }
                         break;
 
                     case "send md":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        userInput = InputString("Data:", null, false);
-                        metadata = InputDictionary();
-                        if (!_Server.Send(ipPort, userInput, metadata)) Console.WriteLine("Failed"); 
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        userInput = Inputty.GetString("Data:", null, false);
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
+                        if (!_Server.Send(guid, userInput, metadata)) Console.WriteLine("Failed"); 
                         break;
 
                     case "send md large":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        metadata = new Dictionary<object, object>();
-                        for (int i = 0; i < 100000; i++) metadata.Add(i, i);
-                        if (!_Server.Send(ipPort, "Hello!", metadata)) Console.WriteLine("Failed");
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        metadata = new Dictionary<string, object>();
+                        for (int i = 0; i < 100000; i++) metadata.Add(i.ToString(), i);
+                        if (!_Server.Send(guid, "Hello!", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        userInput = InputString("Data:", null, false); 
-                        success = _Server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput)).Result;
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        userInput = Inputty.GetString("Data:", null, false); 
+                        success = _Server.SendAsync(guid, Encoding.UTF8.GetBytes(userInput)).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
                     case "sendasync md":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        userInput = InputString("Data:", null, false);
-                        metadata = InputDictionary();
-                        success = _Server.SendAsync(ipPort, Encoding.UTF8.GetBytes(userInput), metadata).Result;
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        userInput = Inputty.GetString("Data:", null, false);
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
+                        success = _Server.SendAsync(guid, Encoding.UTF8.GetBytes(userInput), metadata).Result;
                         if (!success) Console.WriteLine("Failed");
                         break;
 
@@ -204,9 +209,9 @@ namespace TestServer
                         break;
 
                     case "sendempty":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
-                        metadata = InputDictionary();
-                        if (!_Server.Send(ipPort, "", metadata)) Console.WriteLine("Failed");
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
+                        if (!_Server.Send(guid, "", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait empty":
@@ -214,10 +219,10 @@ namespace TestServer
                         break;
 
                     case "remove":
-                        ipPort = InputString("IP:port:", _LastIpPort, false);
+                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
                         Console.WriteLine("Valid disconnect reasons: Removed, Normal, Shutdown, Timeout");
-                        reason = (MessageStatus)(Enum.Parse(typeof(MessageStatus), InputString("Disconnect reason:", "Removed", false)));
-                        _Server.DisconnectClient(ipPort, reason);
+                        reason = (MessageStatus)(Enum.Parse(typeof(MessageStatus), Inputty.GetString("Disconnect reason:", "Removed", false)));
+                        _Server.DisconnectClient(guid, reason);
                         break;
 
                     case "remove all":
@@ -225,7 +230,7 @@ namespace TestServer
                         break;
 
                     case "psk":
-                        _Server.Settings.PresharedKey = InputString("Preshared key:", "1234567812345678", false);
+                        _Server.Settings.PresharedKey = Inputty.GetString("Preshared key:", "1234567812345678", false);
                         break;
 
                     case "stats":
@@ -247,159 +252,34 @@ namespace TestServer
             }
         }
 
-        private static bool InputBoolean(string question, bool yesDefault)
+        private static void ExceptionEncountered(object sender, ExceptionEventArgs e)
         {
-            Console.Write(question);
-
-            if (yesDefault) Console.Write(" [Y/n]? ");
-            else Console.Write(" [y/N]? ");
-
-            string userInput = Console.ReadLine();
-
-            if (String.IsNullOrEmpty(userInput))
-            {
-                if (yesDefault) return true;
-                return false;
-            }
-
-            userInput = userInput.ToLower();
-
-            if (yesDefault)
-            {
-                if (
-                    (String.Compare(userInput, "n") == 0)
-                    || (String.Compare(userInput, "no") == 0)
-                   )
-                {
-                    return false;
-                }
-
-                return true;
-            }
-            else
-            {
-                if (
-                    (String.Compare(userInput, "y") == 0)
-                    || (String.Compare(userInput, "yes") == 0)
-                   )
-                {
-                    return true;
-                }
-
-                return false;
-            }
+            Console.WriteLine("*** Exception ***");
+            Console.WriteLine(e.Json);
         }
 
-        private static string InputString(string question, string defaultAnswer, bool allowNull)
-        {
-            while (true)
-            {
-                Console.Write(question);
-
-                if (!String.IsNullOrEmpty(defaultAnswer))
-                {
-                    Console.Write(" [" + defaultAnswer + "]");
-                }
-
-                Console.Write(" ");
-
-                string userInput = Console.ReadLine();
-
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    if (!String.IsNullOrEmpty(defaultAnswer)) return defaultAnswer;
-                    if (allowNull) return null;
-                    else continue;
-                }
-
-                return userInput;
-            }
-        }
-
-        private static int InputInteger(string question, int defaultAnswer, bool positiveOnly, bool allowZero)
-        {
-            while (true)
-            {
-                Console.Write(question);
-                Console.Write(" [" + defaultAnswer + "] ");
-
-                string userInput = Console.ReadLine();
-
-                if (String.IsNullOrEmpty(userInput))
-                {
-                    return defaultAnswer;
-                }
-
-                int ret = 0;
-                if (!Int32.TryParse(userInput, out ret))
-                {
-                    Console.WriteLine("Please enter a valid integer.");
-                    continue;
-                }
-
-                if (ret == 0)
-                {
-                    if (allowZero)
-                    {
-                        return 0;
-                    }
-                }
-
-                if (ret < 0)
-                {
-                    if (positiveOnly)
-                    {
-                        Console.WriteLine("Please enter a value greater than zero.");
-                        continue;
-                    }
-                }
-
-                return ret;
-            }
-        }
-
-        private static Dictionary<object, object> InputDictionary()
-        {
-            Console.WriteLine("Build metadata, press ENTER on 'Key' to exit");
-
-            Dictionary<object, object> ret = new Dictionary<object, object>();
-
-            while (true)
-            {
-                Console.Write("Key   : ");
-                string key = Console.ReadLine();
-                if (String.IsNullOrEmpty(key)) return ret;
-
-                Console.Write("Value : ");
-                string val = Console.ReadLine();
-                ret.Add(key, val);
-            }
-        }
-         
         private static void ClientConnected(object sender, ConnectionEventArgs args)
         {
-            _LastIpPort = args.IpPort;
-            Console.WriteLine("Client connected: " + args.IpPort);
-            // Console.WriteLine("Disconnecting: " + args.IpPort);
-            // server.DisconnectClient(args.IpPort);
+            _LastGuid = args.Client.Guid;
+            Console.WriteLine("Client connected: " + args.Client.ToString());
         }
          
         private static void ClientDisconnected(object sender, DisconnectionEventArgs args)
         {
-            Console.WriteLine("Client disconnected: " + args.IpPort + ": " + args.Reason.ToString());
+            Console.WriteLine("Client disconnected: " + args.Client.ToString() + ": " + args.Reason.ToString());
         }
          
         private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            _LastIpPort = args.IpPort;
-            Console.Write("Message from " + args.IpPort + ": ");
+            _LastGuid = args.Client.Guid;
+            Console.Write("Message from " + args.Client.ToString() + ": ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
             if (args.Metadata != null && args.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in args.Metadata)
+                foreach (KeyValuePair<string, object> curr in args.Metadata)
                 {
                     Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                 }
@@ -418,20 +298,21 @@ namespace TestServer
 
         private static SyncResponse SyncRequestReceived(SyncRequest req)
         {
-            Console.Write("Synchronous request received from " + req.IpPort + ": ");
+            _LastGuid = req.Client.Guid;
+            Console.Write("Synchronous request received from " + req.Client.ToString() + ": ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
             else Console.WriteLine("[null]");
 
             if (req.Metadata != null && req.Metadata.Count > 0)
             {
                 Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<object, object> curr in req.Metadata)
+                foreach (KeyValuePair<string, object> curr in req.Metadata)
                 {
                     Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                 }
             }
 
-            Dictionary<object, object> retMetadata = new Dictionary<object, object>();
+            Dictionary<string, object> retMetadata = new Dictionary<string, object>();
             retMetadata.Add("foo", "bar");
             retMetadata.Add("bar", "baz");
 
@@ -443,20 +324,20 @@ namespace TestServer
 
         private static void SendAndWait()
         {
-            string ipPort = InputString("IP:port:", _LastIpPort, false);
-            string userInput = InputString("Data:", null, false);
-            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+            Guid guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+            string userInput = Inputty.GetString("Data:", null, false);
+            int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
 
             try
             {
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                SyncResponse resp = _Server.SendAndWait(timeoutMs, ipPort, userInput);
+                SyncResponse resp = _Server.SendAndWait(timeoutMs, guid, userInput);
                 stopwatch.Stop();
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    foreach (KeyValuePair<string, object> curr in resp.Metadata)
                     {
                         Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                     }
@@ -473,19 +354,19 @@ namespace TestServer
 
         private static void SendAndWaitEmpty()
         {
-            string ipPort = InputString("IP:port:", _LastIpPort, false); 
-            int timeoutMs = InputInteger("Timeout (milliseconds):", 5000, true, false);
+            Guid guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
+            int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
 
-            Dictionary<object, object> dict = new Dictionary<object, object>();
+            Dictionary<string, object> dict = new Dictionary<string, object>();
             dict.Add("foo", "bar");
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(timeoutMs, ipPort, "", dict);
+                SyncResponse resp = _Server.SendAndWait(timeoutMs, guid, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
-                    foreach (KeyValuePair<object, object> curr in resp.Metadata)
+                    foreach (KeyValuePair<string, object> curr in resp.Metadata)
                     {
                         Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
                     }

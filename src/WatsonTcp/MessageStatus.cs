@@ -1,6 +1,5 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Converters;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Runtime.Serialization;
 
 namespace WatsonTcp
@@ -8,7 +7,7 @@ namespace WatsonTcp
     /// <summary>
     /// Message status.
     /// </summary>
-    [JsonConverter(typeof(StringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum MessageStatus
     {
         /// <summary>

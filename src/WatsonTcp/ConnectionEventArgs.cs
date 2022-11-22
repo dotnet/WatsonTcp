@@ -9,14 +9,34 @@ namespace WatsonTcp
     /// </summary>
     public class ConnectionEventArgs : EventArgs
     {
-        internal ConnectionEventArgs(string ipPort)
-        {
-            IpPort = ipPort;
-        }
+        #region Public-Members
 
         /// <summary>
-        /// The IP:port of the endpoint to which the connection was established.
+        /// Client metadata.
         /// </summary>
-        public string IpPort { get; }
+        public ClientMetadata Client { get; } = null;
+
+        #endregion
+
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        internal ConnectionEventArgs(ClientMetadata client = null)
+        {
+            Client = client;
+        }
+
+        #endregion
+
+        #region Public-Methods
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }

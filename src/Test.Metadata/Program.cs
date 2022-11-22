@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using WatsonTcp;
 
 namespace Test.Metadata
@@ -42,7 +41,7 @@ namespace Test.Metadata
 
                     for (int i = 0; i < _MessageCount; i++)
                     {
-                        Dictionary<object, object> md = new Dictionary<object, object>();
+                        Dictionary<string, object> md = new Dictionary<string, object>();
 
                         for (int j = 0; j < _EntryCount; j++)
                         {
@@ -76,9 +75,8 @@ namespace Test.Metadata
             try
             {
                 int msgNum = Convert.ToInt32(Encoding.UTF8.GetString(args.Data));
-                Dictionary<object, object> md = args.Metadata;
                 _Stopwatches[msgNum].Stop();
-                Console.WriteLine("Server received message " + msgNum.ToString() + " with " + md.Count + " metadata entries: " + _Stopwatches[msgNum].ElapsedMilliseconds + "ms");
+                Console.WriteLine("Server received message " + msgNum.ToString() + " with " + args.Metadata.Count + " metadata entries: " + _Stopwatches[msgNum].ElapsedMilliseconds + "ms");
 
             }
             catch (Exception e)
@@ -90,51 +88,6 @@ namespace Test.Metadata
         private static void ClientMessageReceived(object sender, MessageReceivedEventArgs args)
         {
 
-        }
-
-        #endregion
-
-        #region Serialization
-
-        private static readonly JsonSerializerSettings HardenedSerializerSettings = new JsonSerializerSettings
-        {
-            TypeNameHandling = TypeNameHandling.None // Prevents CS2328 style attacks if a project is allowing automatic type resolution elsewhere.
-        };
-
-        private static readonly JsonSerializerSettings SerializerDefaults = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore,
-            DateTimeZoneHandling = DateTimeZoneHandling.Local,
-        };
-
-        internal static T DeserializeJson<T>(string json)
-        {
-            if (String.IsNullOrEmpty(json)) throw new ArgumentNullException(nameof(json));
-            return JsonConvert.DeserializeObject<T>(json, HardenedSerializerSettings);
-        }
-
-        internal static string SerializeJson(object obj, bool pretty)
-        {
-            if (obj == null) return null;
-            string json;
-
-            if (pretty)
-            {
-                json = JsonConvert.SerializeObject(
-                    obj,
-                    Newtonsoft.Json.Formatting.Indented,
-                    SerializerDefaults
-                );
-            }
-            else
-            {
-                json = JsonConvert.SerializeObject(
-                    obj,
-                    SerializerDefaults
-                );
-            }
-
-            return json;
         }
 
         #endregion

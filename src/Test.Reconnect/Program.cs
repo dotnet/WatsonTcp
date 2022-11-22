@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading.Tasks;
 using WatsonTcp;
 
 namespace Test.Reconnect
@@ -13,7 +14,7 @@ namespace Test.Reconnect
             WatsonTcpClient _Client = new WatsonTcpClient("127.0.0.1", 9000);
             _Client.Events.MessageReceived += (s, e) =>
             {
-                Console.WriteLine(e.IpPort + ": " + Encoding.UTF8.GetString(e.Data));
+                Console.WriteLine("Server message: " + Encoding.UTF8.GetString(e.Data));
             };
 
             while (true)

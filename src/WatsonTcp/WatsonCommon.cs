@@ -163,24 +163,17 @@ namespace WatsonTcp
 
         internal static DateTime GetExpirationTimestamp(WatsonMessage msg)
         {
-            DateTime expiration = msg.Expiration.Value;
-
-            if (msg.SenderTimestamp != null)
-            {
-                //
-                // TimeSpan will be negative if sender timestamp is earlier than now or positive if sender timestamp is later than now
-                // Goal #1: if sender has a later timestamp, decrease expiration by the difference between sender time and our time
-                // Goal #2: if sender has an earlier timestamp, increase expiration by the difference between sender time and our time
-                // 
-                // E.g. If sender time is 10:40 and receiver time is 10:45 and expiration is 1 minute, so 10:41.
-                // ts = 10:45 - 10:40 = 5 minutes
-                // expiration = 10:41 + 5 = 10:46 which is 1 minute later than when receiver received the message
-                //
-                TimeSpan ts = DateTime.Now - msg.SenderTimestamp.Value;
-                expiration = expiration.AddMilliseconds(ts.TotalMilliseconds);
-            }
-
-            return expiration;
+            //
+            // TimeSpan will be negative if sender timestamp is earlier than now or positive if sender timestamp is later than now
+            // Goal #1: if sender has a later timestamp, decrease expiration by the difference between sender time and our time
+            // Goal #2: if sender has an earlier timestamp, increase expiration by the difference between sender time and our time
+            // 
+            // E.g. If sender time is 10:40 and receiver time is 10:45 and expiration is 1 minute, so 10:41.
+            // ts = 10:45 - 10:40 = 5 minutes
+            // expiration = 10:41 + 5 = 10:46 which is 1 minute later than when receiver received the message
+            //
+            TimeSpan ts = DateTime.UtcNow - msg.TimestampUtc;
+            return msg.ExpirationUtc.Value.AddMilliseconds(ts.TotalMilliseconds);
         }
     }
 }

@@ -2,8 +2,12 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-	  <TargetFrameworks>netcoreapp3.1;net461;net472;net5.0;net6.0</TargetFrameworks>
+	  <TargetFrameworks>netcoreapp3.1;net462;net472;net5.0;net6.0;net7.0</TargetFrameworks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Inputty" Version="1.0.5" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\WatsonTcp\WatsonTcp.csproj" />

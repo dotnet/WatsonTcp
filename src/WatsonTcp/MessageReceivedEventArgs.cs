@@ -9,26 +9,46 @@ namespace WatsonTcp
     /// </summary>
     public class MessageReceivedEventArgs : EventArgs
     {
-        internal MessageReceivedEventArgs(string ipPort, Dictionary<object, object> metadata, byte[] data)
-        {
-            IpPort = ipPort;
-            Metadata = metadata;
-            Data = data;
-        }
+        #region Public-Members
 
         /// <summary>
-        /// The IP:port of the endpoint.
+        /// Client metadata.
         /// </summary>
-        public string IpPort { get; }
+        public ClientMetadata Client { get; } = null;
 
         /// <summary>
         /// The metadata received from the endpoint.
         /// </summary>
-        public Dictionary<object, object> Metadata { get; }
+        public Dictionary<string, object> Metadata { get; }
 
         /// <summary>
         /// The data received from the endpoint.
         /// </summary>
         public byte[] Data { get; }
+
+        #endregion
+
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        internal MessageReceivedEventArgs(ClientMetadata client, Dictionary<string, object> metadata, byte[] data)
+        {
+            Client = client;
+            Metadata = metadata;
+            Data = data;
+        }
+
+        #endregion
+
+        #region Public-Methods
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }
