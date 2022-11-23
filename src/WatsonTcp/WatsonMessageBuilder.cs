@@ -59,14 +59,14 @@ namespace WatsonTcp
         /// <param name="stream">The stream containing the data.</param>
         /// <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
-        /// <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
+        /// <param name="expirationUtc">The UTC time at which the message should expire (only valid for synchronous message requests).</param>
         /// <param name="metadata">Metadata to attach to the message.</param>
         internal WatsonMessage ConstructNew(
             long contentLength,
             Stream stream,
             bool syncRequest = false,
             bool syncResponse = false,
-            DateTime? expiration = null,
+            DateTime? expirationUtc = null,
             Dictionary<string, object> metadata = null)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
@@ -83,7 +83,7 @@ namespace WatsonTcp
             msg.DataStream = stream;
             msg.SyncRequest = syncRequest;
             msg.SyncResponse = syncResponse;
-            msg.ExpirationUtc = expiration;
+            msg.ExpirationUtc = expirationUtc;
             msg.Metadata = metadata;
 
             return msg;

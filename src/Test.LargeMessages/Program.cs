@@ -164,7 +164,7 @@ namespace TestLargeMessages
             string ret = "";
             if (numChar < 1) return null;
             int valid = 0;
-            Random random = new Random((int)DateTime.Now.Ticks);
+            Random random = new Random((int)DateTime.UtcNow.Ticks);
             int num = 0;
 
             for (int i = 0; i < numChar; i++)

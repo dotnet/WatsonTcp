@@ -18,7 +18,7 @@ namespace TestParallel
 
         private static void Main(string[] args)
         {
-            rng = new Random((int)DateTime.Now.Ticks);
+            rng = new Random((int)DateTime.UtcNow.Ticks);
             data = InitByteArray(262144, 0x00);
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
             Console.WriteLine("Starting in 3 seconds...");

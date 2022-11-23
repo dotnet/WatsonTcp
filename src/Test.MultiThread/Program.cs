@@ -46,7 +46,7 @@ namespace TestMultiThread
 
         private static void ClientToServer()
         {
-            _Random = new Random((int)DateTime.Now.Ticks);
+            _Random = new Random((int)DateTime.UtcNow.Ticks);
             _DataLargeBytes = InitByteArray(_DataLargeSize, 0x00);
             _DataLargeMd5 = BytesToHex(Md5(_DataLargeBytes));
             _DataSmallBytes = InitByteArray(_DataSmallSize, 0x00);
@@ -98,7 +98,7 @@ namespace TestMultiThread
          
         private static void ServerToClient()
         {
-            _Random = new Random((int)DateTime.Now.Ticks);
+            _Random = new Random((int)DateTime.UtcNow.Ticks);
             _DataLargeBytes = InitByteArray(_DataLargeSize, 0x00);
             _DataLargeMd5 = BytesToHex(Md5(_DataLargeBytes));
             _DataSmallBytes = InitByteArray(_DataSmallSize, 0x00);

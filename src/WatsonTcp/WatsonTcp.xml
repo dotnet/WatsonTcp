@@ -591,7 +591,7 @@
             <param name="stream">The stream containing the data.</param>
             <param name="syncRequest">Indicate if the message is a synchronous message request.</param>
             <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
-            <param name="expiration">The time at which the message should expire (only valid for synchronous message requests).</param>
+            <param name="expirationUtc">The UTC time at which the message should expire (only valid for synchronous message requests).</param>
             <param name="metadata">Metadata to attach to the message.</param>
         </member>
         <member name="M:WatsonTcp.WatsonMessageBuilder.BuildFromStream(System.IO.Stream,System.Threading.CancellationToken)">

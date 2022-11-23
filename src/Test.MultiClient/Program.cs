@@ -22,7 +22,7 @@ namespace TestMultiClient
 
         private static void Main(string[] args)
         {
-            rng = new Random((int)DateTime.Now.Ticks);
+            rng = new Random((int)DateTime.UtcNow.Ticks);
             data = InitByteArray(65536, 0x00);
             Console.WriteLine("Data MD5: " + BytesToHex(Md5(data)));
 

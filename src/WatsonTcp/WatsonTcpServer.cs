@@ -813,7 +813,7 @@ namespace WatsonTcp
             }
             else
             {
-                if (!_ClientsTimedout.ContainsKey(client.Guid)) _ClientsKicked.TryAdd(client.Guid, DateTime.Now);
+                if (!_ClientsTimedout.ContainsKey(client.Guid)) _ClientsKicked.TryAdd(client.Guid, DateTime.UtcNow);
 
                 if (sendNotice)
                 {
@@ -842,7 +842,7 @@ namespace WatsonTcp
             }
             else
             {
-                if (!_ClientsTimedout.ContainsKey(guid)) _ClientsKicked.TryAdd(guid, DateTime.Now);
+                if (!_ClientsTimedout.ContainsKey(guid)) _ClientsKicked.TryAdd(guid, DateTime.UtcNow);
 
                 if (sendNotice)
                 {
@@ -1143,7 +1143,7 @@ namespace WatsonTcp
             #region Add-to-Client-List
 
             _Clients.TryAdd(client.Guid, client);
-            _ClientsLastSeen.TryAdd(client.Guid, DateTime.Now);
+            _ClientsLastSeen.TryAdd(client.Guid, DateTime.UtcNow);
 
             #endregion
 
@@ -1152,7 +1152,7 @@ namespace WatsonTcp
             if (!String.IsNullOrEmpty(_Settings.PresharedKey))
             {
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "requesting authentication material from " + client.ToString());
-                _UnauthenticatedClients.TryAdd(client.Guid, DateTime.Now);
+                _UnauthenticatedClients.TryAdd(client.Guid, DateTime.UtcNow);
 
                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
                 WatsonMessage authMsg = new WatsonMessage();
@@ -1326,7 +1326,7 @@ namespace WatsonTcp
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
-                        if (DateTime.Now < expiration)
+                        if (DateTime.UtcNow < expiration)
                         { 
                             SyncRequest syncReq = new SyncRequest(
                                 client,
@@ -1363,7 +1363,7 @@ namespace WatsonTcp
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + client.ToString() + " synchronous response received: " + msg.ConversationGuid.ToString());
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
-                        if (DateTime.Now < msg.ExpirationUtc.Value)
+                        if (DateTime.UtcNow < msg.ExpirationUtc.Value)
                         {
                             lock (_SyncResponseLock)
                             {
@@ -1413,7 +1413,7 @@ namespace WatsonTcp
 
                     _Statistics.IncrementReceivedMessages();
                     _Statistics.AddReceivedBytes(msg.ContentLength);
-                    _ClientsLastSeen.AddOrUpdate(client.Guid, DateTime.Now, (key, value) => DateTime.Now);
+                    _ClientsLastSeen.AddOrUpdate(client.Guid, DateTime.UtcNow, (key, value) => DateTime.UtcNow);
                 }
                 catch (ObjectDisposedException)
                 { 
@@ -1592,13 +1592,14 @@ namespace WatsonTcp
             {
                 SendHeaders(client, msg);
                 SendDataStream(client, contentLength, stream);
+                _Settings.Logger?.Invoke(Severity.Debug, _Header + client.ToString() + " synchronous request sent: " + msg.ConversationGuid);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
             }
             catch (Exception e)
             {
-                _Settings.Logger?.Invoke(Severity.Error, _Header + "failed to write message to " + client.ToString() + " due to exception: " + e.Message);
+                _Settings.Logger?.Invoke(Severity.Error, _Header + client.ToString() + " failed to write message: " + e.Message);
                 _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
                 _SyncResponseReceived -= handler;
                 throw;
@@ -1711,13 +1712,13 @@ namespace WatsonTcp
 
                     if (_Settings.IdleClientTimeoutSeconds > 0 && _ClientsLastSeen.Count > 0)
                     {
-                        DateTime idleTimestamp = DateTime.Now.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds);
+                        DateTime idleTimestamp = DateTime.UtcNow.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds);
 
                         foreach (KeyValuePair<Guid, DateTime> curr in _ClientsLastSeen)
                         {
                             if (curr.Value < idleTimestamp)
                             {
-                                _ClientsTimedout.TryAdd(curr.Key, DateTime.Now);
+                                _ClientsTimedout.TryAdd(curr.Key, DateTime.UtcNow);
                                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to idle timeout");
                                 DisconnectClient(curr.Key, MessageStatus.Timeout);
                             }

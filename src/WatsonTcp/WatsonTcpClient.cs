@@ -172,7 +172,7 @@ namespace WatsonTcp
         private Task _DataReceiver = null;
         private Task _IdleServerMonitor = null;
 
-        private DateTime _LastActivity = DateTime.Now;
+        private DateTime _LastActivity = DateTime.UtcNow;
         private bool _IsTimeout = false;
 
         private byte[] _SendBuffer = new byte[65536];
@@ -446,7 +446,7 @@ namespace WatsonTcp
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
 
-            _LastActivity = DateTime.Now;
+            _LastActivity = DateTime.UtcNow;
             _IsTimeout = false;
 
             _DataReceiver = Task.Run(() => DataReceiver(), _Token);
@@ -641,7 +641,6 @@ namespace WatsonTcp
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
             if (data == null) data = new byte[0];
-            DateTime expiration = DateTime.Now.AddMilliseconds(timeoutMs);
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return SendAndWait(timeoutMs, contentLength, stream, metadata);
         }
@@ -790,7 +789,7 @@ namespace WatsonTcp
                         continue;
                     }
 
-                    _LastActivity = DateTime.Now;
+                    _LastActivity = DateTime.UtcNow;
 
                     #endregion
 
@@ -846,7 +845,7 @@ namespace WatsonTcp
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false); 
                          
-                        if (DateTime.Now < expiration)
+                        if (DateTime.UtcNow < expiration)
                         { 
                             SyncRequest syncReq = new SyncRequest(
                                 null,
@@ -884,7 +883,7 @@ namespace WatsonTcp
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous response received: " + msg.ConversationGuid.ToString());
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
-                        if (DateTime.Now < msg.ExpirationUtc.Value)
+                        if (DateTime.UtcNow < msg.ExpirationUtc.Value)
                         {
                             lock (_SyncResponseLock)
                             {
@@ -1143,6 +1142,7 @@ namespace WatsonTcp
             {
                 SendHeaders(msg);
                 SendDataStream(contentLength, stream);
+                _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous request sent: " + msg.ConversationGuid);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1276,7 +1276,7 @@ namespace WatsonTcp
 
                 DateTime timeoutTime = _LastActivity.AddMilliseconds(_Settings.IdleServerTimeoutMs);
 
-                if (DateTime.Now > timeoutTime)
+                if (DateTime.UtcNow > timeoutTime)
                 {
                     _Settings.Logger?.Invoke(Severity.Warn, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort + " due to timeout");
                     _IsTimeout = true;

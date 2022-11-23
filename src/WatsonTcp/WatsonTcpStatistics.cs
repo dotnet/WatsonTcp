@@ -30,7 +30,7 @@ namespace WatsonTcp
         {
             get
             {
-                return DateTime.Now.ToUniversalTime() - _StartTime;
+                return DateTime.UtcNow - _StartTime;
             }
         }
 
@@ -134,7 +134,7 @@ namespace WatsonTcp
 
         #region Private-Members
 
-        private DateTime _StartTime = DateTime.Now.ToUniversalTime();
+        private DateTime _StartTime = DateTime.UtcNow;
         private long _ReceivedBytes = 0;
         private long _ReceivedMessages = 0;
         private long _SentBytes = 0;
