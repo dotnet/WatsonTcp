@@ -1393,9 +1393,9 @@
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.ListClients">
             <summary>
-            List the IP:port of each connected client.
+            Retrieve the client metadata associated with each connected client.
             </summary>
-            <returns>An enumerable string list containing each client IP:port.</returns>
+            <returns>An enumerable collection of client metadata.</returns>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.DisconnectClient(System.String,WatsonTcp.MessageStatus,System.Boolean)">
             <summary>

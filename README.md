@@ -11,6 +11,18 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - If you want a library that doesn't use framing, but has a similar implementation, use [SuperSimpleTcp](https://github.com/jchristn/supersimpletcp)
 - If you want a library that doesn't use framing and provides explicit control over how much data to read, use [CavemanTcp](https://github.com/jchristn/cavemantcp)
 
+## Contributions
+
+Special thanks to the following people for their support and contributions to this project!
+
+@brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
+@NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
+@DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz @nirajgenius 
+@cee-sharp @jeverz @cbarraco @DenisBalan @Markonius @Ahmed310 @markashleybell @thechosensausage
+@JVemon @eatyouroats @bendablegears @Laiteux
+
+If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
+
 ## New in v5.0.x
 
 - Breaking changes
@@ -80,18 +92,6 @@ NOTE: Windows accepts '0.0.0.0' as an IP address representing any interface.  On
 mono --aot=nrgctx-trampolines=8096,nimt-trampolines=8096,ntrampolines=4048 --server myapp.exe
 mono --server myapp.exe
 ```
-
-## Contributions
-
-Special thanks to the following people for their support and contributions to this project!
-
-@brudo @MrMikeJJ @mikkleini @pha3z @crushedice @marek-petak @ozrecsec @developervariety 
-@NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
-@DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz @nirajgenius 
-@cee-sharp @jeverz @cbarraco @DenisBalan @Markonius @Ahmed310 @markashleybell @thechosensausage
-@JVemon @eatyouroats @bendablegears
-
-If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
 ## Examples
 

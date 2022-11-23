@@ -788,9 +788,9 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// List the IP:port of each connected client.
+        /// Retrieve the client metadata associated with each connected client.
         /// </summary>
-        /// <returns>An enumerable string list containing each client IP:port.</returns>
+        /// <returns>An enumerable collection of client metadata.</returns>
         public IEnumerable<ClientMetadata> ListClients()
         {
             return _Clients.Values.ToList();
@@ -855,6 +855,7 @@ namespace WatsonTcp
                 _Clients.TryRemove(guid, out _);
             }
         }
+
         /// <summary>
         /// Disconnects all connected clients.
         /// </summary>
