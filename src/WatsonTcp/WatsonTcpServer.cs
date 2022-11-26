@@ -1353,7 +1353,7 @@ namespace WatsonTcp
                                     respMsg.ConversationGuid = msg.ConversationGuid;
                                     SendInternal(client, respMsg, contentLength, stream);
                                 }
-                            });
+                            }, token);
                         }
                         else
                         { 

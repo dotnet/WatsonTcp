@@ -872,7 +872,7 @@ namespace WatsonTcp
                                     respMsg.ConversationGuid = msg.ConversationGuid;
                                     SendInternal(respMsg, contentLength, stream);
                                 }
-                            });                            
+                            }, _Token);                            
                         }
                         else
                         { 
