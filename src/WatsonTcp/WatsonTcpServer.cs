@@ -1323,33 +1323,37 @@ namespace WatsonTcp
                     if (msg.SyncRequest)
                     {
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + client.ToString() + " synchronous request received: " + msg.ConversationGuid.ToString());
+
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize).ConfigureAwait(false);
 
                         if (DateTime.UtcNow < expiration)
-                        { 
-                            SyncRequest syncReq = new SyncRequest(
-                                client,
-                                msg.ConversationGuid,
-                                msg.ExpirationUtc.Value,
-                                msg.Metadata,
-                                msgData);
-                                 
-                            SyncResponse syncResp = _Callbacks.HandleSyncRequestReceived(syncReq);
-                            if (syncResp != null)
-                            { 
-                                WatsonCommon.BytesToStream(syncResp.Data, 0, out int contentLength, out Stream stream);
-                                WatsonMessage respMsg = _MessageBuilder.ConstructNew(
-                                    contentLength,
-                                    stream,
-                                    false,
-                                    true,
+                        {
+                            Task unawaited = Task.Run(() =>
+                            {
+                                SyncRequest syncReq = new SyncRequest(
+                                    client,
+                                    msg.ConversationGuid,
                                     msg.ExpirationUtc.Value,
-                                    syncResp.Metadata);
+                                    msg.Metadata,
+                                    msgData);
 
-                                respMsg.ConversationGuid = msg.ConversationGuid;
-                                SendInternal(client, respMsg, contentLength, stream);
-                            }
+                                SyncResponse syncResp = _Callbacks.HandleSyncRequestReceived(syncReq);
+                                if (syncResp != null)
+                                {
+                                    WatsonCommon.BytesToStream(syncResp.Data, 0, out int contentLength, out Stream stream);
+                                    WatsonMessage respMsg = _MessageBuilder.ConstructNew(
+                                        contentLength,
+                                        stream,
+                                        false,
+                                        true,
+                                        msg.ExpirationUtc.Value,
+                                        syncResp.Metadata);
+
+                                    respMsg.ConversationGuid = msg.ConversationGuid;
+                                    SendInternal(client, respMsg, contentLength, stream);
+                                }
+                            });
                         }
                         else
                         { 
