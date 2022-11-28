@@ -1020,6 +1020,9 @@ namespace WatsonTcp
                     ClientMetadata client = new ClientMetadata(tcpClient);
                     client.SendBuffer = new byte[_Settings.StreamBufferSize];
 
+                    _Clients.TryAdd(client.Guid, client);
+                    _ClientsLastSeen.TryAdd(client.Guid, DateTime.UtcNow);
+
                     CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_Token, client.Token);
 
                     #endregion
@@ -1064,6 +1067,9 @@ namespace WatsonTcp
                             }
                             else
                             {
+                                _Clients.TryRemove(client.Guid, out _);
+                                _ClientsLastSeen.TryRemove(client.Guid, out _);
+
                                 client.Dispose();
                             }
 
@@ -1140,13 +1146,6 @@ namespace WatsonTcp
 
         private void FinalizeConnection(ClientMetadata client, CancellationToken token)
         { 
-            #region Add-to-Client-List
-
-            _Clients.TryAdd(client.Guid, client);
-            _ClientsLastSeen.TryAdd(client.Guid, DateTime.UtcNow);
-
-            #endregion
-
             #region Request-Authentication
 
             if (!String.IsNullOrEmpty(_Settings.PresharedKey))
