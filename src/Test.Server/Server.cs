@@ -276,12 +276,24 @@ namespace TestServer
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
-            if (args.Metadata != null && args.Metadata.Count > 0)
+            if (args.Metadata == null)
             {
-                Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<string, object> curr in args.Metadata)
+                Console.WriteLine("Metadata: (null)");
+            }
+            else
+            {
+                Console.Write("Metadata: ");
+                if (args.Metadata.Count < 1)
                 {
-                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    Console.WriteLine("(none)");
+                }
+                else
+                {
+                    Console.WriteLine(args.Metadata.Count);
+                    foreach (KeyValuePair<string, object> curr in args.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
                 }
             }
         }

@@ -30,6 +30,7 @@ namespace Test.Metadata
                 // server.Settings.Logger = ServerLogger;
                 server.Events.MessageReceived += ServerMessageReceived;
                 server.Start();
+
                 Console.WriteLine("Server started");
                 Task.Delay(1000).Wait();
 
@@ -77,7 +78,6 @@ namespace Test.Metadata
                 int msgNum = Convert.ToInt32(Encoding.UTF8.GetString(args.Data));
                 _Stopwatches[msgNum].Stop();
                 Console.WriteLine("Server received message " + msgNum.ToString() + " with " + args.Metadata.Count + " metadata entries: " + _Stopwatches[msgNum].ElapsedMilliseconds + "ms");
-
             }
             catch (Exception e)
             {

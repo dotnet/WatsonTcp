@@ -81,6 +81,7 @@ namespace TestClient
                     case "send md":
                         userInput = Inputty.GetString("Data:", null, false);
                         metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");
+                        metadata.Add("time", DateTime.UtcNow);
                         if (!_Client.Send(Encoding.UTF8.GetBytes(userInput), metadata)) Console.WriteLine("Failed");
                         break;
 
@@ -262,14 +263,28 @@ namespace TestClient
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
-            if (args.Metadata != null && args.Metadata.Count > 0)
+            if (args.Metadata == null)
             {
-                Console.WriteLine("Metadata:");
-                foreach (KeyValuePair<string, object> curr in args.Metadata)
+                Console.WriteLine("Metadata: (null)");
+            }
+            else
+            {
+                Console.Write("Metadata: ");
+                if (args.Metadata.Count < 1)
                 {
-                    Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    Console.WriteLine("(none)");
                 }
-            } 
+                else
+                {
+                    Console.WriteLine(args.Metadata.Count);
+                    foreach (KeyValuePair<string, object> curr in args.Metadata)
+                    {
+                        Console.WriteLine("  " + curr.Key.ToString() + ": " + curr.Value.ToString());
+                    }
+                }
+
+                if (args.Metadata.ContainsKey("foo")) Console.WriteLine(args.Metadata["foo"]);
+            }
         }
 
         private static SyncResponse SyncRequestReceived(SyncRequest req)

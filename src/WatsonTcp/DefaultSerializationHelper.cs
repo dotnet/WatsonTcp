@@ -13,6 +13,36 @@ namespace WatsonTcp
         #region Public-Members
 
         /// <summary>
+        /// JSON serializer options.
+        /// </summary>
+        public JsonSerializerOptions Options
+        {
+            get
+            {
+                return _Options;
+            }
+            set
+            {
+                if (value == null) _Options = new JsonSerializerOptions();
+                else _Options = value;
+            }
+        }
+
+        #endregion
+
+        #region Private-Members
+
+        private JsonSerializerOptions _Options = new JsonSerializerOptions();
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        #endregion
+
+        #region Public-Methods
+
+        /// <summary>
         /// Deserialize JSON to an instance.
         /// </summary>
         /// <typeparam name="T">Type.</typeparam>
@@ -32,14 +62,10 @@ namespace WatsonTcp
         public string SerializeJson(object obj, bool pretty = true)
         {
             if (obj == null) return null;
-            if (!pretty)
-            {
-                return JsonSerializer.Serialize(obj);
-            }
-            else
-            {
-                return JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true });
-            }
+
+            _Options.WriteIndented = pretty;
+
+            return JsonSerializer.Serialize(obj, _Options);
         }
 
         /// <summary>
@@ -56,18 +82,6 @@ namespace WatsonTcp
 
             }
         }
-
-        #endregion
-
-        #region Private-Members
-
-        #endregion
-
-        #region Constructors-and-Factories
-
-        #endregion
-
-        #region Public-Methods
 
         #endregion
 
