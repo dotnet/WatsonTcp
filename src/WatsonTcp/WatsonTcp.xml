@@ -91,11 +91,6 @@
             Default serialization helper.
             </summary>
         </member>
-        <member name="P:WatsonTcp.DefaultSerializationHelper.Options">
-            <summary>
-            JSON serializer options.
-            </summary>
-        </member>
         <member name="M:WatsonTcp.DefaultSerializationHelper.DeserializeJson``1(System.String)">
             <summary>
             Deserialize JSON to an instance.

@@ -12,27 +12,11 @@ namespace WatsonTcp
     {
         #region Public-Members
 
-        /// <summary>
-        /// JSON serializer options.
-        /// </summary>
-        public JsonSerializerOptions Options
-        {
-            get
-            {
-                return _Options;
-            }
-            set
-            {
-                if (value == null) _Options = new JsonSerializerOptions();
-                else _Options = value;
-            }
-        }
-
         #endregion
 
         #region Private-Members
 
-        private JsonSerializerOptions _Options = new JsonSerializerOptions();
+        private bool _Pretty = false;
 
         #endregion
 
@@ -63,9 +47,14 @@ namespace WatsonTcp
         {
             if (obj == null) return null;
 
-            _Options.WriteIndented = pretty;
-
-            return JsonSerializer.Serialize(obj, _Options);
+            if (!pretty)
+            {
+                return JsonSerializer.Serialize(obj);
+            }
+            else
+            {
+                return JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented= true });
+            }
         }
 
         /// <summary>
