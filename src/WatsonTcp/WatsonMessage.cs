@@ -59,7 +59,7 @@ namespace WatsonTcp
         /// Status of the message.   
         /// </summary>
         [JsonPropertyName("status")]
-        public MessageStatus Status = MessageStatus.Normal;
+        public MessageStatus Status { get; set; } = MessageStatus.Normal;
 
         /// <summary>
         /// Metadata dictionary; contains user-supplied metadata.

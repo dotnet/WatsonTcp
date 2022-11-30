@@ -532,7 +532,7 @@
             Preshared key for connection authentication.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonMessage.Status">
+        <member name="P:WatsonTcp.WatsonMessage.Status">
             <summary>
             Status of the message.   
             </summary>
