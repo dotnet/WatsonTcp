@@ -552,7 +552,7 @@
             Indicates if the message is a synchronous response.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonMessage.TimestampUtc">
+        <member name="P:WatsonTcp.WatsonMessage.TimestampUtc">
             <summary>
             Indicates the current time as perceived by the sender; useful for determining expiration windows.
             </summary>

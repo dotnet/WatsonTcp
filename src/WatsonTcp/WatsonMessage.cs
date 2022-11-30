@@ -83,7 +83,7 @@ namespace WatsonTcp
         /// Indicates the current time as perceived by the sender; useful for determining expiration windows.
         /// </summary>
         [JsonPropertyName("ts")]
-        public DateTime TimestampUtc = DateTime.UtcNow;
+        public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// Indicates an expiration time in UTC; only applicable to synchronous requests.
