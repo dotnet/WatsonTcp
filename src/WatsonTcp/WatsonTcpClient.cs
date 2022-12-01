@@ -535,7 +535,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(string data, Dictionary<string, object> metadata = null)
         {
-            if (String.IsNullOrEmpty(data)) return Send(new byte[0], metadata);
+            if (String.IsNullOrEmpty(data)) return Send(Array.Empty<byte>(), metadata);
             else return Send(Encoding.UTF8.GetBytes(data), metadata);
         }
          
@@ -548,7 +548,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(byte[] data, Dictionary<string, object> metadata = null, int start = 0)
         {
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return Send(contentLength, stream, metadata);
         }
@@ -563,7 +563,7 @@ namespace WatsonTcp
         public bool Send(long contentLength, Stream stream, Dictionary<string, object> metadata = null)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return SendInternal(msg, contentLength, stream);
         }
@@ -577,7 +577,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string data, Dictionary<string, object> metadata = null, CancellationToken token = default)
         {
-            if (String.IsNullOrEmpty(data)) return await SendAsync(new byte[0], metadata);
+            if (String.IsNullOrEmpty(data)) return await SendAsync(Array.Empty<byte>(), metadata);
             if (token == default(CancellationToken)) token = _Token;
             return await SendAsync(Encoding.UTF8.GetBytes(data), metadata, 0, token).ConfigureAwait(false);
         }
@@ -593,7 +593,7 @@ namespace WatsonTcp
         public async Task<bool> SendAsync(byte[] data, Dictionary<string, object> metadata = null, int start = 0, CancellationToken token = default)
         {
             if (token == default(CancellationToken)) token = _Token;
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return await SendAsync(contentLength, stream, metadata, token).ConfigureAwait(false);
         }
@@ -610,7 +610,7 @@ namespace WatsonTcp
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (token == default(CancellationToken)) token = _Token;
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return await SendInternalAsync(msg, contentLength, stream, token).ConfigureAwait(false);
         }
@@ -625,7 +625,7 @@ namespace WatsonTcp
         public SyncResponse SendAndWait(int timeoutMs, string data, Dictionary<string, object> metadata = null)
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (String.IsNullOrEmpty(data)) return SendAndWait(timeoutMs, new byte[0], metadata);
+            if (String.IsNullOrEmpty(data)) return SendAndWait(timeoutMs, Array.Empty<byte>(), metadata);
             return SendAndWait(timeoutMs, Encoding.UTF8.GetBytes(data), metadata); 
         }
 
@@ -640,7 +640,7 @@ namespace WatsonTcp
         public SyncResponse SendAndWait(int timeoutMs, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
         {
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return SendAndWait(timeoutMs, contentLength, stream, metadata);
         }
@@ -657,7 +657,7 @@ namespace WatsonTcp
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             DateTime expiration = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, true, false, expiration, metadata);
             return SendAndWaitInternal(msg, timeoutMs, contentLength, stream);

@@ -298,7 +298,7 @@ namespace TestMultiThread
                 Console.WriteLine(e.ToString()); 
             }
 
-            return new SyncResponse(req, new byte[0]);
+            return new SyncResponse(req, Array.Empty<byte>());
         }
 
         private static void ClientServerConnected(object sender, ConnectionEventArgs args) 
@@ -374,7 +374,7 @@ namespace TestMultiThread
                 Console.WriteLine(e.ToString());
             }
 
-            return new SyncResponse(req, new byte[0]);
+            return new SyncResponse(req, Array.Empty<byte>());
         }
 
         private static byte[] InitByteArray(int count, byte val)
@@ -417,7 +417,7 @@ namespace TestMultiThread
 
         private static byte[] ReadFromStream(Stream stream, long count, int bufferLen)
         {
-            if (count <= 0) return new byte[0];
+            if (count <= 0) return Array.Empty<byte>();
             if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes.");
             byte[] buffer = new byte[bufferLen];
 

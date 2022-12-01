@@ -88,7 +88,7 @@ namespace WatsonTcp
 
         private byte[] ReadFromStream(Stream stream, long count)
         {
-            if (count <= 0) return new byte[0];
+            if (count <= 0) return Array.Empty<byte>();
             byte[] buffer = new byte[_BufferSize];
 
             int read = 0;

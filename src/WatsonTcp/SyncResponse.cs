@@ -50,7 +50,7 @@ namespace WatsonTcp
             ExpirationUtc = req.ExpirationUtc;
             ConversationGuid = req.ConversationGuid;
 
-            if (String.IsNullOrEmpty(data)) Data = new byte[0];
+            if (String.IsNullOrEmpty(data)) Data = Array.Empty<byte>();
             else Data = Encoding.UTF8.GetBytes(data);
         }
 
@@ -83,7 +83,7 @@ namespace WatsonTcp
 
             if (String.IsNullOrEmpty(data))
             {
-                Data = new byte[0];
+                Data = Array.Empty<byte>();
             }
             else
             {

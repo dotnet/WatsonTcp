@@ -423,7 +423,7 @@ namespace WatsonTcp
         [Obsolete("Please migrate to methods that use a Guid to identify the recipient.")]
         public bool Send(string ipPort, string data, Dictionary<string, object> metadata = null)
         {
-            byte[] bytes = new byte[0];
+            byte[] bytes = Array.Empty<byte>();
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
             return Send(ipPort, bytes, metadata);
         }
@@ -437,7 +437,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(Guid guid, string data, Dictionary<string, object> metadata = null)
         {
-            byte[] bytes = new byte[0];
+            byte[] bytes = Array.Empty<byte>();
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
             return Send(guid, bytes, metadata);
         }
@@ -453,7 +453,7 @@ namespace WatsonTcp
         [Obsolete("Please migrate to methods that use a Guid to identify the recipient.")]
         public bool Send(string ipPort, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
         {
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return Send(ipPort, contentLength, stream, metadata);
         }
@@ -468,7 +468,7 @@ namespace WatsonTcp
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public bool Send(Guid guid, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
         {
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return Send(guid, contentLength, stream, metadata);
         }
@@ -493,7 +493,7 @@ namespace WatsonTcp
                 throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
             }
 
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return SendInternal(client, msg, contentLength, stream);
         }
@@ -516,7 +516,7 @@ namespace WatsonTcp
                 throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
             }
 
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return SendInternal(client, msg, contentLength, stream);
         }
@@ -537,7 +537,7 @@ namespace WatsonTcp
         [Obsolete("Please migrate to methods that use a Guid to identify the recipient.")]
         public async Task<bool> SendAsync(string ipPort, string data, Dictionary<string, object> metadata = null, int start = 0, CancellationToken token = default)
         {
-            byte[] bytes = new byte[0];
+            byte[] bytes = Array.Empty<byte>();
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
             return await SendAsync(ipPort, bytes, metadata, start, token).ConfigureAwait(false);
         }
@@ -553,7 +553,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(Guid guid, string data, Dictionary<string, object> metadata = null, int start = 0, CancellationToken token = default)
         {
-            byte[] bytes = new byte[0];
+            byte[] bytes = Array.Empty<byte>();
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
             return await SendAsync(guid, bytes, metadata, start, token).ConfigureAwait(false);
         }
@@ -570,7 +570,7 @@ namespace WatsonTcp
         [Obsolete("Please migrate to methods that use a Guid to identify the recipient.")]
         public async Task<bool> SendAsync(string ipPort, byte[] data, Dictionary<string, object> metadata = null, int start = 0, CancellationToken token = default)
         {
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return await SendAsync(ipPort, contentLength, stream, metadata, token).ConfigureAwait(false);
         }
@@ -586,7 +586,7 @@ namespace WatsonTcp
         /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(Guid guid, byte[] data, Dictionary<string, object> metadata = null, int start = 0, CancellationToken token = default)
         {
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return await SendAsync(guid, contentLength, stream, metadata, token).ConfigureAwait(false);
         }
@@ -613,7 +613,7 @@ namespace WatsonTcp
                 throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
             }
 
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return await SendInternalAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
         }
@@ -638,7 +638,7 @@ namespace WatsonTcp
                 throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
             }
 
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return await SendInternalAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
         }
@@ -658,7 +658,7 @@ namespace WatsonTcp
         [Obsolete("Please migrate to methods that use a Guid to identify the recipient.")]
         public SyncResponse SendAndWait(int timeoutMs, string ipPort, string data, Dictionary<string, object> metadata = null)
         {
-            byte[] bytes = new byte[0];
+            byte[] bytes = Array.Empty<byte>();
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
             return SendAndWait(timeoutMs, ipPort, bytes, metadata);
         }
@@ -673,7 +673,7 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(int timeoutMs, Guid guid, string data, Dictionary<string, object> metadata = null)
         {
-            byte[] bytes = new byte[0];
+            byte[] bytes = Array.Empty<byte>();
             if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
             return SendAndWait(timeoutMs, guid, bytes, metadata);
         }
@@ -690,7 +690,7 @@ namespace WatsonTcp
         [Obsolete("Please migrate to methods that use a Guid to identify the recipient.")]
         public SyncResponse SendAndWait(int timeoutMs, string ipPort, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
         {
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return SendAndWait(timeoutMs, ipPort, contentLength, stream, metadata);
         }
@@ -706,7 +706,7 @@ namespace WatsonTcp
         /// <returns>SyncResponse.</returns>
         public SyncResponse SendAndWait(int timeoutMs, Guid guid, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
         {
-            if (data == null) data = new byte[0];
+            if (data == null) data = Array.Empty<byte>();
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return SendAndWait(timeoutMs, guid, contentLength, stream, metadata);
         }
@@ -732,7 +732,7 @@ namespace WatsonTcp
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + ipPort);
                 throw new KeyNotFoundException("Unable to find client " + ipPort + ".");
             }
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             DateTime expiration = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, true, false, expiration, metadata);
             return SendAndWaitInternal(client, msg, timeoutMs, contentLength, stream);
@@ -757,7 +757,7 @@ namespace WatsonTcp
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
                 throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
             }
-            if (stream == null) stream = new MemoryStream(new byte[0]);
+            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             DateTime expiration = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, true, false, expiration, metadata);
             return SendAndWaitInternal(client, msg, timeoutMs, contentLength, stream);

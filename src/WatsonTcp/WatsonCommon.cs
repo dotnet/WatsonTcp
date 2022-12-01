@@ -36,7 +36,7 @@ namespace WatsonTcp
 
         internal static byte[] ReadFromStream(Stream stream, long count, int bufferLen)
         {
-            if (count <= 0) return new byte[0];
+            if (count <= 0) return Array.Empty<byte>();
             if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes."); 
             byte[] buffer = new byte[bufferLen];
 
@@ -66,7 +66,7 @@ namespace WatsonTcp
 
         internal static MemoryStream DataStreamToMemoryStream(long contentLength, Stream stream, int bufferLen)
         {
-            if (contentLength <= 0) return new MemoryStream(new byte[0]);
+            if (contentLength <= 0) return new MemoryStream(Array.Empty<byte>());
             if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes.");
             byte[] buffer = new byte[bufferLen];
 
@@ -128,7 +128,7 @@ namespace WatsonTcp
         internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
-            if (msg.ContentLength == 0) return new byte[0]; 
+            if (msg.ContentLength == 0) return Array.Empty<byte>(); 
             return await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen); 
         }
          
@@ -150,7 +150,7 @@ namespace WatsonTcp
         internal static void BytesToStream(byte[] data, int start, out int contentLength, out Stream stream)
         {
             contentLength = 0;
-            stream = new MemoryStream(new byte[0]);
+            stream = new MemoryStream(Array.Empty<byte>());
 
             if (data != null && data.Length > 0)
             {
