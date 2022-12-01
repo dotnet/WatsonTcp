@@ -255,7 +255,7 @@ namespace TestServer
         private static void ExceptionEncountered(object sender, ExceptionEventArgs e)
         {
             Console.WriteLine("*** Exception ***");
-            Console.WriteLine(e.Json);
+            Console.WriteLine(e.ToString());
         }
 
         private static void ClientConnected(object sender, ConnectionEventArgs args)

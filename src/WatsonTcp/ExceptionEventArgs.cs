@@ -9,22 +9,36 @@ namespace WatsonTcp
     /// </summary>
     public class ExceptionEventArgs
     {
-        internal ExceptionEventArgs(Exception e, string json)
-        {
-            if (e == null) throw new ArgumentNullException(nameof(e));
-
-            Exception = e;
-            Json = json;
-        }
+        #region Public-Members
 
         /// <summary>
         /// Exception.
         /// </summary>
         public Exception Exception { get; }
 
-        /// <summary>
-        /// JSON representation of the exception.
-        /// </summary>
-        public string Json { get; }
+        #endregion
+
+        #region Private-Members
+
+        #endregion
+
+        #region Constructors-and-Factories
+
+        internal ExceptionEventArgs(Exception e)
+        {
+            if (e == null) throw new ArgumentNullException(nameof(e));
+
+            Exception = e;
+        }
+
+        #endregion
+
+        #region Public-Methods
+
+        #endregion
+
+        #region Private-Methods
+
+        #endregion
     }
 }

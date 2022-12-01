@@ -359,7 +359,7 @@ namespace WatsonTcp
                 catch (Exception e)
                 {
                     _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + e.Message);
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
                 finally
@@ -427,7 +427,7 @@ namespace WatsonTcp
                 catch (Exception e)
                 {
                     _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + e.Message);
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     throw;
                 }
                 finally
@@ -959,7 +959,7 @@ namespace WatsonTcp
                 {
                     _Settings?.Logger?.Invoke(Severity.Error,
                         _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ": " + e.Message + Environment.NewLine);
-                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
                 } 
                 finally
@@ -1022,7 +1022,7 @@ namespace WatsonTcp
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ": " + e.Message);
 
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
 
                 disconnectDetected = true;
                 return false;

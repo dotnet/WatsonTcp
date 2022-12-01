@@ -406,7 +406,7 @@ namespace WatsonTcp
             }
             catch (Exception e)
             {
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 throw;
             }
         }
@@ -1095,7 +1095,7 @@ namespace WatsonTcp
                 catch (Exception e)
                 {
                     _Settings.Logger?.Invoke(Severity.Error, _Header + "listener exception: " + e.Message);
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
                 }
             } 
@@ -1134,7 +1134,7 @@ namespace WatsonTcp
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + $"disconnected during SSL/TLS establishment with {client.ToString()} ({_TlsVersion}): " + e.Message);
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
 
                 client.Dispose(); 
                 Interlocked.Decrement(ref _Connections);
@@ -1437,7 +1437,7 @@ namespace WatsonTcp
                 catch (Exception e)
                 {
                     _Settings?.Logger?.Invoke(Severity.Error, _Header + "data receiver exception for " + client.ToString() + ": " + e.Message);
-                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
                 }
             }
@@ -1501,7 +1501,7 @@ namespace WatsonTcp
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "failed to write message to " + client.ToString() + ": " + e.Message);
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 return false;
             }
             finally
@@ -1551,7 +1551,7 @@ namespace WatsonTcp
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "failed to write message to " + client.ToString() + ": " + e.Message);
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 return false;
             }
             finally
@@ -1603,7 +1603,7 @@ namespace WatsonTcp
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + client.ToString() + " failed to write message: " + e.Message);
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e, _SerializationHelper.SerializeJson(e, true)));
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 _SyncResponseReceived -= handler;
                 throw;
             }

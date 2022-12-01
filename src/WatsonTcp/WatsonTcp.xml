@@ -167,11 +167,6 @@
             Exception.
             </summary>
         </member>
-        <member name="P:WatsonTcp.ExceptionEventArgs.Json">
-            <summary>
-            JSON representation of the exception.
-            </summary>
-        </member>
         <member name="T:WatsonTcp.ISerializationHelper">
             <summary>
             Serialization helper.
