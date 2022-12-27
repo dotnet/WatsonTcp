@@ -2,6 +2,12 @@
 
 ## Current Version
 
+v5.1.x
+
+- Strong name signing
+
+## Previous Versions
+
 v5.0.x
 
 - Breaking changes
@@ -13,8 +19,6 @@ v5.0.x
 - Mark ```Send*``` methods that use ```ipPort``` as obsolete (pending removal in future release)
 - Restrict message metadata dictionary to ```<string, object>```
 - Targeting for .NET 7.0
-
-## Previous Versions
 
 v4.8.11
 

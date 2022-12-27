@@ -23,17 +23,9 @@ Special thanks to the following people for their support and contributions to th
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
-## New in v5.0.x
+## New in v5.1.x
 
-- Breaking changes
-- Migrate from using ```IpPort``` as a client key to using ```Guid```
-- Removal of ```Newtonsoft.Json``` as a dependency
-- Separate ```WatsonMessageBuilder``` class to reduce code bloat
-- ```ClientMetadata``` now includes ```Guid```
-- ```ListClients``` now returns list of ```ClientMetadata``` instead of list of ```IpPort```
-- Mark ```Send*``` methods that use ```ipPort``` as obsolete (pending removal in future release)
-- Restrict message metadata dictionary to ```<string, object>```
-- Targeting for .NET 7.0
+- Strong name signing
 
 ## Test Applications
 

@@ -4,7 +4,7 @@
 	<TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1;net462;net472;net5.0;net6.0;net7.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>5.0.11</Version>
+    <Version>5.1.0</Version>
     <Authors>Joel Christner</Authors>
     <Company>Joel Christner</Company>
     <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -18,6 +18,9 @@
     <PackageIconUrl></PackageIconUrl>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageIcon>watson.png</PackageIcon>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>C:\Code\Watson\WatsonTcp\src\watsontcp.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>False</DelaySign>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
