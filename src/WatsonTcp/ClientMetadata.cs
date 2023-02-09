@@ -15,7 +15,7 @@ namespace WatsonTcp
         #region Public-Members
 
         /// <summary>
-        /// Globally-unique identifier for the connection.
+        /// GUID.
         /// </summary>
         public Guid Guid { get; } = Guid.NewGuid();
 
@@ -117,9 +117,8 @@ namespace WatsonTcp
 
         internal ClientMetadata(TcpClient tcp)
         {
-            if (tcp == null) throw new ArgumentNullException(nameof(tcp));
+            _TcpClient = tcp ?? throw new ArgumentNullException(nameof(tcp));
 
-            _TcpClient = tcp;
             _IpPort = tcp.Client.RemoteEndPoint.ToString();
 
             NetworkStream = tcp.GetStream();
@@ -144,15 +143,8 @@ namespace WatsonTcp
                 }
             }
 
-            if (_SslStream != null)
-            {
-                _SslStream.Close(); 
-            }
-
-            if (_NetworkStream != null)
-            {
-                _NetworkStream.Close(); 
-            }
+            _SslStream?.Close();
+            _NetworkStream?.Close();
 
             if (_TcpClient != null)
             {

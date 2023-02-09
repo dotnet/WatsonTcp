@@ -47,7 +47,7 @@
         </member>
         <member name="P:WatsonTcp.ClientMetadata.Guid">
             <summary>
-            Globally-unique identifier for the connection.
+            GUID.
             </summary>
         </member>
         <member name="P:WatsonTcp.ClientMetadata.IpPort">
@@ -89,6 +89,11 @@
         <member name="T:WatsonTcp.DefaultSerializationHelper">
             <summary>
             Default serialization helper.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.DefaultSerializationHelper.#ctor">
+            <summary>
+            Instantiate.
             </summary>
         </member>
         <member name="M:WatsonTcp.DefaultSerializationHelper.DeserializeJson``1(System.String)">

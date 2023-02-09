@@ -19,7 +19,7 @@ Special thanks to the following people for their support and contributions to th
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
 @DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz @nirajgenius 
 @cee-sharp @jeverz @cbarraco @DenisBalan @Markonius @Ahmed310 @markashleybell @thechosensausage
-@JVemon @eatyouroats @bendablegears @Laiteux @fisherman6v6
+@JVemon @eatyouroats @bendablegears @Laiteux @fisherman6v6 @wesoos
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
@@ -329,7 +329,7 @@ The project TcpTest (https://github.com/jchristn/TcpTest) was built specifically
 
 Additionally, as of v4.3.0, support for TCP keepalives has been added to WatsonTcp, primarily to address the issue of a network interface being shut down, the cable unplugged, or the media otherwise becoming unavailable.  It is important to note that keepalives are supported in .NET Core and .NET Framework, but NOT .NET Standard.  As of this release, .NET Standard provides no facilities for TCP keepalives.
 
-TCP keepalives are enabled by default.
+TCP keepalives are NOT enabled by default.  To enable and configure:
 ```csharp
 server.Keepalive.EnableTcpKeepAlives = true;
 server.Keepalive.TcpKeepAliveInterval = 5;      // seconds to wait before sending subsequent keepalive
