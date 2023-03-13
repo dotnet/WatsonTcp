@@ -941,18 +941,22 @@ namespace WatsonTcp
                 }
                 catch (ObjectDisposedException)
                 {
+                    _Settings?.Logger?.Invoke(Severity.Debug, _Header + "object disposed exception encountered");
                     break;
                 }
                 catch (TaskCanceledException)
                 {
+                    _Settings?.Logger?.Invoke(Severity.Debug, _Header + "task canceled exception encountered");
                     break;
                 }
                 catch (OperationCanceledException)
                 {
+                    _Settings?.Logger?.Invoke(Severity.Debug, _Header + "operation canceled exception encountered");
                     break;
                 }
                 catch (IOException)
                 {
+                    _Settings?.Logger?.Invoke(Severity.Debug, _Header + "IO exception encountered");
                     break;
                 }
                 catch (Exception e)
