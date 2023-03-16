@@ -673,7 +673,7 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="disposing">Indicate if resources should be disposed.</param>
         protected virtual void Dispose(bool disposing)
-        { 
+        {
             if (disposing)
             {
                 _Settings.Logger?.Invoke(Severity.Info, _Header + "disposing");
@@ -939,24 +939,28 @@ namespace WatsonTcp
                     _Statistics.IncrementReceivedMessages();
                     _Statistics.AddReceivedBytes(msg.ContentLength);
                 }
-                catch (ObjectDisposedException)
+                catch (ObjectDisposedException ode)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "object disposed exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(ode));
                     break;
                 }
-                catch (TaskCanceledException)
+                catch (TaskCanceledException tce)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "task canceled exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(tce));
                     break;
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException oce)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "operation canceled exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(oce));
                     break;
                 }
-                catch (IOException)
+                catch (IOException ioe)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "IO exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(ioe));
                     break;
                 }
                 catch (Exception e)

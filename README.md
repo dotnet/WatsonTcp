@@ -19,13 +19,14 @@ Special thanks to the following people for their support and contributions to th
 @NormenSchwettmann @karstennilsen @motridox @AdamFrisby @Job79 @Dijkstra-ru @playingoDEERUX
 @DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz @nirajgenius 
 @cee-sharp @jeverz @cbarraco @DenisBalan @Markonius @Ahmed310 @markashleybell @thechosensausage
-@JVemon @eatyouroats @bendablegears @Laiteux @fisherman6v6 @wesoos
+@JVemon @eatyouroats @bendablegears @Laiteux @fisherman6v6 @wesoos @YorVeX
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
 ## New in v5.1.x
 
 - Strong name signing
+- Better exception logging
 
 ## Test Applications
 

@@ -101,26 +101,35 @@ namespace WatsonTcp
             byte[] buffer = new byte[bufferLen];
 
             int read = 0;
-            long bytesRemaining = count; 
+            long bytesRemaining = count;
 
             using (MemoryStream ms = new MemoryStream())
             {
-                while (bytesRemaining > 0)
+                try
                 {
-                    if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
+                    while (bytesRemaining > 0)
+                    {
+                        if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
 
-                    read = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (read > 0)
-                    {
-                        ms.Write(buffer, 0, read);
-                        bytesRemaining -= read;
-                    }
-                    else
-                    {
-                        throw new IOException("Could not read from supplied stream.");
+                        read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (read > 0)
+                        {
+                            ms.Write(buffer, 0, read);
+                            bytesRemaining -= read;
+                        }
+                        else
+                        {
+                            throw new IOException("Could not read from supplied stream.");
+                        }
                     }
                 }
+                catch (Exception e)
+                {
+                    // exception may be thrown if a client disconnects
+                    // immediately after sending a message
+                }
 
+                ms.Seek(0, SeekOrigin.Begin);
                 return ms.ToArray();
             }
         }
@@ -128,8 +137,21 @@ namespace WatsonTcp
         internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
-            if (msg.ContentLength == 0) return Array.Empty<byte>(); 
-            return await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen); 
+            if (msg.ContentLength == 0) return Array.Empty<byte>();
+
+            byte[] msgData = null;
+
+            try
+            {
+                msgData = await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen);
+            }
+            catch (Exception)
+            {
+                // exception may be thrown if a client disconnects
+                // immediately after sending a message
+            }
+
+            return msgData;
         }
          
         internal static byte[] AppendBytes(byte[] head, byte[] tail)

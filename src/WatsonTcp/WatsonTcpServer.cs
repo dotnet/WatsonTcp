@@ -1418,24 +1418,28 @@ namespace WatsonTcp
                     _Statistics.AddReceivedBytes(msg.ContentLength);
                     _ClientsLastSeen.AddOrUpdate(client.Guid, DateTime.UtcNow, (key, value) => DateTime.UtcNow);
                 }
-                catch (ObjectDisposedException)
+                catch (ObjectDisposedException ode)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "object disposed exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(ode));
                     break;
                 }
-                catch (TaskCanceledException)
+                catch (TaskCanceledException tce)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "task canceled exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(tce));
                     break;
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException oce)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "operation canceled exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(oce));
                     break;
                 }
-                catch (IOException)
+                catch (IOException ioe)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "IO exception encountered");
+                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(ioe));
                     break;
                 }
                 catch (Exception e)

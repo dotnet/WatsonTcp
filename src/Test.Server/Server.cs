@@ -254,8 +254,7 @@ namespace TestServer
 
         private static void ExceptionEncountered(object sender, ExceptionEventArgs e)
         {
-            Console.WriteLine("*** Exception ***");
-            Console.WriteLine(e.ToString());
+            Console.WriteLine(_Server.SerializationHelper.SerializeJson(e.Exception, true));
         }
 
         private static void ClientConnected(object sender, ConnectionEventArgs args)
@@ -272,7 +271,7 @@ namespace TestServer
         private static void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
             _LastGuid = args.Client.Guid;
-            Console.Write("Message from " + args.Client.ToString() + ": ");
+            Console.Write(args.Data.Length + " byte message from " + args.Client.ToString() + ": ");
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 

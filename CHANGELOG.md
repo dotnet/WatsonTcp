@@ -5,6 +5,7 @@
 v5.1.x
 
 - Strong name signing
+- Better exception logging
 
 ## Previous Versions
 

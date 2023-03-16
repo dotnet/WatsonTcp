@@ -1,59 +1,59 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-	<TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1;net462;net472;net5.0;net6.0;net7.0</TargetFrameworks>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	<GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>5.1.0</Version>
-    <Authors>Joel Christner</Authors>
-    <Company>Joel Christner</Company>
-    <Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
-    <Copyright>(c)2022 Joel Christner</Copyright>
-    <PackageTags>tcp rpc ssl message messaging frame framing async api server bus queue mesh fabric</PackageTags>
-    <PackageProjectUrl>https://github.com/jchristn/WatsonTcp</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
-    <RepositoryType>Github</RepositoryType>
-    <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageReleaseNotes>Breaking changes, Newtonsoft removal, code cleanup</PackageReleaseNotes>
-    <PackageIconUrl></PackageIconUrl>
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <PackageIcon>watson.png</PackageIcon>
-    <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>C:\Code\Watson\WatsonTcp\src\watsontcp.snk</AssemblyOriginatorKeyFile>
-    <DelaySign>False</DelaySign>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1;net462;net48;net5.0;net6.0;net7.0</TargetFrameworks>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<Version>5.1.1</Version>
+		<Authors>Joel Christner</Authors>
+		<Company>Joel Christner</Company>
+		<Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
+		<Copyright>(c)2022 Joel Christner</Copyright>
+		<PackageTags>tcp rpc ssl message messaging frame framing async api server bus queue mesh fabric</PackageTags>
+		<PackageProjectUrl>https://github.com/jchristn/WatsonTcp</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
+		<RepositoryType>Github</RepositoryType>
+		<PackageLicenseUrl></PackageLicenseUrl>
+		<PackageReleaseNotes>Breaking changes, Newtonsoft removal, code cleanup</PackageReleaseNotes>
+		<PackageIconUrl></PackageIconUrl>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<PackageIcon>watson.png</PackageIcon>
+		<SignAssembly>True</SignAssembly>
+		<AssemblyOriginatorKeyFile>C:\Code\Watson\WatsonTcp\src\watsontcp.snk</AssemblyOriginatorKeyFile>
+		<DelaySign>False</DelaySign>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp3.1|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp3.1|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.1|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.1|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.1|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.1|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net461|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net461|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net461|AnyCPU'">
-    <DocumentationFile>WatsonTcp.xml</DocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net461|AnyCPU'">
+		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
+	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net5.0|AnyCPU'">
 		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
@@ -72,30 +72,30 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-    <None Include="assets\watson.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-    <None Include="LICENSE.md">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-  </ItemGroup>
-
-	<ItemGroup>
-	  <PackageReference Include="System.Text.Json" Version="7.0.0" />
+		<None Include="assets\watson.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+		<None Include="LICENSE.md">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
 	</ItemGroup>
 
-  <ItemGroup>
-    <None Update="assets\watson.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="assets\watson.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="WatsonTcp.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="7.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="assets\watson.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="assets\watson.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="WatsonTcp.xml">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>
