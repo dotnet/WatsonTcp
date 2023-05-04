@@ -1731,7 +1731,7 @@ namespace WatsonTcp
                             {
                                 _ClientsTimedout.TryAdd(curr.Key, DateTime.UtcNow);
                                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to idle timeout");
-                                DisconnectClient(curr.Key, MessageStatus.Timeout);
+                                DisconnectClient(curr.Key, MessageStatus.Timeout, true);
                             }
                         }
                     } 
