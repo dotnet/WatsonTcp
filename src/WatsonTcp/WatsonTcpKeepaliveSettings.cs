@@ -5,7 +5,7 @@ using System.Text;
 namespace WatsonTcp
 {
     /// <summary>
-    /// Watson TCP keepalive settings.
+    /// WatsonTcp keepalive settings.  WatsonTcp does not implement keepalives, rather, it relies on the underlying implementation in the operating system and runtime.
     /// Keepalive probes are sent after an idle period defined by TcpKeepAliveTime (seconds).
     /// Should a keepalive response not be received within TcpKeepAliveInterval (seconds), a subsequent keepalive probe will be sent.
     /// For .NET Framework, should 10 keepalive probes fail, the connection will terminate.
@@ -17,13 +17,15 @@ namespace WatsonTcp
         #region Public-Members
 
         /// <summary>
-        /// Enable or disable TCP-based keepalive probes.
+        /// Enable or disable TCP-based keepalive probes.  
+        /// WatsonTcp does not implement keepalives, rather, it relies on the underlying implementation in the operating system and runtime.
         /// TCP keepalives are only supported in .NET Core and .NET Framework projects.  .NET Standard does not provide facilities to support TCP keepalives.
         /// </summary>
         public bool EnableTcpKeepAlives = false;
 
         /// <summary>
-        /// TCP keepalive interval, i.e. the number of seconds a TCP connection will wait for a keepalive response before sending another keepalive probe.
+        /// TCP keepalive interval, i.e. the number of seconds a TCP connection will wait for a keepalive response before sending another keepalive probe.  
+        /// WatsonTcp does not implement keepalives, rather, it relies on the underlying implementation in the operating system and runtime.
         /// Default is 5 seconds.  Value must be greater than zero.
         /// </summary>
         public int TcpKeepAliveInterval
@@ -40,7 +42,8 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// TCP keepalive time, i.e. the number of seconds a TCP connection will remain alive/idle before keepalive probes are sent to the remote. 
+        /// TCP keepalive time, i.e. the number of seconds a TCP connection will remain alive/idle before keepalive probes are sent to the remote.
+        /// WatsonTcp does not implement keepalives, rather, it relies on the underlying implementation in the operating system and runtime.
         /// Default is 5 seconds.  Value must be greater than zero.
         /// </summary>
         public int TcpKeepAliveTime
@@ -55,9 +58,10 @@ namespace WatsonTcp
                 _TcpKeepAliveTime = value;
             }
         }
-         
+
         /// <summary>
         /// TCP keepalive retry count, i.e. the number of times a TCP probe will be sent in effort to verify the connection.
+        /// WatsonTcp does not implement keepalives, rather, it relies on the underlying implementation in the operating system and runtime.
         /// After the specified number of probes fail, the connection will be terminated.
         /// </summary>
         public int TcpKeepAliveRetryCount

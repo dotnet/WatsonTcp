@@ -422,6 +422,8 @@ namespace WatsonTcp
 
                     _DataStream = _SslStream;
 
+                    if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
+
                     Connected = true;
                 }
                 catch (Exception e)
