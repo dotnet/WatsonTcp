@@ -123,7 +123,7 @@ namespace WatsonTcp
                         }
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     // exception may be thrown if a client disconnects
                     // immediately after sending a message

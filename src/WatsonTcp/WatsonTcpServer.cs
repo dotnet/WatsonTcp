@@ -6,8 +6,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -948,7 +950,14 @@ namespace WatsonTcp
                 client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                 client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, _Keepalive.TcpKeepAliveTime);
                 client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, _Keepalive.TcpKeepAliveInterval);
-                client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+
+                // Windows 10 version 1703 or later
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    && Environment.OSVersion.Version >= new Version(10, 0, 15063))
+                {
+                    client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, _Keepalive.TcpKeepAliveRetryCount);
+                }
 
 #elif NETFRAMEWORK
 
@@ -1170,72 +1179,82 @@ namespace WatsonTcp
             #endregion 
         }
 
-        private bool IsConnected(ClientMetadata client)
+        private bool IsClientConnected(ClientMetadata client)
         {
             if (client != null && client.TcpClient != null)
             {
-                if (client.TcpClient.Connected)
+                var state = IPGlobalProperties.GetIPGlobalProperties()
+                    .GetActiveTcpConnections()
+                        .FirstOrDefault(x =>
+                            x.LocalEndPoint.Equals(client.TcpClient.Client.LocalEndPoint)
+                            && x.RemoteEndPoint.Equals(client.TcpClient.Client.RemoteEndPoint));
+
+                if (state == default(TcpConnectionInformation)
+                    || state.State == TcpState.Unknown
+                    || state.State == TcpState.FinWait1
+                    || state.State == TcpState.FinWait2
+                    || state.State == TcpState.Closed
+                    || state.State == TcpState.Closing
+                    || state.State == TcpState.CloseWait)
                 {
-                    byte[] tmp = new byte[1];
-                    bool success = false;
+                    return false;
+                }
 
-                    try
-                    {
-                        client.WriteLock.Wait();
-                        client.TcpClient.Client.Send(tmp, 0, 0);
-                        success = true;
-                    }
-                    catch (SocketException se)
-                    {
-                        if (se.NativeErrorCode.Equals(10035)) success = true;
-                    }
-                    catch (Exception)
-                    {
-                    }
-                    finally
-                    {
-                        if (client != null)
-                        {
-                            client.WriteLock.Release();
-                        }
-                    }
+                byte[] tmp = new byte[1];
+                bool success = false;
 
-                    if (success) return true;
-
-                    try
+                try
+                {
+                    client.WriteLock.Wait();
+                    client.TcpClient.Client.Send(tmp, 0, 0);
+                    success = true;
+                }
+                catch (SocketException se)
+                {
+                    if (se.NativeErrorCode.Equals(10035)) success = true;
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    if (client != null)
                     {
-                        client.WriteLock.Wait();
+                        client.WriteLock.Release();
+                    }
+                }
 
-                        if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
-                            && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
-                        {
-                            byte[] buffer = new byte[1];
-                            if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
-                            {
-                                return false;
-                            }
-                            else
-                            {
-                                return true;
-                            }
-                        }
-                        else
+                if (success) return true;
+
+                try
+                {
+                    client.WriteLock.Wait();
+
+                    if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
+                        && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
+                    {
+                        byte[] buffer = new byte[1];
+                        if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
                         {
                             return false;
                         }
+                        else
+                        {
+                            return true;
+                        }
                     }
-                    catch (Exception)
+                    else
                     {
                         return false;
                     }
-                    finally
-                    {
-                        if (client != null) client.WriteLock.Release();
-                    }
                 }
-                else
+                catch (Exception)
                 {
                     return false;
+                }
+                finally
+                {
+                    if (client != null) client.WriteLock.Release();
                 }
             }
             else
@@ -1254,7 +1273,7 @@ namespace WatsonTcp
             {
                 try
                 { 
-                    if (!IsConnected(client)) break;
+                    if (!IsClientConnected(client)) break;
 
                     WatsonMessage msg = await _MessageBuilder.BuildFromStream(client.DataStream);
                     if (msg == null)
