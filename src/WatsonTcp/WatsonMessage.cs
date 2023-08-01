@@ -28,7 +28,7 @@ namespace WatsonTcp
         /// </summary>
         [JsonPropertyName("len")]
         public long ContentLength { get; set; }
-         
+
         /// <summary>
         /// Preshared key for connection authentication.
         /// </summary>

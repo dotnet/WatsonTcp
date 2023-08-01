@@ -66,6 +66,7 @@ If you're building an application that will need to integrate with WatsonTcp, le
 - Maintain a persistent TCP connection with WatsonTcp
 - Create a header JSON object of the form: ```{"len":n,"status":"Normal"}``` where the ```len``` is the number of data bytes and ```status``` is the status of ```Normal```
 - Include any other pertinent parameters as found in the ```WatsonMessage``` class
+- If you wish to include metadata, use ```,"md":{...}``` inside of your header JSON object; review ```WatsonMessage.cs``` to see JSON property names for other fields
 - Do NOT use pretty serialization of the header object (this introduces additional ```\r\n``` into the data)
 - Encode the header object to bytes and send it, followed by ```\r\n\r\n```
 - Send the data
