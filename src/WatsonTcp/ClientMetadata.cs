@@ -17,7 +17,7 @@ namespace WatsonTcp
         /// <summary>
         /// GUID.
         /// </summary>
-        public Guid Guid { get; } = Guid.NewGuid();
+        public Guid Guid { get; set; } = Guid.NewGuid();
 
         /// <summary>
         /// IP:port for the connection.

@@ -46,30 +46,35 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Server GUID.
+        /// </summary>
+        public Guid Guid { get; set; } = Guid.NewGuid();
+
+        /// <summary>
         /// Enable or disable message debugging.  Requires `Logger` to be set.
         /// WARNING: Setting this value to true will emit a large number of log messages with a large amount of data.
         /// </summary>
-        public bool DebugMessages = false;
+        public bool DebugMessages { get; set; } = false;
 
         /// <summary>
         /// Method to invoke when sending a log message.
         /// </summary>
-        public Action<Severity, string> Logger = null;
+        public Action<Severity, string> Logger { get; set; } = null;
 
         /// <summary>
         /// Enable acceptance of SSL certificates from clients that cannot be validated.
         /// </summary>
-        public bool AcceptInvalidCertificates = true;
+        public bool AcceptInvalidCertificates { get; set; } = true;
 
         /// <summary>
         /// Require mutual authentication between SSL clients and this server.
         /// </summary>
-        public bool MutuallyAuthenticate = false;
+        public bool MutuallyAuthenticate { get; set; } = false;
 
         /// <summary>
         /// Preshared key that must be consistent between clients and this server.
         /// </summary>
-        public string PresharedKey = null;
+        public string PresharedKey { get; set; } = null;
 
         /// <summary>
         /// For Watson TCP server, the maximum amount of time to wait before considering a client idle and disconnecting them. 

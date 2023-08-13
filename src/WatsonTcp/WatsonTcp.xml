@@ -567,6 +567,11 @@
             Indicates the conversation GUID of the message. 
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonMessage.SenderGuid">
+            <summary>
+            Sender GUID.
+            </summary>
+        </member>
         <member name="P:WatsonTcp.WatsonMessage.DataStream">
             <summary>
             Stream containing the message data.
@@ -944,6 +949,11 @@
             Buffer size to use when reading input and output streams.  Default is 65536.  Value must be greater than zero.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.Guid">
+            <summary>
+            Client GUID.
+            </summary>
+        </member>
         <member name="P:WatsonTcp.WatsonTcpClientSettings.MaxProxiedStreamSize">
             <summary>
             Maximum content length for streams that are proxied through a MemoryStream.
@@ -951,28 +961,28 @@
             Value must be greater than zero.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpClientSettings.DebugMessages">
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.DebugMessages">
             <summary>
             Enable or disable message debugging.  Requires `Logger` to be set.
             WARNING: Setting this value to true will emit a large number of log messages with a large amount of data.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpClientSettings.Logger">
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.Logger">
             <summary>
             Method to invoke when sending a log message.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpClientSettings.AcceptInvalidCertificates">
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.AcceptInvalidCertificates">
             <summary>
             Enable acceptance of SSL certificates from clients that cannot be validated.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpClientSettings.MutuallyAuthenticate">
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.MutuallyAuthenticate">
             <summary>
             Require mutual authentication between SSL clients and this server.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpClientSettings.PresharedKey">
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.PresharedKey">
             <summary>
             Preshared key that must be consistent between clients and this server.
             </summary>
@@ -1527,28 +1537,33 @@
             Value must be greater than zero.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServerSettings.DebugMessages">
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.Guid">
+            <summary>
+            Server GUID.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.DebugMessages">
             <summary>
             Enable or disable message debugging.  Requires `Logger` to be set.
             WARNING: Setting this value to true will emit a large number of log messages with a large amount of data.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServerSettings.Logger">
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.Logger">
             <summary>
             Method to invoke when sending a log message.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServerSettings.AcceptInvalidCertificates">
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.AcceptInvalidCertificates">
             <summary>
             Enable acceptance of SSL certificates from clients that cannot be validated.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServerSettings.MutuallyAuthenticate">
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.MutuallyAuthenticate">
             <summary>
             Require mutual authentication between SSL clients and this server.
             </summary>
         </member>
-        <member name="F:WatsonTcp.WatsonTcpServerSettings.PresharedKey">
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.PresharedKey">
             <summary>
             Preshared key that must be consistent between clients and this server.
             </summary>

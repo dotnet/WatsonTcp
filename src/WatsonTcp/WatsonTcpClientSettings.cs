@@ -28,6 +28,11 @@ namespace WatsonTcp
         }
 
         /// <summary>
+        /// Client GUID.
+        /// </summary>
+        public Guid Guid { get; set; } = Guid.NewGuid();
+
+        /// <summary>
         /// Maximum content length for streams that are proxied through a MemoryStream.
         /// If the content length exceeds this value, the underlying DataStream will be passed in the StreamReceived event.
         /// Value must be greater than zero.
@@ -49,27 +54,27 @@ namespace WatsonTcp
         /// Enable or disable message debugging.  Requires `Logger` to be set.
         /// WARNING: Setting this value to true will emit a large number of log messages with a large amount of data.
         /// </summary>
-        public bool DebugMessages = false;
+        public bool DebugMessages { get; set; } = false;
 
         /// <summary>
         /// Method to invoke when sending a log message.
         /// </summary>
-        public Action<Severity, string> Logger = null;
+        public Action<Severity, string> Logger { get; set; } = null;
 
         /// <summary>
         /// Enable acceptance of SSL certificates from clients that cannot be validated.
         /// </summary>
-        public bool AcceptInvalidCertificates = true;
+        public bool AcceptInvalidCertificates { get; set; } = true;
 
         /// <summary>
         /// Require mutual authentication between SSL clients and this server.
         /// </summary>
-        public bool MutuallyAuthenticate = false;
+        public bool MutuallyAuthenticate { get; set; } = false;
 
         /// <summary>
         /// Preshared key that must be consistent between clients and this server.
         /// </summary>
-        public string PresharedKey = null;
+        public string PresharedKey { get; set; } = null;
 
         /// <summary>
         /// For Watson TCP client, the number of seconds to wait before timing out a connection attempt.  Default is 5 seconds.  Value must be greater than zero.

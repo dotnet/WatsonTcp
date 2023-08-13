@@ -98,6 +98,11 @@ namespace WatsonTcp
         public Guid ConversationGuid { get; set; } = Guid.NewGuid();
 
         /// <summary>
+        /// Sender GUID.
+        /// </summary>
+        public Guid SenderGuid { get; set; } = Guid.NewGuid();
+
+        /// <summary>
         /// Stream containing the message data.
         /// </summary>
         [JsonIgnore]

@@ -185,7 +185,7 @@ namespace WatsonTcp
         private ConcurrentDictionary<Guid, ClientMetadata> _Clients = new ConcurrentDictionary<Guid, ClientMetadata>();
         private ConcurrentDictionary<Guid, DateTime> _ClientsLastSeen = new ConcurrentDictionary<Guid, DateTime>();
         private ConcurrentDictionary<Guid, DateTime> _ClientsKicked = new ConcurrentDictionary<Guid, DateTime>();
-        private ConcurrentDictionary<Guid, DateTime> _ClientsTimedout = new ConcurrentDictionary<Guid, DateTime>();
+        private ConcurrentDictionary<Guid, DateTime> _ClientsTimedout = new ConcurrentDictionary<Guid, DateTime>(); 
 
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
