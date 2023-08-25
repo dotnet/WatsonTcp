@@ -6,6 +6,7 @@ v5.1.x
 
 - Strong name signing
 - Better exception logging
+- Set ```Settings.NoDelay``` to ```true``` by default (disabling Nagle's algorithm)
 
 ## Previous Versions
 

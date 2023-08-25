@@ -146,9 +146,9 @@ namespace WatsonTcp
         }
 
         /// <summary>
-        /// Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is false.
+        /// Nagle's algorithm.  Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is true.
         /// </summary>
-        public bool NoDelay { get; set; } = false;
+        public bool NoDelay { get; set; } = true;
 
         #endregion
 

@@ -1014,7 +1014,7 @@
         </member>
         <member name="P:WatsonTcp.WatsonTcpClientSettings.NoDelay">
             <summary>
-            Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is false.
+            Nagle's algorithm.  Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is true.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClientSettings.#ctor">
@@ -1595,7 +1595,7 @@
         </member>
         <member name="P:WatsonTcp.WatsonTcpServerSettings.NoDelay">
             <summary>
-            Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is false.
+            Nagle's algorithm.  Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is true.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServerSettings.#ctor">
