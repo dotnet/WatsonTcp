@@ -11,6 +11,10 @@ WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients
 - If you want a library that doesn't use framing, but has a similar implementation, use [SuperSimpleTcp](https://github.com/jchristn/supersimpletcp)
 - If you want a library that doesn't use framing and provides explicit control over how much data to read, use [CavemanTcp](https://github.com/jchristn/cavemantcp)
 
+## .NET Foundation
+
+This project is part of the [.NET Foundation](http://www.dotnetfoundation.org/projects) along with other projects like [the .NET Runtime](https://github.com/dotnet/runtime/).
+
 ## Contributions
 
 Special thanks to the following people for their support and contributions to this project!
