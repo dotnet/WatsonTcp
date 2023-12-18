@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Threading.Tasks;
 using WatsonTcp;
 
 namespace Test.FastDisconnect
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             try
             {
@@ -13,7 +14,7 @@ namespace Test.FastDisconnect
                 {
                     client.Events.MessageReceived += MessageReceived;
                     client.Connect();
-                    client.Send("Hello!");
+                    await client.SendAsync("Hello!");
                 }
             }
             catch (Exception e)

@@ -8,9 +8,9 @@ namespace Test.NonExistentServer
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         { 
-            Task.Run(() =>
+            await Task.Run(() =>
             {
                 WatsonTcpClient client = new WatsonTcpClient("10.1.2.3", 1234); // NonExistant Server
 
@@ -31,7 +31,7 @@ namespace Test.NonExistentServer
             });
 
             Console.WriteLine("Waiting on NullReferenceException");
-            Thread.Sleep(10000); 
+            await Task.Delay(10000); 
         }
 
         static void ServerConnected(object sender, ConnectionEventArgs args)

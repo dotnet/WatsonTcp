@@ -1,8 +1,7 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System.Text.Json.Serialization;
+
     /// <summary>
     /// Supported TLS versions.
     /// </summary>

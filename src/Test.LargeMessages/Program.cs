@@ -14,7 +14,7 @@ namespace TestLargeMessages
         static WatsonTcpServer _Server = null;
         static WatsonTcpClient _Client = null;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             _Server = new WatsonTcpServer("127.0.0.1", 9000);
             _Server.Events.ClientConnected += ServerClientConnected;
@@ -51,7 +51,7 @@ namespace TestLargeMessages
                 string randomString = RandomString(msgSize);
                 string md5 = Md5(randomString);
                 Console.WriteLine("Client sending " + msgSize + " bytes: MD5 " + md5);
-                _Client.Send(Encoding.UTF8.GetBytes(randomString));
+                await _Client.SendAsync(Encoding.UTF8.GetBytes(randomString));
             } 
 
             Console.WriteLine("");
@@ -65,7 +65,7 @@ namespace TestLargeMessages
                 string randomString = RandomString(msgSize);
                 string md5 = Md5(randomString);
                 Console.WriteLine("Server sending " + msgSize + " bytes: MD5 " + md5);
-                _Server.Send(guid, randomString);
+                await _Server.SendAsync(guid, randomString);
             }
 
             Console.WriteLine("");

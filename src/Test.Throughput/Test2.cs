@@ -43,28 +43,39 @@ namespace TestThroughput
             _MsgBytes = Encoding.UTF8.GetBytes(_MsgString); 
         }
 
-        internal void RunTest()
-        {  
+        internal async Task RunTest()
+        {
+            bool finished = false;
+
             using (WatsonTcpServer server = new WatsonTcpServer("127.0.0.1", 10000))
             {
                 server.Events.MessageReceived += Test2ServerMsgRcv;
                 server.Start();
-                 
-                Stopwatch sw = new Stopwatch();
+
+                _Stopwatch.Start();
+
+                Task unawaited = Task.Run(async () =>
+                {
+                    while (!finished)
+                    { 
+                        await Task.Delay(1000);
+                        Console.WriteLine("Server stats: " + server.Statistics.ReceivedMessages + " messages, " + server.Statistics.ReceivedBytes + " bytes");
+                    }
+                });
 
                 for (int i = 0; i < _NumClients; i++)
                 {
                     int clientNum = i;
                     Console.WriteLine("Starting client " + clientNum);
 
-                    Task.Run(() => Test2ClientWorker(clientNum));
+                    Task clientTask = Task.Run(() => Test2ClientWorker(clientNum));
                     _RunningTasks++;
                 } 
 
                 while (_RunningTasks > 0)
                 {
                     Console.WriteLine("Waiting on " + _RunningTasks + " running tasks (1 second pause)");
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
 
                 Console.WriteLine("All tasks complete");
@@ -74,10 +85,11 @@ namespace TestThroughput
                 while (_MessagesProcessing > 0)
                 {
                     Console.WriteLine("Waiting on " + _MessagesProcessing + " to complete processing (1 second pause)");
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
 
-                Console.WriteLine("All messages processed");
+                Console.WriteLine("Processing complete");
+                await Task.Delay(2500);
             }
 
             Console.WriteLine("");
@@ -94,7 +106,7 @@ namespace TestThroughput
             Console.WriteLine("  Bytes received successfully   : " + _BytesReceived);
             Console.WriteLine("");
 
-            decimal secondsTotal = _Stopwatch.ElapsedMilliseconds / 1000;
+            long secondsTotal = _Stopwatch.ElapsedMilliseconds / 1000;
             if (secondsTotal < 1) secondsTotal = 1;
 
             decimal bytesPerSecond = _BytesSent / secondsTotal;
@@ -103,14 +115,16 @@ namespace TestThroughput
             Console.WriteLine("  Elapsed time (ms)             : " + _Stopwatch.ElapsedMilliseconds + "ms");
             Console.WriteLine("  Elapsed time (seconds)        : " + decimal.Round(secondsTotal, 2) + "s");
             Console.WriteLine("");
-            Console.WriteLine("  Messages per second           : " + decimal.Round(_MessagesSentSuccess / secondsTotal, 2) + " msg/s");
+            Console.WriteLine("  Messages per second           : " + decimal.Round((decimal)_MessagesSentSuccess / secondsTotal, 2) + " msg/s");
             Console.WriteLine("  Bytes per second              : " + decimal.Round(bytesPerSecond, 2) + "B/s");
             Console.WriteLine("  Kilobytes per second          : " + decimal.Round(kbPerSecond, 2) + "kB/s");
             Console.WriteLine("  Megabytes per second          : " + decimal.Round(mbPerSecond, 2) + "MB/s");
             Console.WriteLine("");
+            
+            finished = true;
         }
 
-        private void Test2ClientWorker(int clientNum)
+        private async Task Test2ClientWorker(int clientNum)
         { 
             try
             {
@@ -124,7 +138,10 @@ namespace TestThroughput
 
                     for (int i = 0; i < _NumMessages; i++)
                     {
-                        if (client.Send(_MsgBytes))
+                        await Task.Delay(1);
+
+                        bool success = await client.SendAsync(_MsgBytes);
+                        if (success)
                         {
                             msgsSent++;
                             bytesSent += _MsgBytes.Length;
@@ -139,26 +156,29 @@ namespace TestThroughput
                     }
                 }
 
-                Interlocked.Decrement(ref _RunningTasks);
                 Console.WriteLine("Client " + clientNum + " finished, sent " + msgsSent + " messages, " + bytesSent + " bytes");
+            }
+            catch (TaskCanceledException)
+            {
+
+            }
+            catch (OperationCanceledException)
+            {
+
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception: " + e.ToString());
             }
+
+            Interlocked.Decrement(ref _RunningTasks);
         }
          
-        private void Test2ServerMsgRcv(object sender, MessageReceivedEventArgs args) 
+        private void Test2ServerMsgRcv(object sender, MessageReceivedEventArgs args)
         {
-            try
-            {
-                Interlocked.Decrement(ref _MessagesProcessing);
-                Interlocked.Add(ref _BytesReceived, args.Data.Length);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
+            // Console.WriteLine("Processing message from client " + args.IpPort + " (" + args.Data.Length + " bytes)");
+            Interlocked.Decrement(ref _MessagesProcessing);
+            Interlocked.Add(ref _BytesReceived, args.Data.Length);
         }
 
         private void Test2ClientMsgRcv(object sender, MessageReceivedEventArgs args)

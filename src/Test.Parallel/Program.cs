@@ -16,7 +16,7 @@ namespace TestParallel
         private static byte[] data;
         private static WatsonTcpServer server;
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             rng = new Random((int)DateTime.UtcNow.Ticks);
             data = InitByteArray(262144, 0x00);
@@ -29,19 +29,19 @@ namespace TestParallel
             server.Events.MessageReceived += ServerMsgReceived;
             server.Start();
 
-            Thread.Sleep(3000);
+            await Task.Delay(3000);
 
             Console.WriteLine("Press ENTER to exit");
 
             for (int i = 0; i < clientThreads; i++)
             {
-                Task.Run(() => ClientTask());
+                await Task.Run(() => ClientTask());
             }
 
             Console.ReadLine();
         }
 
-        private static void ClientTask()
+        private static async Task ClientTask()
         {
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
             {
@@ -53,7 +53,7 @@ namespace TestParallel
                 for (int i = 0; i < numIterations; i++)
                 {
                     Task.Delay(rng.Next(0, 25)).Wait();
-                    client.Send(data);
+                    await client.SendAsync(data);
                 }
             }
 

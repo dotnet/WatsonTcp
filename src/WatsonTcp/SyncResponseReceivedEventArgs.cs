@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
     /// <summary>
     /// Internal EventArgs for passing arguments for SyncResponseReceived event.

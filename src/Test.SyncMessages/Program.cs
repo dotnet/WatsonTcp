@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.Design;
 using System.Text;
+using System.Threading.Tasks;
 using GetSomeInput;
 using WatsonTcp;
 
@@ -12,18 +13,18 @@ namespace Test.SyncMessages
         static WatsonTcpClient _Client;
         static Guid _ClientGuid;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             using (_Server = new WatsonTcpServer("127.0.0.1", 8000))
             {
                 using (_Client = new WatsonTcpClient("127.0.0.1", 8000))
                 {
-                    _Server.Callbacks.SyncRequestReceived += ServerSyncRequestReceived;
+                    _Server.Callbacks.SyncRequestReceivedAsync += ServerSyncRequestReceived;
                     _Server.Events.ClientConnected += ServerClientConnected;
                     _Server.Events.ClientDisconnected += ServerClientDisconnected;
                     _Server.Events.MessageReceived += ServerMessageReceived;
 
-                    _Client.Callbacks.SyncRequestReceived += ClientSyncRequestReceived;
+                    _Client.Callbacks.SyncRequestReceivedAsync += ClientSyncRequestReceived;
                     _Client.Events.ServerConnected += ClientServerConnected;
                     _Client.Events.ServerDisconnected += ClientServerDisconnected;
                     _Client.Events.MessageReceived += ClientMessageReceived;
@@ -31,7 +32,7 @@ namespace Test.SyncMessages
                     _Server.Start();
                     _Client.Connect();
 
-                    Menu();
+                    await Menu();
                 }
             }
         }
@@ -58,7 +59,7 @@ namespace Test.SyncMessages
             _ClientGuid = e.Client.Guid;
         }
 
-        static void Menu()
+        static async Task Menu()
         {
             while (true)
             {
@@ -96,13 +97,13 @@ namespace Test.SyncMessages
                     case "server send":
                         val = Inputty.GetString("Data:", null, true);
                         if (!String.IsNullOrEmpty(val) && _ClientGuid != Guid.Empty)
-                            _Server.Send(_ClientGuid, val);
+                            await _Server.SendAsync(_ClientGuid, val);
                         break;
 
                     case "client send":
                         val = Inputty.GetString("Data:", null, true);
                         if (!String.IsNullOrEmpty(val))
-                            _Client.Send(val);
+                            await _Client.SendAsync(val);
                         break;
 
                     case "server echo":
@@ -112,7 +113,7 @@ namespace Test.SyncMessages
                             cmd = new Command();
                             cmd.CommandType = CommandTypeEnum.Echo;
                             cmd.Data = val;
-                            resp = _Server.SendAndWait(5000, _ClientGuid, _Server.SerializationHelper.SerializeJson(cmd, false));
+                            resp = await _Server.SendAndWaitAsync(5000, _ClientGuid, _Server.SerializationHelper.SerializeJson(cmd, false));
                             if (resp != null)
                                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
                         }
@@ -125,7 +126,7 @@ namespace Test.SyncMessages
                             cmd = new Command();
                             cmd.CommandType = CommandTypeEnum.Echo;
                             cmd.Data = val;
-                            resp = _Client.SendAndWait(5000, _Client.SerializationHelper.SerializeJson(cmd, false));
+                            resp = await _Client.SendAndWaitAsync(5000, _Client.SerializationHelper.SerializeJson(cmd, false));
                             if (resp != null)
                                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
                         }
@@ -138,7 +139,7 @@ namespace Test.SyncMessages
                             cmd = new Command();
                             cmd.CommandType = CommandTypeEnum.Increment;
                             cmd.Int = Convert.ToInt32(val);
-                            resp = _Server.SendAndWait(5000, _ClientGuid, _Server.SerializationHelper.SerializeJson(cmd, false));
+                            resp = await _Server.SendAndWaitAsync(5000, _ClientGuid, _Server.SerializationHelper.SerializeJson(cmd, false));
                             if (resp != null)
                                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
                         }
@@ -151,7 +152,7 @@ namespace Test.SyncMessages
                             cmd = new Command();
                             cmd.CommandType = CommandTypeEnum.Increment;
                             cmd.Int = Convert.ToInt32(val);
-                            resp = _Client.SendAndWait(5000, _Client.SerializationHelper.SerializeJson(cmd, false));
+                            resp = await _Client.SendAndWaitAsync(5000, _Client.SerializationHelper.SerializeJson(cmd, false));
                             if (resp != null)
                                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
                         }
@@ -164,7 +165,7 @@ namespace Test.SyncMessages
                             cmd = new Command();
                             cmd.CommandType = CommandTypeEnum.Decrement;
                             cmd.Int = Convert.ToInt32(val);
-                            resp = _Server.SendAndWait(5000, _ClientGuid, _Server.SerializationHelper.SerializeJson(cmd, false));
+                            resp = await _Server.SendAndWaitAsync(5000, _ClientGuid, _Server.SerializationHelper.SerializeJson(cmd, false));
                             if (resp != null)
                                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
                         }
@@ -177,7 +178,7 @@ namespace Test.SyncMessages
                             cmd = new Command();
                             cmd.CommandType = CommandTypeEnum.Decrement;
                             cmd.Int = Convert.ToInt32(val);
-                            resp = _Client.SendAndWait(5000, _Client.SerializationHelper.SerializeJson(cmd, false));
+                            resp = await _Client.SendAndWaitAsync(5000, _Client.SerializationHelper.SerializeJson(cmd, false));
                             if (resp != null)
                                 Console.WriteLine("Response: " + Encoding.UTF8.GetString(resp.Data));
                         }
@@ -191,7 +192,9 @@ namespace Test.SyncMessages
             Console.WriteLine("Client received message: " + Encoding.UTF8.GetString(e.Data));
         }
 
-        private static SyncResponse ClientSyncRequestReceived(SyncRequest arg)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> ClientSyncRequestReceived(SyncRequest arg)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Client received sync request: " + Encoding.UTF8.GetString(arg.Data));
 
@@ -215,7 +218,9 @@ namespace Test.SyncMessages
             Console.WriteLine("Server received message: " + Encoding.UTF8.GetString(e.Data));
         }
 
-        private static SyncResponse ServerSyncRequestReceived(SyncRequest arg)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> ServerSyncRequestReceived(SyncRequest arg)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.WriteLine("Server received sync request: " + Encoding.UTF8.GetString(arg.Data));
 

@@ -21,13 +21,12 @@ namespace TestClient
         private static WatsonTcpClient _Client = null;
         private static string _PresharedKey = null;
         
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             InitializeClient();
 
             bool runForever = true;
-            Dictionary<string, object> metadata; 
-            bool success;
+            Dictionary<string, object> metadata;
 
             while (runForever)
             {
@@ -43,8 +42,6 @@ namespace TestClient
                         Console.WriteLine("  send                send message to server");
                         Console.WriteLine("  send offset         send message to server with offset");
                         Console.WriteLine("  send md             send message with metadata to server");
-                        Console.WriteLine("  sendasync           send message to server asynchronously");
-                        Console.WriteLine("  sendasync md        send message with metadata to server asynchronously");
                         Console.WriteLine("  sendandwait         send message and wait for a response");
                         Console.WriteLine("  sendempty           send empty message with metadata");
                         Console.WriteLine("  sendandwait empty   send empty message with metadata and wait for a response");
@@ -69,53 +66,39 @@ namespace TestClient
 
                     case "send":
                         userInput = Inputty.GetString("Data:", null, false);
-                        if (!_Client.Send(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
+                        if (!await _Client.SendAsync(Encoding.UTF8.GetBytes(userInput))) Console.WriteLine("Failed");
                         break;
 
                     case "send offset":
                         userInput = Inputty.GetString("Data:", null, false);
                         int offset = Inputty.GetInteger("Offset:", 0, true, true);
-                        if (!_Client.Send(Encoding.UTF8.GetBytes(userInput), null, offset)) Console.WriteLine("Failed");
+                        if (!await _Client.SendAsync(Encoding.UTF8.GetBytes(userInput), null, offset)) Console.WriteLine("Failed");
                         break;
 
                     case "send md":
                         userInput = Inputty.GetString("Data:", null, false);
                         metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");
                         metadata.Add("time", DateTime.UtcNow);
-                        if (!_Client.Send(Encoding.UTF8.GetBytes(userInput), metadata)) Console.WriteLine("Failed");
+                        if (!await _Client.SendAsync(Encoding.UTF8.GetBytes(userInput), metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "send md large":
                         metadata = new Dictionary<string, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i.ToString(), i);
-                        if (!_Client.Send("Hello!", metadata)) Console.WriteLine("Failed");
-                        break;
-
-                    case "sendasync":
-                        userInput = Inputty.GetString("Data:", null, false);
-                        success = _Client.SendAsync(Encoding.UTF8.GetBytes(userInput)).Result;
-                        if (!success) Console.WriteLine("Failed");
-                        break;
-
-                    case "sendasync md":
-                        userInput = Inputty.GetString("Data:", null, false);
-                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        success = _Client.SendAsync(Encoding.UTF8.GetBytes(userInput), metadata).Result;
-                        if (!success) Console.WriteLine("Failed");
+                        if (!await _Client.SendAsync("Hello!", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait":
-                        SendAndWait();
+                        await SendAndWait();
                         break;
 
                     case "sendempty":
-                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        success = _Client.Send("", metadata);
-                        if (!success) Console.WriteLine("Failed");
+                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");
+                        if (!await _Client.SendAsync("", metadata)) Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait empty":
-                        SendAndWaitEmpty();
+                        await SendAndWaitEmpty();
                         break;
 
                     case "status":
@@ -147,7 +130,7 @@ namespace TestClient
                         break;
 
                     case "auth":
-                        _Client.Authenticate(_PresharedKey);
+                        await _Client.AuthenticateAsync(_PresharedKey);
                         break;
 
                     case "stats":
@@ -214,7 +197,7 @@ namespace TestClient
             _Client.Events.MessageReceived += MessageReceived;
             _Client.Events.ExceptionEncountered += ExceptionEncountered;
 
-            _Client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            _Client.Callbacks.SyncRequestReceivedAsync = SyncRequestReceived;
             _Client.Callbacks.AuthenticationRequested = AuthenticationRequested;
 
             // _Client.Settings.IdleServerTimeoutMs = 5000;
@@ -287,7 +270,9 @@ namespace TestClient
             }
         }
 
-        private static SyncResponse SyncRequestReceived(SyncRequest req)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> SyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.Write("Message received from server: ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
@@ -307,7 +292,7 @@ namespace TestClient
             retMetadata.Add("bar", "baz");
 
             // Uncomment to test timeout
-            // Task.Delay(10000).Wait();
+            // await Task.Delay(10000);
             return new SyncResponse(req, retMetadata, "Here is your response!");
         }
 
@@ -321,7 +306,7 @@ namespace TestClient
             Console.WriteLine("Server disconnected: " + args.Reason.ToString());
         }
 
-        private static void SendAndWait()
+        private static async Task SendAndWait()
         {
             string userInput = Inputty.GetString("Data:", null, false);
             int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
@@ -332,7 +317,7 @@ namespace TestClient
             {
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-                SyncResponse resp = _Client.SendAndWait(timeoutMs, userInput, metadata);
+                SyncResponse resp = await _Client.SendAndWaitAsync(timeoutMs, userInput, metadata);
                 stopwatch.Stop();
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
@@ -352,7 +337,7 @@ namespace TestClient
             }
         }
 
-        private static void SendAndWaitEmpty()
+        private static async Task SendAndWaitEmpty()
         { 
             int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
 
@@ -361,7 +346,7 @@ namespace TestClient
 
             try
             {
-                SyncResponse resp = _Client.SendAndWait(timeoutMs, "", dict);
+                SyncResponse resp = await _Client.SendAndWaitAsync(timeoutMs, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

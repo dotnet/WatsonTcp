@@ -21,7 +21,7 @@ namespace TestServerStream
         private static bool _MutualAuth = true;
         private static Guid _LastGuid = Guid.Empty;
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             _ServerIp = Inputty.GetString("Server IP:", "127.0.0.1", false);
             _ServerPort = Inputty.GetInteger("Server port:", 9000, true, false);
@@ -46,7 +46,7 @@ namespace TestServerStream
             _Server.Events.ClientConnected += ClientConnected;
             _Server.Events.ClientDisconnected += ClientDisconnected;
             _Server.Events.StreamReceived += StreamReceived;
-            _Server.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            _Server.Callbacks.SyncRequestReceivedAsync = SyncRequestReceived;
             _Server.Settings.Logger = Logger;
             // server.Debug = true;
             _Server.Start();
@@ -80,8 +80,6 @@ namespace TestServerStream
                         Console.WriteLine("  list           list clients");
                         Console.WriteLine("  send           send message to client");
                         Console.WriteLine("  send md        send message with metadata to client");
-                        Console.WriteLine("  sendasync      send message to a client asynchronously");
-                        Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
                         Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  remove all     disconnect all clients");
@@ -131,7 +129,7 @@ namespace TestServerStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = _Server.Send(guid, data.Length, ms);
+                        success = await _Server.SendAsync(guid, data.Length, ms);
                         Console.WriteLine(success);
                         break;
 
@@ -143,45 +141,21 @@ namespace TestServerStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = _Server.Send(guid, data.Length, ms, metadata);
-                        Console.WriteLine(success);
-                        break;
-
-                    case "sendasync":
-                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false)); 
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        data = Encoding.UTF8.GetBytes(userInput); 
-                        ms = new MemoryStream(data);
-                        ms.Seek(0, SeekOrigin.Begin); 
-                        success = _Server.SendAsync(guid, data.Length, ms).Result;
-                        Console.WriteLine(success);
-                        break;
-
-                    case "sendasync md":
-                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
-                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        data = Encoding.UTF8.GetBytes(userInput);
-                        ms = new MemoryStream(data);
-                        success = _Server.SendAsync(guid, data.Length, ms, metadata).Result;
+                        success = await _Server.SendAsync(guid, data.Length, ms, metadata);
                         Console.WriteLine(success);
                         break;
 
                     case "sendandwait":
-                        SendAndWait();
+                        await SendAndWait();
                         break;
 
                     case "remove":
                         guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
-                        _Server.DisconnectClient(guid);
+                        await _Server.DisconnectClientAsync(guid);
                         break;
 
                     case "remove all":
-                        _Server.DisconnectClients();
+                        await _Server.DisconnectClientsAsync();
                         break;
 
                     case "psk":
@@ -274,7 +248,9 @@ namespace TestServerStream
             }
         }
 
-        private static SyncResponse SyncRequestReceived(SyncRequest req)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> SyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.Write("Synchronous request received from " + req.Client.ToString() + ": ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
@@ -299,7 +275,7 @@ namespace TestServerStream
             return new SyncResponse(req, retMetadata, "Here is your response!");
         }
 
-        private static void SendAndWait()
+        private static async Task SendAndWait()
         {
             Guid guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
             string userInput = Inputty.GetString("Data:", null, false);
@@ -307,7 +283,7 @@ namespace TestServerStream
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(timeoutMs, guid, userInput); 
+                SyncResponse resp = await _Server.SendAndWaitAsync(timeoutMs, guid, userInput); 
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -325,7 +301,7 @@ namespace TestServerStream
             }
         }
 
-        private static void SendAndWaitEmpty()
+        private static async Task SendAndWaitEmpty()
         {
             Guid guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
             int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
@@ -335,7 +311,7 @@ namespace TestServerStream
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(timeoutMs, guid, "", dict);
+                SyncResponse resp = await _Server.SendAndWaitAsync(timeoutMs, guid, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

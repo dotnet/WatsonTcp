@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+
     /// <summary>
     /// Settings for Watson TCP client.
     /// </summary>

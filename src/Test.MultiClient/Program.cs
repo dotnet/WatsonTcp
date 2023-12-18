@@ -20,7 +20,7 @@ namespace TestMultiClient
         private static Random rng;
         private static byte[] data;
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             rng = new Random((int)DateTime.UtcNow.Ticks);
             data = InitByteArray(65536, 0x00);
@@ -33,20 +33,20 @@ namespace TestMultiClient
             server.Events.MessageReceived += ServerMsgReceived;
             server.Start();
 
-            Thread.Sleep(3000);
+            await Task.Delay(3000);
 
             Console.WriteLine("Starting clients");
             for (int i = 0; i < clientThreads; i++)
             {
                 Console.WriteLine("Starting client " + i);
-                Task.Run(() => ClientTask());
+                await Task.Run(() => ClientTask());
             }
 
             Console.WriteLine("Press ENTER to exit");
             Console.ReadLine();
         }
 
-        private static void ClientTask()
+        private static async Task ClientTask()
         {
             Console.WriteLine("ClientTask entering");
             using (WatsonTcpClient client = new WatsonTcpClient("localhost", serverPort))
@@ -58,13 +58,13 @@ namespace TestMultiClient
 
                 while (!clientsStarted)
                 {
-                    Thread.Sleep(100);
+                    await Task.Delay(100);
                 }
 
                 for (int i = 0; i < numIterations; i++)
                 {
                     Task.Delay(rng.Next(0, 1000)).Wait();
-                    client.Send(data);
+                    await client.SendAsync(data);
                 }
             }
 

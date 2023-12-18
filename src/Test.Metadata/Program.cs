@@ -14,7 +14,7 @@ namespace Test.Metadata
         static int _EntryCount = 500;
         static Stopwatch[] _Stopwatches = null;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             if (args != null && args.Length == 2)
             {
@@ -50,7 +50,7 @@ namespace Test.Metadata
                             md.Add("person." + i.ToString() + "." + j.ToString(), p);
                         }
 
-                        client.Send(i.ToString(), md);
+                        await client.SendAsync(i.ToString(), md);
 
                         _Stopwatches[i] = new Stopwatch();
                         _Stopwatches[i].Start();

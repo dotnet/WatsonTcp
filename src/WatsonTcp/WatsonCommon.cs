@@ -1,70 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Net;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.IO;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     internal static class WatsonCommon
     {
-        internal static byte[] ReadStreamFully(Stream input)
-        { 
-            byte[] buffer = new byte[65536];
-            using (MemoryStream ms = new MemoryStream())
-            {
-                int read = 0;
-                while (true)
-                {
-                    read = input.Read(buffer, 0, buffer.Length);
-                    if (read > 0)
-                    {
-                        ms.Write(buffer, 0, read);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                return ms.ToArray();
-            }
-        }
-
-        internal static byte[] ReadFromStream(Stream stream, long count, int bufferLen)
-        {
-            if (count <= 0) return Array.Empty<byte>();
-            if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes."); 
-            byte[] buffer = new byte[bufferLen];
-
-            int read = 0;
-            long bytesRemaining = count;
-            MemoryStream ms = new MemoryStream();
-
-            while (bytesRemaining > 0)
-            {
-                if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
-
-                read = stream.Read(buffer, 0, buffer.Length);
-                if (read > 0)
-                {
-                    ms.Write(buffer, 0, read);
-                    bytesRemaining -= read;
-                }
-                else
-                {
-                    throw new IOException("Could not read from supplied stream.");
-                }
-            }
-
-            byte[] data = ms.ToArray();
-            return data;
-        }
-
-        internal static MemoryStream DataStreamToMemoryStream(long contentLength, Stream stream, int bufferLen)
+        internal static async Task<MemoryStream> DataStreamToMemoryStream(long contentLength, Stream stream, int bufferLen, CancellationToken token)
         {
             if (contentLength <= 0) return new MemoryStream(Array.Empty<byte>());
             if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes.");
@@ -78,10 +22,10 @@ namespace WatsonTcp
             {
                 if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
 
-                read = stream.Read(buffer, 0, buffer.Length);
+                read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
                 if (read > 0)
                 {
-                    ms.Write(buffer, 0, read);
+                    await ms.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
                     bytesRemaining -= read;
                 }
                 else
@@ -94,7 +38,7 @@ namespace WatsonTcp
             return ms;
         }
 
-        internal static async Task<byte[]> ReadFromStreamAsync(Stream stream, long count, int bufferLen)
+        internal static async Task<byte[]> ReadFromStreamAsync(Stream stream, long count, int bufferLen, CancellationToken token)
         {
             if (count <= 0) return null;
             if (bufferLen <= 0) throw new ArgumentException("Buffer must be greater than zero bytes.");
@@ -111,10 +55,10 @@ namespace WatsonTcp
                     {
                         if (bufferLen > bytesRemaining) buffer = new byte[bytesRemaining];
 
-                        read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
                         if (read > 0)
                         {
-                            ms.Write(buffer, 0, read);
+                            await ms.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
                             bytesRemaining -= read;
                         }
                         else
@@ -134,7 +78,7 @@ namespace WatsonTcp
             }
         }
 
-        internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen)
+        internal static async Task<byte[]> ReadMessageDataAsync(WatsonMessage msg, int bufferLen, CancellationToken token)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (msg.ContentLength == 0) return Array.Empty<byte>();
@@ -143,7 +87,7 @@ namespace WatsonTcp
 
             try
             {
-                msgData = await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen);
+                msgData = await WatsonCommon.ReadFromStreamAsync(msg.DataStream, msg.ContentLength, bufferLen, token).ConfigureAwait(false);
             }
             catch (Exception)
             {

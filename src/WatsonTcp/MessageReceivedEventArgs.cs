@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.Collections.Generic;
+
     /// <summary>
     /// Event arguments for when a message is received.
     /// </summary>

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
     /// <summary>
     /// Event arguments for when authentication is requested from a client.

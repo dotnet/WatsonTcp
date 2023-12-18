@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using GetSomeInput;
 using WatsonTcp;
 
@@ -15,7 +16,7 @@ namespace Test.FileTransfer
         static Guid _ClientGuid = Guid.Empty;
         static int _StreamBufferSize = 4096;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             using (_Server = new WatsonTcpServer("127.0.0.1", 9000))
             {
@@ -31,7 +32,7 @@ namespace Test.FileTransfer
                     _Client.Events.StreamReceived += ClientStreamReceived;
                     _Client.Connect();
 
-                    Worker();
+                    await Worker();
                 }
             }
         }
@@ -194,7 +195,7 @@ namespace Test.FileTransfer
             }
         }
 
-        static void Worker()
+        static async Task Worker()
         {
             while (true)
             {
@@ -228,7 +229,7 @@ namespace Test.FileTransfer
                         ms = new MemoryStream();
                         ms.Write(msgBytes, 0, msgBytes.Length);
                         ms.Seek(0, SeekOrigin.Begin);
-                        _Server.Send(_ClientGuid, msgBytes.Length, ms);
+                        await _Server.SendAsync(_ClientGuid, msgBytes.Length, ms);
                         break;
 
                     case "client send":
@@ -238,7 +239,7 @@ namespace Test.FileTransfer
                         ms = new MemoryStream();
                         ms.Write(msgBytes, 0, msgBytes.Length);
                         ms.Seek(0, SeekOrigin.Begin);
-                        _Client.Send(msgBytes.Length, ms);
+                        await _Client.SendAsync(msgBytes.Length, ms);
                         break;
 
                     case "server send file":
@@ -249,7 +250,7 @@ namespace Test.FileTransfer
                         {
                             md.Add("filename", filename);
                             md.Add("md5", Md5File(filename));
-                            _Server.Send(_ClientGuid, len, fs, md);
+                            await _Server.SendAsync(_ClientGuid, len, fs, md);
                         }
                         break;
 
@@ -261,7 +262,7 @@ namespace Test.FileTransfer
                         {
                             md.Add("filename", filename);
                             md.Add("md5", Md5File(filename));
-                            _Client.Send(len, fs, md);
+                            await _Client.SendAsync(len, fs, md);
                         }
                         break;
                 }

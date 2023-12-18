@@ -56,7 +56,7 @@ namespace Test.WinFormServer
         {
             if (_LastGuid != Guid.Empty)
             {
-                _Server.Send(_LastGuid, "Hello world!");
+                _Server.SendAsync(_LastGuid, "Hello world!");
                 Logger(Severity.Debug, "Sent 'Hello world!' to client " + _LastGuid.ToString());
             }
             else

@@ -34,17 +34,17 @@ namespace TestMultiThread
         private static int _Success = 0;
         private static int _Failure = 0;
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             Console.WriteLine("1: Client to server");
             Console.WriteLine("2: Server to client");
             Console.Write("Test [1/2]: ");
             int testNum = Convert.ToInt32(Console.ReadLine());
-            if (testNum == 1) ClientToServer();
-            else if (testNum == 2) ServerToClient();
+            if (testNum == 1) await ClientToServer();
+            else if (testNum == 2) await ServerToClient();
         }
 
-        private static void ClientToServer()
+        private static async Task ClientToServer()
         {
             _Random = new Random((int)DateTime.UtcNow.Ticks);
             _DataLargeBytes = InitByteArray(_DataLargeSize, 0x00);
@@ -60,33 +60,33 @@ namespace TestMultiThread
             _Server.Events.ClientDisconnected += ServerClientDisconnected;
             if (!_UseStreams) _Server.Events.MessageReceived += ServerMsgReceived; 
             else _Server.Events.StreamReceived += ServerStreamReceived;
-            _Server.Callbacks.SyncRequestReceived = ServerSyncRequestReceived;
+            _Server.Callbacks.SyncRequestReceivedAsync = ServerSyncRequestReceived;
             _Server.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Server.Settings.Logger = ServerLogger;
             _Server.Settings.DebugMessages = _Debug;
             _Server.Start();
             
-            Thread.Sleep(2000);
+            await Task.Delay(2000);
 
             _Client = new WatsonTcpClient("localhost", _ServerPort);
             _Client.Events.ServerConnected += ClientServerConnected;
             _Client.Events.ServerDisconnected += ClientServerDisconnected;
             if (!_UseStreams) _Client.Events.MessageReceived += ClientMsgReceived;
             else _Client.Events.StreamReceived += ClientStreamReceived; 
-            _Client.Callbacks.SyncRequestReceived = ClientSyncRequestReceived;
+            _Client.Callbacks.SyncRequestReceivedAsync = ClientSyncRequestReceived;
             _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Client.Settings.Logger = ClientLogger;
             _Client.Settings.DebugMessages = _Debug;
             _Client.Connect();
             
-            Thread.Sleep(2000);
+            await Task.Delay(2000);
 
             Console.WriteLine("Press ENTER to exit");
 
             for (int i = 0; i < _ClientThreads; i++)
             {
                 Console.WriteLine("Starting client thread " + i);
-                Task.Run(() => ClientTask());
+                await Task.Run(() => ClientTask());
             }
 
             Console.WriteLine("Press ENTER after completion to view statistics");
@@ -96,7 +96,7 @@ namespace TestMultiThread
             Console.WriteLine("Failure: " + _Failure);
         } 
          
-        private static void ServerToClient()
+        private static async Task ServerToClient()
         {
             _Random = new Random((int)DateTime.UtcNow.Ticks);
             _DataLargeBytes = InitByteArray(_DataLargeSize, 0x00);
@@ -112,19 +112,19 @@ namespace TestMultiThread
             _Server.Events.ClientDisconnected += ServerClientDisconnected;
             if (!_UseStreams) _Server.Events.MessageReceived += ServerMsgReceived;
             else _Server.Events.StreamReceived += ServerStreamReceived;
-            _Server.Callbacks.SyncRequestReceived = ServerSyncRequestReceived;
+            _Server.Callbacks.SyncRequestReceivedAsync = ServerSyncRequestReceived;
             _Server.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Server.Settings.Logger = ServerLogger;
             _Server.Start();
 
-            Thread.Sleep(2000);
+            await Task.Delay(2000);
 
             _Client = new WatsonTcpClient("localhost", _ServerPort);
             _Client.Events.ServerConnected += ClientServerConnected;
             _Client.Events.ServerDisconnected += ClientServerDisconnected;
             if (!_UseStreams) _Client.Events.MessageReceived += ClientMsgReceived;
             else _Client.Events.StreamReceived += ClientStreamReceived;
-            _Client.Callbacks.SyncRequestReceived = ClientSyncRequestReceived;
+            _Client.Callbacks.SyncRequestReceivedAsync = ClientSyncRequestReceived;
             _Client.Settings.MaxProxiedStreamSize = _MaxProxiedStreamSize;
             _Client.Settings.Logger = ClientLogger;
             _Client.Connect();
@@ -135,14 +135,14 @@ namespace TestMultiThread
                 // wait
             }
 
-            Thread.Sleep(2000);
+            await Task.Delay(2000);
 
             Console.WriteLine("Press ENTER to exit");
 
             for (int i = 0; i < _ServerThreads; i++)
             {
                 Console.WriteLine("Starting server thread " + i);
-                Task.Run(() => ServerTask());
+                await Task.Run(() => ServerTask());
             }
 
             Console.WriteLine("Press ENTER after completion to view statistics");
@@ -152,28 +152,28 @@ namespace TestMultiThread
             Console.WriteLine("Failure: " + _Failure);
         }
 
-        private static void ClientTask()
+        private static async Task ClientTask()
         {
             for (int i = 0; i < _NumIterations; i++)
             {
                 int waitVal = _Random.Next(0, 12);
-                Task.Delay(waitVal).Wait();
+                await Task.Delay(waitVal);
                 if (waitVal % 3 == 0)
                 {
                     Console.WriteLine("[client] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending large message");
-                    _Client.Send(_DataLargeBytes);
+                    await _Client.SendAsync(_DataLargeBytes);
                 }
                 else if (waitVal % 2 == 0)
                 {
                     Console.WriteLine("[client] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending small message");
-                    _Client.Send(_DataSmallBytes);
+                    await _Client.SendAsync(_DataSmallBytes);
                 }
                 else
                 {
                     Console.WriteLine("[client] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
                     try
                     {
-                        SyncResponse syncResponse = _Client.SendAndWait(_SendAndWaitInterval, _DataSmallBytes);
+                        SyncResponse syncResponse = await _Client.SendAndWaitAsync(_SendAndWaitInterval, _DataSmallBytes);
                         Console.WriteLine("[client] Sync response received");
                     }
                     catch (Exception e)
@@ -186,7 +186,7 @@ namespace TestMultiThread
             Console.WriteLine("[client] Finished");
         }
 
-        private static void ServerTask()
+        private static async Task ServerTask()
         {
             for (int i = 0; i < _NumIterations; i++)
             {
@@ -195,19 +195,19 @@ namespace TestMultiThread
                 if (waitVal % 3 == 0)
                 {
                     Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending large message");
-                    _Server.Send(_LastGuid, _DataLargeBytes);
+                    await _Server.SendAsync(_LastGuid, _DataLargeBytes);
                 }
                 else if (waitVal % 2 == 0)
                 {
                     Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Sending small message");
-                    _Server.Send(_LastGuid, _DataSmallBytes);
+                    await _Server.SendAsync(_LastGuid, _DataSmallBytes);
                 }
                 else
                 {
                     Console.WriteLine("[server] " + (i + 1).ToString() + "/" + _NumIterations.ToString() + " Send and wait small message");
                     try
                     {
-                        SyncResponse syncResponse = _Server.SendAndWait(_SendAndWaitInterval, _LastGuid, _DataSmallBytes);
+                        SyncResponse syncResponse = await _Server.SendAndWaitAsync(_SendAndWaitInterval, _LastGuid, _DataSmallBytes);
                         Console.WriteLine("[server] Sync response received");
                     }
                     catch (Exception e)
@@ -277,7 +277,9 @@ namespace TestMultiThread
             }
         }
 
-        private static SyncResponse ServerSyncRequestReceived(SyncRequest req)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> ServerSyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             try
             {
@@ -353,7 +355,9 @@ namespace TestMultiThread
             }
         }
 
-        private static SyncResponse ClientSyncRequestReceived(SyncRequest req)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> ClientSyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             try
             {

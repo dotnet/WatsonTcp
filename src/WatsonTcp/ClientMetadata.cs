@@ -1,12 +1,12 @@
-﻿using System;
-using System.IO;
-using System.Net.Security;
-using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.IO;
+    using System.Net.Security;
+    using System.Net.Sockets;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     /// <summary>
     /// Client metadata.
     /// </summary>

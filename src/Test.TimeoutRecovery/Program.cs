@@ -21,7 +21,7 @@ namespace Test.TimeoutRecovery
         private static bool _MutuallyAuthenticate = true;
         private static Guid _LastGuid = Guid.Empty;
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             _ServerIp = Inputty.GetString("Server IP:", "127.0.0.1", false);
             _ServerPort = Inputty.GetInteger("Server port:", 9000, true, false);
@@ -48,7 +48,7 @@ namespace Test.TimeoutRecovery
                 _Server.Events.ClientConnected += ClientConnected;
                 _Server.Events.ClientDisconnected += ClientDisconnected;
                 _Server.Events.MessageReceived += MessageReceived;
-                _Server.Callbacks.SyncRequestReceived = SyncRequestReceived;
+                _Server.Callbacks.SyncRequestReceivedAsync = SyncRequestReceived;
                 // server.Settings.PresharedKey = "0000000000000000";
                 // server.IdleClientTimeoutSeconds = 10;
                 _Server.Settings.Logger = Logger;
@@ -66,7 +66,6 @@ namespace Test.TimeoutRecovery
             List<ClientMetadata> clients;
             Guid guid;
             Dictionary<string, object> metadata;
-            bool success = false;
 
             Console.WriteLine("");
             Console.WriteLine("To test timeout recovery, send a message from a client with an integer");
@@ -89,8 +88,6 @@ namespace Test.TimeoutRecovery
                         Console.WriteLine("  dispose             dispose of the connection");
                         Console.WriteLine("  send                send message to client");
                         Console.WriteLine("  send md             send message with metadata to client");
-                        Console.WriteLine("  sendasync           send message to a client asynchronously");
-                        Console.WriteLine("  sendasync md        send message with metadata to a client asynchronously");
                         Console.WriteLine("  sendandwait         send message and wait for a response");
                         Console.WriteLine("  sendempty           send empty message with metadata");
                         Console.WriteLine("  sendandwait empty   send empty message with metadata and wait for a response");
@@ -135,56 +132,44 @@ namespace Test.TimeoutRecovery
                     case "send":
                         guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
                         userInput = Inputty.GetString("Data:", null, false);
-                        if (!_Server.Send(guid, userInput)) Console.WriteLine("Failed");
+                        if (!await _Server.SendAsync(guid, userInput)) 
+                            Console.WriteLine("Failed");
                         break;
 
                     case "send md":
                         guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
                         userInput = Inputty.GetString("Data:", null, false);
                         metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        if (!_Server.Send(guid, userInput, metadata)) Console.WriteLine("Failed");
-                        Console.WriteLine(success);
+                        if (!await _Server.SendAsync(guid, userInput, metadata)) 
+                            Console.WriteLine("Failed");
                         break;
 
                     case "send md large":
                         guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
                         metadata = new Dictionary<string, object>();
                         for (int i = 0; i < 100000; i++) metadata.Add(i.ToString(), i);
-                        if (!_Server.Send(guid, "Hello!", metadata)) Console.WriteLine("Failed");
-                        break;
-
-                    case "sendasync":
-                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
-                        userInput = Inputty.GetString("Data:", null, false);
-                        success = _Server.SendAsync(guid, Encoding.UTF8.GetBytes(userInput)).Result;
-                        if (!success) Console.WriteLine("Failed");
-                        break;
-
-                    case "sendasync md":
-                        guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
-                        userInput = Inputty.GetString("Data:", null, false);
-                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        success = _Server.SendAsync(guid, Encoding.UTF8.GetBytes(userInput), metadata).Result;
-                        if (!success) Console.WriteLine("Failed");
+                        if (!await _Server.SendAsync(guid, "Hello!", metadata)) 
+                            Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait":
-                        SendAndWait();
+                        await SendAndWait();
                         break;
 
                     case "sendempty":
                         guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
                         metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        if (!_Server.Send(guid, "", metadata)) Console.WriteLine("Failed");
+                        if (!await _Server.SendAsync(guid, "", metadata)) 
+                            Console.WriteLine("Failed");
                         break;
 
                     case "sendandwait empty":
-                        SendAndWaitEmpty();
+                        await SendAndWaitEmpty();
                         break;
 
                     case "remove":
                         guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
-                        _Server.DisconnectClient(guid);
+                        await _Server.DisconnectClientAsync(guid);
                         break;
 
                     case "psk":
@@ -238,7 +223,9 @@ namespace Test.TimeoutRecovery
             }
         }
 
-        private static SyncResponse SyncRequestReceived(SyncRequest req)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> SyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             _LastGuid = req.Client.Guid;
             Console.Write("Message received from " + req.Client.ToString() + ": ");
@@ -279,7 +266,7 @@ namespace Test.TimeoutRecovery
             return new SyncResponse(req, retMetadata, resp);
         }
 
-        private static void SendAndWait()
+        private static async Task SendAndWait()
         {
             Guid guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
             string userInput = Inputty.GetString("Data:", null, false);
@@ -287,7 +274,7 @@ namespace Test.TimeoutRecovery
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(timeoutMs, guid, userInput);
+                SyncResponse resp = await _Server.SendAndWaitAsync(timeoutMs, guid, userInput);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -305,7 +292,7 @@ namespace Test.TimeoutRecovery
             }
         }
 
-        private static void SendAndWaitEmpty()
+        private static async Task SendAndWaitEmpty()
         {
             Guid guid = Guid.Parse(Inputty.GetString("GUID:", _LastGuid.ToString(), false));
             int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
@@ -315,7 +302,7 @@ namespace Test.TimeoutRecovery
 
             try
             {
-                SyncResponse resp = _Server.SendAndWait(timeoutMs, guid, "", dict);
+                SyncResponse resp = await _Server.SendAndWaitAsync(timeoutMs, guid, "", dict);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

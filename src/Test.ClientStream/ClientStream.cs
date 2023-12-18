@@ -20,7 +20,7 @@ namespace TestClientStream
         private static WatsonTcpClient client = null;
         private static string presharedKey = null;
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             serverIp = Inputty.GetString("Server IP:", "127.0.0.1", false);
             serverPort = Inputty.GetInteger("Server port:", 9000, true, false);
@@ -53,8 +53,6 @@ namespace TestClientStream
                         Console.WriteLine("  cls            clear screen");
                         Console.WriteLine("  send           send message to server");
                         Console.WriteLine("  send md        send message with metadata to server");
-                        Console.WriteLine("  sendasync      send message to server asynchronously");
-                        Console.WriteLine("  sendasync md   send message with metadata to server asynchronously");
                         Console.WriteLine("  sendandwait    send message and wait for a response");
                         Console.WriteLine("  status         show if client connected");
                         Console.WriteLine("  dispose        dispose of the client");
@@ -79,7 +77,7 @@ namespace TestClientStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = client.Send(data.Length, ms);
+                        success = await client.SendAsync(data.Length, ms);
                         Console.WriteLine(success);
                         break;
 
@@ -90,33 +88,12 @@ namespace TestClientStream
                         if (String.IsNullOrEmpty(userInput)) break;
                         data = Encoding.UTF8.GetBytes(userInput);
                         ms = new MemoryStream(data);
-                        success = client.Send(data.Length, ms, metadata);
-                        Console.WriteLine(success);
-                        break;
-
-                    case "sendasync":
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        data = Encoding.UTF8.GetBytes(userInput);
-                        ms = new MemoryStream(data);
-                        success = client.SendAsync(data.Length, ms).Result;
-                        Console.WriteLine(success);
-                        break;
-
-                    case "sendasync md":
-                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        data = Encoding.UTF8.GetBytes(userInput);
-                        ms = new MemoryStream(data);
-                        success = client.SendAsync(data.Length, ms, metadata).Result;
+                        success = await client.SendAsync(data.Length, ms, metadata);
                         Console.WriteLine(success);
                         break;
 
                     case "sendandwait":
-                        SendAndWait();
+                        await SendAndWait();
                         break;
 
                     case "status":
@@ -148,7 +125,7 @@ namespace TestClientStream
                         break;
 
                     case "auth":
-                        client.Authenticate(presharedKey);
+                        await client.AuthenticateAsync(presharedKey);
                         break;
 
                     case "debug":
@@ -186,7 +163,7 @@ namespace TestClientStream
             client.Events.ServerConnected += ServerConnected;
             client.Events.ServerDisconnected += ServerDisconnected;
             client.Events.StreamReceived += StreamReceived;
-            client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+            client.Callbacks.SyncRequestReceivedAsync = SyncRequestReceived;
             client.Settings.Logger = Logger;
             // client.Debug = true;
             client.Connect();
@@ -256,7 +233,9 @@ namespace TestClientStream
             }
         }
 
-        private static SyncResponse SyncRequestReceived(SyncRequest req)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        private static async Task<SyncResponse> SyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Console.Write("Message received from server: ");
             if (req.Data != null) Console.WriteLine(Encoding.UTF8.GetString(req.Data));
@@ -310,7 +289,7 @@ namespace TestClientStream
             Console.WriteLine("Server disconnected: " + args.Reason.ToString());
         }
 
-        private static void SendAndWait()
+        private static async Task SendAndWait()
         {
             string userInput = Inputty.GetString("Data:", null, false);
             int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
@@ -319,7 +298,7 @@ namespace TestClientStream
 
             try
             {
-                SyncResponse resp = client.SendAndWait(timeoutMs, userInput, metadata);
+                SyncResponse resp = await client.SendAndWaitAsync(timeoutMs, userInput, metadata);
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");
@@ -337,7 +316,7 @@ namespace TestClientStream
             }
         }
 
-        private static void SendAndWaitEmpty()
+        private static async Task SendAndWaitEmpty()
         {
             int timeoutMs = Inputty.GetInteger("Timeout (milliseconds):", 5000, true, false);
 
@@ -346,7 +325,7 @@ namespace TestClientStream
 
             try
             {
-                SyncResponse resp = client.SendAndWait(timeoutMs, "");
+                SyncResponse resp = await client.SendAndWaitAsync(timeoutMs, "");
                 if (resp.Metadata != null && resp.Metadata.Count > 0)
                 {
                     Console.WriteLine("Metadata:");

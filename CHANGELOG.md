@@ -2,13 +2,23 @@
 
 ## Current Version
 
+v6.0.x
+
+- Remove unsupported frameworks
+- Async version of ```SyncMessageReceived``` callback
+- Moving usings inside namespace
+- Remove obsolete methods
+- Mark non-async APIs obsolete 
+- Modified test projects to use async
+- Ensured background tasks honored cancellation tokens
+
+## Previous Versions
+
 v5.1.x
 
 - Strong name signing
 - Better exception logging
 - Set ```Settings.NoDelay``` to ```true``` by default (disabling Nagle's algorithm)
-
-## Previous Versions
 
 v5.0.x
 

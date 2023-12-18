@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+
     /// <summary>
     /// WatsonTcp keepalive settings.  WatsonTcp does not implement keepalives, rather, it relies on the underlying implementation in the operating system and runtime.
     /// Keepalive probes are sent after an idle period defined by TcpKeepAliveTime (seconds).

@@ -27,11 +27,15 @@ Special thanks to the following people for their support and contributions to th
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
-## New in v5.1.x
+## New in v6.0.x
 
-- Strong name signing
-- Better exception logging
-- Set ```Settings.NoDelay``` to ```true``` by default (disabling Nagle's algorithm)
+- Remove unsupported frameworks
+- Async version of ```SyncMessageReceived``` callback
+- Moving usings inside namespace
+- Remove obsolete methods
+- Mark non-async APIs obsolete 
+- Modified test projects to use async
+- Ensured background tasks honored cancellation tokens
 
 ## Test Applications
 
@@ -105,7 +109,7 @@ static void Main(string[] args)
     server.Events.ClientConnected += ClientConnected;
     server.Events.ClientDisconnected += ClientDisconnected;
     server.Events.MessageReceived += MessageReceived; 
-    server.Callbacks.SyncRequestReceived = SyncRequestReceived;
+    server.Callbacks.SyncRequestReceivedAsync = SyncRequestReceived;
     server.Start();
 
     // list clients
@@ -125,7 +129,11 @@ static void Main(string[] args)
     // send and wait for a response
     try
     {
-        SyncResponse resp = server.SendAndWait([guid], 5000, "Hey, say hello back within 5 seconds!");
+        SyncResponse resp = server.SendAndWait(
+            [guid], 
+            5000, 
+            "Hey, say hello back within 5 seconds!");
+
         Console.WriteLine("My friend says: " + Encoding.UTF8.GetString(resp.Data));
     }
     catch (TimeoutException)
@@ -141,15 +149,23 @@ static void ClientConnected(object sender, ConnectionEventArgs args)
 
 static void ClientDisconnected(object sender, DisconnectionEventArgs args)
 {
-    Console.WriteLine("Client disconnected: " + args.Client.ToString() + ": " + args.Reason.ToString());
+    Console.WriteLine(
+        "Client disconnected: " 
+        + args.Client.ToString() 
+        + ": " 
+        + args.Reason.ToString());
 }
 
 static void MessageReceived(object sender, MessageReceivedEventArgs args)
 {
-    Console.WriteLine("Message from " + args.Client.ToString() + ": " + Encoding.UTF8.GetString(args.Data));
+    Console.WriteLine(
+        "Message from " 
+        + args.Client.ToString() 
+        + ": " 
+        + Encoding.UTF8.GetString(args.Data));
 }
 
-static SyncResponse SyncRequestReceived(SyncRequest req)
+static async Task<SyncResponse> SyncRequestReceived(SyncRequest req)
 {
     return new SyncResponse(req, "Hello back at you!");
 }
@@ -165,7 +181,7 @@ static void Main(string[] args)
     client.Events.ServerConnected += ServerConnected;
     client.Events.ServerDisconnected += ServerDisconnected;
     client.Events.MessageReceived += MessageReceived; 
-    client.Callbacks.SyncRequestReceived = SyncRequestReceived;
+    client.Callbacks.SyncRequestReceivedAsync = SyncRequestReceived;
     client.Connect();
 
     // check connectivity
@@ -185,7 +201,10 @@ static void Main(string[] args)
     // send and wait for a response
     try
     {
-        SyncResponse resp = client.SendAndWait(5000, "Hey, say hello back within 5 seconds!");
+        SyncResponse resp = client.SendAndWait(
+            5000, 
+            "Hey, say hello back within 5 seconds!");
+
         Console.WriteLine("My friend says: " + Encoding.UTF8.GetString(resp.Data));
     }
     catch (TimeoutException)
@@ -209,7 +228,7 @@ static void ServerDisconnected(object sender, DisconnectionEventArgs args)
     Console.WriteLine("Server disconnected");
 }
 
-static SyncResponse SyncRequestReceived(SyncRequest req)
+static async Task<SyncResponse> SyncRequestReceived(SyncRequest req)
 {
     return new SyncResponse(req, "Hello back at you!");
 }
@@ -262,7 +281,11 @@ static void StreamReceived(object sender, StreamReceivedEventArgs args)
         }
     }
 
-    Console.WriteLine("Stream received from " + args.Client.ToString() + ": " + Encoding.UTF8.GetString(ms.ToArray())); 
+    Console.WriteLine(
+        "Stream received from " 
+        + args.Client.ToString() 
+        + ": " 
+        + Encoding.UTF8.GetString(ms.ToArray())); 
 }
 
 // client

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using WatsonTcp;
 
 namespace TestPartialStream
@@ -39,7 +40,7 @@ namespace TestPartialStream
         {
             WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9001);
 
-            client.Events.ServerConnected += (sender, args) =>
+            client.Events.ServerConnected += async (sender, args) => 
             {
                 Console.WriteLine("Client: connected to server. Will send a message...");
 
@@ -47,8 +48,9 @@ namespace TestPartialStream
                 var buffer = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
                 using (var stream = new MemoryStream(buffer))
-                    client.Send(contentLength: 5, stream); //    <-- will disconnect unless you use 10
-
+                {
+                    await client.SendAsync(5, stream); //    <-- will disconnect unless you use 10
+                }
             };
 
             client.Events.ServerDisconnected += (sender, args) =>

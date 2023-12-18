@@ -13,7 +13,7 @@ namespace Test.Deadlock
         static WatsonTcpClient _Client = null;
         static Guid _ClientGuid = Guid.Empty;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             using (_Server = new WatsonTcpServer(_ServerHostname, _ServerPort))
             {
@@ -34,11 +34,7 @@ namespace Test.Deadlock
                     Console.WriteLine("Server received message from client " + e.Client.ToString() + ": " + Encoding.UTF8.GetString(e.Data));
                 };
 
-                _Server.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
-                {
-                    Console.WriteLine("Server received sync message from client " + req.Client.ToString() + ": " + Encoding.UTF8.GetString(req.Data));
-                    return new SyncResponse(req, "Here's your response from the server!");
-                };
+                _Server.Callbacks.SyncRequestReceivedAsync = ServerSyncRequestReceived;
 
                 _Server.Settings.Logger = ServerLogger;
                 _Server.Start();
@@ -60,23 +56,35 @@ namespace Test.Deadlock
                         Console.WriteLine("Client received message from server: " + Encoding.UTF8.GetString(e.Data));
                     };
 
-                    _Client.Callbacks.SyncRequestReceived = delegate (SyncRequest req)
-                    {
-                        Console.WriteLine("Client received sync message from server: " + Encoding.UTF8.GetString(req.Data));
-                        return new SyncResponse(req, "Here's your response from the client!");
-                    };
+                    _Client.Callbacks.SyncRequestReceivedAsync = ClientSyncRequestReceived;
 
                     _Client.Settings.Logger = ClientLogger;
                     _Client.Connect();
 
                     while (true)
                     {
-                        Task.Delay(5000).Wait();
-                        Task.Run(() => ServerTask());
-                        Task.Run(() => ClientTask());
+                        await Task.Delay(5000);
+                        await Task.Run(() => ServerTask());
+                        await Task.Run(() => ClientTask());
                     }
                 }
             }
+        }
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        static async Task<SyncResponse> ServerSyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        {
+            Console.WriteLine("Server received sync message from client " + req.Client.ToString() + ": " + Encoding.UTF8.GetString(req.Data));
+            return new SyncResponse(req, "Here's your response from the server!");
+        }
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        static async Task<SyncResponse> ClientSyncRequestReceived(SyncRequest req)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+        {
+            Console.WriteLine("Client received sync message from server: " + Encoding.UTF8.GetString(req.Data));
+            return new SyncResponse(req, "Here's your response from the client!");
         }
 
         static void ServerLogger(Severity sev, string msg)
@@ -89,11 +97,11 @@ namespace Test.Deadlock
             Console.WriteLine("[Client] [" + sev.ToString().PadRight(9) + "] " + msg);
         }
 
-        static void ServerTask()
+        static async Task ServerTask()
         {
             try
             {
-                SyncResponse resp = _Server.SendAndWait(5000, _ClientGuid, "Here's your request from the server!");
+                SyncResponse resp = await _Server.SendAndWaitAsync(5000, _ClientGuid, "Here's your request from the server!");
                 if (resp == null)
                 {
                     Console.WriteLine("Server did not receive response from client");
@@ -109,11 +117,11 @@ namespace Test.Deadlock
             }
         }
 
-        static void ClientTask()
+        static async Task ClientTask()
         {
             try
             {
-                SyncResponse resp = _Client.SendAndWait(5000, "Here's your request from the client!");
+                SyncResponse resp = await _Client.SendAndWaitAsync(5000, "Here's your request from the client!");
                 if (resp == null)
                 {
                     Console.WriteLine("Client did not receive response from server");

@@ -21,7 +21,7 @@ namespace Test.MaxConnections
         private static bool _AcceptInvalidCertificates = true;
         private static bool _MutuallyAuthenticate = true;
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             _ServerHostname = Inputty.GetString("Server IP:", "127.0.0.1", false);
             _ServerPort = Inputty.GetInteger("Server port:", 9000, true, false);
@@ -84,8 +84,6 @@ namespace Test.MaxConnections
                         Console.WriteLine("  dispose        dispose of the connection");
                         Console.WriteLine("  send           send message to client");
                         Console.WriteLine("  send md        send message with metadata to client");
-                        Console.WriteLine("  sendasync      send message to a client asynchronously");
-                        Console.WriteLine("  sendasync md   send message with metadata to a client asynchronously");
                         Console.WriteLine("  remove         disconnect client");
                         Console.WriteLine("  psk            set preshared key");
                         Console.WriteLine("  stats          display server statistics");
@@ -133,7 +131,7 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = _Server.Send(Guid.Parse(guid), userInput);
+                        success = await _Server.SendAsync(Guid.Parse(guid), userInput);
                         Console.WriteLine(success);
                         break;
 
@@ -145,37 +143,14 @@ namespace Test.MaxConnections
                         Console.Write("Data: ");
                         userInput = Console.ReadLine();
                         if (String.IsNullOrEmpty(userInput)) break;
-                        success = _Server.Send(Guid.Parse(guid), Encoding.UTF8.GetBytes(userInput), metadata);
-                        Console.WriteLine(success);
-                        break;
-
-                    case "sendasync":
-                        Console.Write("GUID: ");
-                        guid = Console.ReadLine();
-                        if (String.IsNullOrEmpty(guid)) break;
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        success = _Server.SendAsync(Guid.Parse(guid), Encoding.UTF8.GetBytes(userInput)).Result;
-                        Console.WriteLine(success);
-                        break;
-
-                    case "sendasync md":
-                        Console.Write("GUID: ");
-                        guid = Console.ReadLine();
-                        if (String.IsNullOrEmpty(guid)) break;
-                        metadata = Inputty.GetDictionary<string, object>("Key  :", "Value:");;
-                        Console.Write("Data: ");
-                        userInput = Console.ReadLine();
-                        if (String.IsNullOrEmpty(userInput)) break;
-                        success = _Server.SendAsync(Guid.Parse(guid), Encoding.UTF8.GetBytes(userInput), metadata).Result;
+                        success = await _Server.SendAsync(Guid.Parse(guid), Encoding.UTF8.GetBytes(userInput), metadata);
                         Console.WriteLine(success);
                         break;
 
                     case "remove":
                         Console.Write("GUID: ");
                         guid = Console.ReadLine();
-                        _Server.DisconnectClient(Guid.Parse(guid));
+                        await _Server.DisconnectClientAsync(Guid.Parse(guid));
                         break;
 
                     case "psk":

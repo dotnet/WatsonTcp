@@ -1,8 +1,8 @@
-﻿using System;
-using System.Security.Authentication;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.Security.Authentication;
+
     /// <summary>
     /// TLS extensions.
     /// </summary>

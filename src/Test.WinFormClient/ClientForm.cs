@@ -51,7 +51,7 @@ namespace Test.WinFormClient
 
         private void button2_Click(object sender, EventArgs e)
         {
-            _Client.Send("Hello world!");
+            _Client.SendAsync("Hello world!");
             Logger(Severity.Debug, "Sent message 'Hello world!'");
         }
 

@@ -1,9 +1,9 @@
-﻿using System;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.Net.Security;
+    using System.Security.Cryptography.X509Certificates;
+
     /// <summary>
     /// Stores the parameters for the <see cref="SslStream"/> used by servers.
     /// </summary>

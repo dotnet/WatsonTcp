@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Runtime.Serialization;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System.Text.Json.Serialization;
+    using System.Runtime.Serialization;
+
     /// <summary>
     /// Reason why a client disconnected.
     /// </summary>
