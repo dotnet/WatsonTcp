@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net48;net6.0;net7.0;net8.0</TargetFrameworks>
+		<TargetFrameworks>net462;net48;net6.0;net7.0;net8.0</TargetFrameworks>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>6.0.0</Version>
+		<Version>6.0.1</Version>
 		<Authors>Joel Christner</Authors>
 		<Company>Joel Christner</Company>
 		<Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
-		<Copyright>(c)2023 Joel Christner</Copyright>
+		<Copyright>(c)2024 Joel Christner</Copyright>
 		<PackageTags>tcp rpc ssl message messaging frame framing async api server bus queue mesh fabric</PackageTags>
-		<PackageProjectUrl>https://github.com/jchristn/WatsonTcp</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/jchristn/WatsonTcp</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/dotnet/WatsonTcp</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/dotnet/WatsonTcp</RepositoryUrl>
 		<RepositoryType>Github</RepositoryType>
 		<PackageLicenseUrl></PackageLicenseUrl>
 		<PackageReleaseNotes>Breaking changes, move towards async</PackageReleaseNotes>
