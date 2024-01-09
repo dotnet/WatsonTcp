@@ -36,6 +36,7 @@ If you'd like to contribute, please jump right into the source code and create a
 - Mark non-async APIs obsolete 
 - Modified test projects to use async
 - Ensured background tasks honored cancellation tokens
+- Ability to specify a client's GUID before attempting to connect
 
 ## Test Applications
 
@@ -316,6 +317,19 @@ static void StreamReceived(object sender, StreamReceivedEventArgs args)
 
     Console.WriteLine("Stream received from server: " + Encoding.UTF8.GetString(ms.ToArray())); 
 }
+```
+
+## Specifying a Client GUID
+
+If you wish to specify a client's GUID, you can modify ```WatsonTcpClient.Settings.Guid``` prior to calling ```WatsonTcpClient.Connect()```.
+
+```csharp
+WatsonTcpClient client = new WatsonTcpClient("127.0.0.1", 9000);
+client.Events.ServerConnected += ServerConnected;
+client.Events.ServerDisconnected += ServerDisconnected;
+client.Events.StreamReceived += StreamReceived; 
+client.Settings.Guid = Guid.Parse("12345678-1234-1234-123456781234");
+client.Connect();
 ```
 
 ## Troubleshooting

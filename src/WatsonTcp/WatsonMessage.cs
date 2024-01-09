@@ -78,18 +78,18 @@
         /// Indicates an expiration time in UTC; only applicable to synchronous requests.
         /// </summary>
         [JsonPropertyName("exp")]
-        public DateTime? ExpirationUtc { get; set; } = DateTime.UtcNow;
+        public DateTime? ExpirationUtc { get; set; } = null;
 
         /// <summary>
         /// Indicates the conversation GUID of the message. 
         /// </summary>
         [JsonPropertyName("convguid")]
-        public Guid ConversationGuid { get; set; } = Guid.NewGuid();
+        public Guid ConversationGuid { get; set; } = default(Guid);
 
         /// <summary>
         /// Sender GUID.
         /// </summary>
-        public Guid SenderGuid { get; set; } = Guid.NewGuid();
+        public Guid SenderGuid { get; set; } = default(Guid);
 
         /// <summary>
         /// Stream containing the message data.

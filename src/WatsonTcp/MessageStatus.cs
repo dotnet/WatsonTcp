@@ -63,6 +63,11 @@
         /// Timeout
         /// </summary>
         [EnumMember(Value = "Timeout")]
-        Timeout = 10
+        Timeout = 10,
+        /// <summary>
+        /// RegisterClient
+        /// </summary>
+        [EnumMember(Value = "RegisterClient")]
+        RegisterClient = 11
     }
 }

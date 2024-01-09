@@ -278,6 +278,11 @@
             Timeout
             </summary>
         </member>
+        <member name="F:WatsonTcp.MessageStatus.RegisterClient">
+            <summary>
+            RegisterClient
+            </summary>
+        </member>
         <member name="T:WatsonTcp.Mode">
             <summary>
             Mode.

@@ -443,6 +443,19 @@
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
+            if (Connected)
+            {
+                WatsonMessage msg = new WatsonMessage();
+                msg.Status = MessageStatus.RegisterClient;
+
+                if (!SendInternalAsync(msg, 0, null, default(CancellationToken)).Result)
+                {
+                    Connected = false;
+                    _Settings.Logger?.Invoke(Severity.Alert, _Header + "unable to register GUID " + _Settings.Guid + " with the server");
+                    throw new ArgumentException("Server rejected GUID " + _Settings.Guid);
+                }
+            }
+
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
 
@@ -1239,6 +1252,7 @@
 
         private async Task SendHeadersAsync(WatsonMessage msg, CancellationToken token)
         {
+            msg.SenderGuid = _Settings.Guid;
             byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg); 
             await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length, token).ConfigureAwait(false);
             await _DataStream.FlushAsync(token).ConfigureAwait(false);

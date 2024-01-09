@@ -1162,6 +1162,34 @@
             }
         }
 
+        private void UpdateClientGuid(ClientMetadata client, Guid guid)
+        {
+            Guid original = client.Guid;
+
+            DateTime dt;
+            ClientMetadata md;
+
+            if (_UnauthenticatedClients.TryRemove(original, out dt))
+                _UnauthenticatedClients.TryAdd(guid, dt);
+
+            if (_Clients.TryRemove(original, out md))
+            {
+                md.Guid = guid;
+                _Clients.TryAdd(guid, md);
+            }
+
+            if (_ClientsLastSeen.TryRemove(original, out dt))
+                _ClientsLastSeen.TryAdd(guid, dt);
+
+            if (_ClientsKicked.TryRemove(original, out dt))
+                _ClientsKicked.TryAdd(guid, dt);
+
+            if (_ClientsTimedout.TryRemove(original, out dt))
+                _ClientsTimedout.TryAdd(guid, dt);
+
+            _Settings.Logger?.Invoke(Severity.Debug, _Header + "updated client GUID from " + original + " to " + client.Guid);
+        }
+
         #endregion
 
         #region Read
@@ -1237,6 +1265,12 @@
                     {
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "sent disconnect notice to " + client.ToString());
                         break;
+                    }
+                    else if (msg.Status == MessageStatus.RegisterClient)
+                    {
+                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "client " + client.ToString() + " attempting to register GUID " + msg.SenderGuid.ToString());
+                        UpdateClientGuid(client, msg.SenderGuid);
+                        continue;
                     }
                      
                     if (msg.SyncRequest)
