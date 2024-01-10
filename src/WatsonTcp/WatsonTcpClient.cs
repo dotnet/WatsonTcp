@@ -529,16 +529,6 @@
         /// Send a pre-shared key to the server to authenticate.
         /// </summary>
         /// <param name="presharedKey">Up to 16-character string.</param>
-        [Obsolete("Please migrate to async methods.")]
-        public void Authenticate(string presharedKey)
-        {
-            AuthenticateAsync(presharedKey).Wait();
-        }
-
-        /// <summary>
-        /// Send a pre-shared key to the server to authenticate.
-        /// </summary>
-        /// <param name="presharedKey">Up to 16-character string.</param>
         /// <param name="token">Cancellation token to cancel the request.</param>
         public async Task AuthenticateAsync(string presharedKey, CancellationToken token = default)
         {
@@ -550,54 +540,6 @@
             msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
             await SendInternalAsync(msg, 0, null, token);
         }
-
-        #region Send
-
-        /// <summary>
-        /// Send data and metadata to the server.
-        /// </summary>
-        /// <param name="data">String containing data.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public bool Send(string data, Dictionary<string, object> metadata = null)
-        {
-            if (String.IsNullOrEmpty(data)) return Send(Array.Empty<byte>(), metadata);
-            else return Send(Encoding.UTF8.GetBytes(data), metadata);
-        }
-
-        /// <summary>
-        /// Send data and metadata to the server.
-        /// </summary>
-        /// <param name="data">Byte array containing data.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <param name="start">Start position within the supplied array.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public bool Send(byte[] data, Dictionary<string, object> metadata = null, int start = 0)
-        {
-            if (data == null) data = Array.Empty<byte>();
-            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
-            return Send(contentLength, stream, metadata);
-        }
-
-        /// <summary>
-        /// Send data and metadata to the server using a stream.
-        /// </summary>
-        /// <param name="contentLength">The number of bytes in the stream.</param>
-        /// <param name="stream">The stream containing the data.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public bool Send(long contentLength, Stream stream, Dictionary<string, object> metadata = null)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
-            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
-            return SendInternalAsync(msg, contentLength, stream, default(CancellationToken)).Result;
-        }
-
-        #endregion
 
         #region SendAsync
 
@@ -646,61 +588,6 @@
             if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return await SendInternalAsync(msg, contentLength, stream, token).ConfigureAwait(false);
-        }
-
-        #endregion
-
-        #region SendAndWait
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="data">Data to send.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <returns>SyncResponse.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public SyncResponse SendAndWait(int timeoutMs, string data, Dictionary<string, object> metadata = null)
-        {
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (String.IsNullOrEmpty(data)) return SendAndWait(timeoutMs, Array.Empty<byte>(), metadata);
-            return SendAndWait(timeoutMs, Encoding.UTF8.GetBytes(data), metadata); 
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="data">Data to send.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <param name="start">Start position within the supplied array.</param>
-        /// <returns>SyncResponse.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public SyncResponse SendAndWait(int timeoutMs, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
-        {
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (data == null) data = Array.Empty<byte>();
-            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
-            return SendAndWait(timeoutMs, contentLength, stream, metadata);
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="contentLength">The number of bytes to send from the supplied stream.</param>
-        /// <param name="stream">Stream containing data.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <returns>SyncResponse.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public SyncResponse SendAndWait(int timeoutMs, long contentLength, Stream stream, Dictionary<string, object> metadata = null)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
-            DateTime expiration = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, true, false, expiration, metadata);
-            return SendAndWaitInternalAsync(msg, timeoutMs, contentLength, stream, default(CancellationToken)).Result;
         }
 
         #endregion

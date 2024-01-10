@@ -374,7 +374,7 @@ namespace WatsonTcp
             }
         }
 
-        internal void UpdateClientTimedout(Guid guid, DateTime dt)
+        internal void UpdateClientTimeout(Guid guid, DateTime dt)
         {
             lock (_ClientsTimedoutLock)
             {

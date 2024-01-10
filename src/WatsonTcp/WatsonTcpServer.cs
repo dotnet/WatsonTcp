@@ -401,65 +401,6 @@
             }
         }
 
-        #region Send
-
-        /// <summary>
-        /// Send data to the specified client.
-        /// </summary>
-        /// <param name="guid">Globally-unique identifier of the client.</param>
-        /// <param name="data">String containing data.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public bool Send(Guid guid, string data, Dictionary<string, object> metadata = null)
-        {
-            byte[] bytes = Array.Empty<byte>();
-            if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
-            return Send(guid, bytes, metadata);
-        }
-
-        /// <summary>
-        /// Send data and metadata to the specified client.
-        /// </summary>
-        /// <param name="guid">Globally-unique identifier of the client.</param>
-        /// <param name="data">Byte array containing data.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <param name="start">Start position within the supplied array.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public bool Send(Guid guid, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
-        {
-            if (data == null) data = Array.Empty<byte>();
-            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
-            return Send(guid, contentLength, stream, metadata);
-        }
-
-        /// <summary>
-        /// Send data and metadata to the specified client using a stream.
-        /// </summary>
-        /// <param name="guid">Globally-unique identifier of the client.</param>
-        /// <param name="contentLength">The number of bytes in the stream.</param>
-        /// <param name="stream">The stream containing the data.</param>
-        /// <param name="metadata">Dictionary containing metadata.</param>
-        /// <returns>Boolean indicating if the message was sent successfully.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public bool Send(Guid guid, long contentLength, Stream stream, Dictionary<string, object> metadata = null)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            ClientMetadata client = _ClientManager.GetClient(guid);
-            if (client == null)
-            {
-                _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
-                throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
-            }
-
-            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
-            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
-            return SendInternalAsync(client, msg, contentLength, stream, default(CancellationToken)).Result;
-        }
-
-        #endregion
-
         #region SendAsync
 
         /// <summary>
@@ -517,69 +458,6 @@
             if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, metadata);
             return await SendInternalAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
-        }
-
-        #endregion
-
-        #region SendAndWait
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="guid">Globally-unique identifier of the client.</param>
-        /// <param name="data">Data to send.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <returns>SyncResponse.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public SyncResponse SendAndWait(int timeoutMs, Guid guid, string data, Dictionary<string, object> metadata = null)
-        {
-            byte[] bytes = Array.Empty<byte>();
-            if (!String.IsNullOrEmpty(data)) bytes = Encoding.UTF8.GetBytes(data);
-            return SendAndWait(timeoutMs, guid, bytes, metadata);
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="guid">Globally-unique identifier of the client.</param>
-        /// <param name="data">Data to send.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <param name="start">Start position within the supplied array.</param>
-        /// <returns>SyncResponse.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public SyncResponse SendAndWait(int timeoutMs, Guid guid, byte[] data, Dictionary<string, object> metadata = null, int start = 0)
-        {
-            if (data == null) data = Array.Empty<byte>();
-            WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
-            return SendAndWait(timeoutMs, guid, contentLength, stream, metadata);
-        }
-
-        /// <summary>
-        /// Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-        /// </summary>
-        /// <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-        /// <param name="guid">Globally-unique identifier of the client.</param>
-        /// <param name="contentLength">The number of bytes to send from the supplied stream.</param>
-        /// <param name="stream">Stream containing data.</param>
-        /// <param name="metadata">Metadata dictionary to attach to the message.</param>
-        /// <returns>SyncResponse.</returns>
-        [Obsolete("Please migrate to async methods.")]
-        public SyncResponse SendAndWait(int timeoutMs, Guid guid, long contentLength, Stream stream, Dictionary<string, object> metadata = null)
-        {
-            if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            ClientMetadata client = _ClientManager.GetClient(guid);
-            if (client == null)
-            {
-                _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
-                throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
-            }
-            if (stream == null) stream = new MemoryStream(Array.Empty<byte>());
-            DateTime expiration = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, true, false, expiration, metadata);
-            return SendAndWaitInternalAsync(client, msg, timeoutMs, contentLength, stream, default(CancellationToken)).Result;
         }
 
         #endregion
@@ -681,37 +559,6 @@
         /// <param name="guid">Globally-unique identifier of the client.</param>
         /// <param name="status">Reason for the disconnect.  This is conveyed to the client.</param>
         /// <param name="sendNotice">Flag to indicate whether the client should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
-        [Obsolete("Please migrate to async methods.")]
-        public void DisconnectClient(Guid guid, MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
-        {
-            ClientMetadata client = _ClientManager.GetClient(guid);
-            if (client == null)
-            {
-                _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
-            }
-            else
-            {
-                if (!_ClientManager.ExistsClientTimedout(guid)) _ClientManager.AddClientKicked(guid); 
-
-                if (sendNotice)
-                {
-                    WatsonMessage removeMsg = new WatsonMessage();
-                    removeMsg.Status = status;
-                    SendInternalAsync(client, removeMsg, 0, null, default(CancellationToken)).Wait();
-                }
-
-                client.Dispose();
-
-                _ClientManager.RemoveClient(guid);
-            }
-        }
-
-        /// <summary>
-        /// Disconnects the specified client.
-        /// </summary>
-        /// <param name="guid">Globally-unique identifier of the client.</param>
-        /// <param name="status">Reason for the disconnect.  This is conveyed to the client.</param>
-        /// <param name="sendNotice">Flag to indicate whether the client should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
         /// <param name="token">Cancellation token to cancel the request.</param>
         public async Task DisconnectClientAsync(Guid guid, MessageStatus status = MessageStatus.Removed, bool sendNotice = true, CancellationToken token = default)
         {
@@ -733,24 +580,6 @@
 
                 client.Dispose();
                 _ClientManager.RemoveClient(guid);
-            }
-        }
-
-        /// <summary>
-        /// Disconnects all connected clients.
-        /// </summary>
-        /// <param name="status">Reason for the disconnect.  This is conveyed to each client.</param>
-        /// <param name="sendNotice">Flag to indicate whether the client should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
-        [Obsolete("Please migrate to async methods.")]
-        public void DisconnectClients(MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
-        {
-            Dictionary<Guid, ClientMetadata> clients = _ClientManager.AllClients();
-            if (clients != null && clients.Count > 0)
-            {
-                foreach (KeyValuePair<Guid, ClientMetadata> client in clients)
-                {
-                    DisconnectClient(client.Key, status, sendNotice);
-                }
             }
         }
 

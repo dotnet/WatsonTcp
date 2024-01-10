@@ -37,6 +37,7 @@ If you'd like to contribute, please jump right into the source code and create a
 - Modified test projects to use async
 - Ensured background tasks honored cancellation tokens
 - Ability to specify a client's GUID before attempting to connect
+- Remove obsolete methods
 
 ## Test Applications
 
@@ -117,20 +118,17 @@ static void Main(string[] args)
     IEnumerable<ClientMetadata> clients = server.ListClients();
 
     // send a message
-    server.Send([guid], "Hello, client!");
+    await server.SendAsync([guid], "Hello, client!");
 
     // send a message with metadata
     Dictionary<string, object> md = new Dictionary<string, object>();
     md.Add("foo", "bar");
-    server.Send([guid], "Hello, client!  Here's some metadata!", md);
-
-    // send async!
-    await server.SendAsync([guid], "Hello, client!  I'm async!");
+    await server.SendAsync([guid], "Hello, client!  Here's some metadata!", md);
 
     // send and wait for a response
     try
     {
-        SyncResponse resp = server.SendAndWait(
+        SyncResponse resp = await server.SendAndWaitAsync(
             [guid], 
             5000, 
             "Hey, say hello back within 5 seconds!");
@@ -194,15 +192,12 @@ static void Main(string[] args)
     // send a message with metadata
     Dictionary<string, object> md = new Dictionary<string, object>();
     md.Add("foo", "bar");
-    client.Send("Hello, client!  Here's some metadata!", md);
-
-    // send async!
-    await client.SendAsync("Hello, client!  I'm async!");
+    await client.SendAsync("Hello, client!  Here's some metadata!", md);
 
     // send and wait for a response
     try
     {
-        SyncResponse resp = client.SendAndWait(
+        SyncResponse resp = await client.SendAndWaitAsync(
             5000, 
             "Hey, say hello back within 5 seconds!");
 
