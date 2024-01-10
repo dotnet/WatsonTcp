@@ -76,6 +76,17 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="M:WatsonTcp.ClientMetadataManager.Dispose">
+            <summary>
+            Dispose.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ClientMetadataManager.Dispose(System.Boolean)">
+            <summary>
+            Dispose.
+            </summary>
+            <param name="disposing">Indicate if resources should be disposed.</param>
+        </member>
         <member name="T:WatsonTcp.ConnectionEventArgs">
             <summary>
             Event arguments for when a connection is established.

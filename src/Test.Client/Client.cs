@@ -216,7 +216,7 @@ namespace TestClient
         private static void ExceptionEncountered(object sender, ExceptionEventArgs e)
         {
             Console.WriteLine("*** Exception ***");
-            Console.WriteLine(e.ToString());
+            Console.WriteLine(e.Exception.ToString());
         }
 
         private static string AuthenticationRequested()
@@ -246,11 +246,7 @@ namespace TestClient
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
-            if (args.Metadata == null)
-            {
-                Console.WriteLine("Metadata: (null)");
-            }
-            else
+            if (args.Metadata != null)
             {
                 Console.Write("Metadata: ");
                 if (args.Metadata.Count < 1)

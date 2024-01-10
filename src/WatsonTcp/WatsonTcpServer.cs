@@ -10,6 +10,7 @@
     using System.Net.Security;
     using System.Net.Sockets;
     using System.Runtime.InteropServices;
+    using System.Security.AccessControl;
     using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Threading;
@@ -164,6 +165,7 @@
         private WatsonTcpStatistics _Statistics = new WatsonTcpStatistics();
         private WatsonTcpKeepaliveSettings _Keepalive = new WatsonTcpKeepaliveSettings();
         private WatsonTcpServerSslConfiguration _SslConfiguration = new WatsonTcpServerSslConfiguration();
+        private ClientMetadataManager _ClientManager = new ClientMetadataManager();
         private ISerializationHelper _SerializationHelper = new DefaultSerializationHelper();
 
         private int _Connections = 0;
@@ -177,12 +179,6 @@
         private TcpListener _Listener;
 
         private X509Certificate2 _SslCertificate;
-
-        private ConcurrentDictionary<Guid, DateTime> _UnauthenticatedClients = new ConcurrentDictionary<Guid, DateTime>();
-        private ConcurrentDictionary<Guid, ClientMetadata> _Clients = new ConcurrentDictionary<Guid, ClientMetadata>();
-        private ConcurrentDictionary<Guid, DateTime> _ClientsLastSeen = new ConcurrentDictionary<Guid, DateTime>();
-        private ConcurrentDictionary<Guid, DateTime> _ClientsKicked = new ConcurrentDictionary<Guid, DateTime>();
-        private ConcurrentDictionary<Guid, DateTime> _ClientsTimedout = new ConcurrentDictionary<Guid, DateTime>(); 
 
         private CancellationTokenSource _TokenSource = new CancellationTokenSource();
         private CancellationToken _Token;
@@ -354,12 +350,7 @@
         {
             if (_IsListening) throw new InvalidOperationException("WatsonTcpServer is already running.");
 
-            if (_UnauthenticatedClients == null) _UnauthenticatedClients = new ConcurrentDictionary<Guid, DateTime>();
-            if (_Clients == null) _Clients = new ConcurrentDictionary<Guid, ClientMetadata>();
-            if (_ClientsLastSeen == null) _ClientsLastSeen = new ConcurrentDictionary<Guid, DateTime>();
-            if (_ClientsKicked == null) _ClientsKicked = new ConcurrentDictionary<Guid, DateTime>();
-            if (_ClientsTimedout == null) _ClientsTimedout = new ConcurrentDictionary<Guid, DateTime>();
-
+            _ClientManager = new ClientMetadataManager();
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
             _Statistics = new WatsonTcpStatistics();
@@ -455,8 +446,8 @@
         public bool Send(Guid guid, long contentLength, Stream stream, Dictionary<string, object> metadata = null)
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
-            ClientMetadata client = _Clients.FirstOrDefault(p => p.Key.Equals(guid)).Value;
-            if (client == default(ClientMetadata))
+            ClientMetadata client = _ClientManager.GetClient(guid);
+            if (client == null)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
                 throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
@@ -516,8 +507,8 @@
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (token == default(CancellationToken)) token = _Token;
-            ClientMetadata client = _Clients.FirstOrDefault(p => p.Key.Equals(guid)).Value;
-            if (client == default(ClientMetadata))
+            ClientMetadata client = _ClientManager.GetClient(guid);
+            if (client == null)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
                 throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
@@ -579,8 +570,8 @@
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            ClientMetadata client = _Clients.FirstOrDefault(p => p.Key == guid).Value;
-            if (client == default(ClientMetadata))
+            ClientMetadata client = _ClientManager.GetClient(guid);
+            if (client == null)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
                 throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
@@ -644,8 +635,8 @@
         {
             if (contentLength < 0) throw new ArgumentException("Content length must be zero or greater.");
             if (timeoutMs < 1000) throw new ArgumentException("Timeout milliseconds must be 1000 or greater.");
-            ClientMetadata client = _Clients.FirstOrDefault(p => p.Key == guid).Value;
-            if (client == default(ClientMetadata))
+            ClientMetadata client = _ClientManager.GetClient(guid);
+            if (client == null)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
                 throw new KeyNotFoundException("Unable to find client " + guid.ToString() + ".");
@@ -665,7 +656,7 @@
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
         public bool IsClientConnected(Guid guid)
         {
-            return _Clients.Any(p => p.Key.Equals(guid));
+            return _ClientManager.ExistsClient(guid);
         }
 
         /// <summary>
@@ -674,7 +665,14 @@
         /// <returns>An enumerable collection of client metadata.</returns>
         public IEnumerable<ClientMetadata> ListClients()
         {
-            return _Clients.Values.ToList();
+            Dictionary<Guid, ClientMetadata> clients = _ClientManager.AllClients();
+            if (clients != null && clients.Count > 0)
+            {
+                foreach (KeyValuePair<Guid, ClientMetadata> client in clients)
+                {
+                    yield return client.Value;
+                }
+            }
         }
 
         /// <summary>
@@ -686,14 +684,14 @@
         [Obsolete("Please migrate to async methods.")]
         public void DisconnectClient(Guid guid, MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
         {
-            ClientMetadata client = _Clients.FirstOrDefault(p => p.Key.Equals(guid)).Value;
-            if (client == default(ClientMetadata))
+            ClientMetadata client = _ClientManager.GetClient(guid);
+            if (client == null)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
             }
             else
             {
-                if (!_ClientsTimedout.ContainsKey(guid)) _ClientsKicked.TryAdd(guid, DateTime.UtcNow);
+                if (!_ClientManager.ExistsClientTimedout(guid)) _ClientManager.AddClientKicked(guid); 
 
                 if (sendNotice)
                 {
@@ -703,7 +701,8 @@
                 }
 
                 client.Dispose();
-                _Clients.TryRemove(guid, out _);
+
+                _ClientManager.RemoveClient(guid);
             }
         }
 
@@ -716,14 +715,14 @@
         /// <param name="token">Cancellation token to cancel the request.</param>
         public async Task DisconnectClientAsync(Guid guid, MessageStatus status = MessageStatus.Removed, bool sendNotice = true, CancellationToken token = default)
         {
-            ClientMetadata client = _Clients.FirstOrDefault(p => p.Key.Equals(guid)).Value;
-            if (client == default(ClientMetadata))
+            ClientMetadata client = _ClientManager.GetClient(guid);
+            if (client == null)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
             }
             else
             {
-                if (!_ClientsTimedout.ContainsKey(guid)) _ClientsKicked.TryAdd(guid, DateTime.UtcNow);
+                if (!_ClientManager.ExistsClientTimedout(guid)) _ClientManager.AddClientKicked(guid);
 
                 if (sendNotice)
                 {
@@ -733,7 +732,7 @@
                 }
 
                 client.Dispose();
-                _Clients.TryRemove(guid, out _);
+                _ClientManager.RemoveClient(guid);
             }
         }
 
@@ -745,9 +744,10 @@
         [Obsolete("Please migrate to async methods.")]
         public void DisconnectClients(MessageStatus status = MessageStatus.Removed, bool sendNotice = true)
         {
-            if (_Clients != null && _Clients.Count > 0)
+            Dictionary<Guid, ClientMetadata> clients = _ClientManager.AllClients();
+            if (clients != null && clients.Count > 0)
             {
-                foreach (KeyValuePair<Guid, ClientMetadata> client in _Clients)
+                foreach (KeyValuePair<Guid, ClientMetadata> client in clients)
                 {
                     DisconnectClient(client.Key, status, sendNotice);
                 }
@@ -762,9 +762,10 @@
         /// <param name="token">Cancellation token to cancel the request.</param>
         public async Task DisconnectClientsAsync(MessageStatus status = MessageStatus.Removed, bool sendNotice = true, CancellationToken token = default)
         {
-            if (_Clients != null && _Clients.Count > 0)
+            Dictionary<Guid, ClientMetadata> clients = _ClientManager.AllClients();
+            if (clients != null && clients.Count > 0)
             {
-                foreach (KeyValuePair<Guid, ClientMetadata> client in _Clients)
+                foreach (KeyValuePair<Guid, ClientMetadata> client in clients)
                 {
                     await DisconnectClientAsync(client.Key, status, sendNotice, token).ConfigureAwait(false);
                 }
@@ -804,6 +805,11 @@
                     _SslCertificate.Dispose();
                 }
 
+                if (_ClientManager != null)
+                {
+                    _ClientManager.Dispose();
+                }
+
                 _Settings = null;
                 _Events = null;
                 _Callbacks = null;
@@ -816,12 +822,6 @@
                 _Listener = null;
 
                 _SslCertificate = null;
-
-                _UnauthenticatedClients = null;
-                _Clients = null;
-                _ClientsLastSeen = null;
-                _ClientsKicked = null;
-                _ClientsTimedout = null;
 
                 _TokenSource = null;
 
@@ -926,8 +926,8 @@
                     ClientMetadata client = new ClientMetadata(tcpClient);
                     client.SendBuffer = new byte[_Settings.StreamBufferSize];
 
-                    _Clients.TryAdd(client.Guid, client);
-                    _ClientsLastSeen.TryAdd(client.Guid, DateTime.UtcNow);
+                    _ClientManager.AddClient(client.Guid, client);
+                    _ClientManager.AddClientLastSeen(client.Guid);
 
                     CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_Token, client.Token);
 
@@ -973,8 +973,8 @@
                             }
                             else
                             {
-                                _Clients.TryRemove(client.Guid, out _);
-                                _ClientsLastSeen.TryRemove(client.Guid, out _);
+                                _ClientManager.RemoveClient(client.Guid);
+                                _ClientManager.RemoveClientLastSeen(client.Guid);
 
                                 client.Dispose();
                             }
@@ -1059,7 +1059,7 @@
             if (!String.IsNullOrEmpty(_Settings.PresharedKey))
             {
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "requesting authentication material from " + client.ToString());
-                _UnauthenticatedClients.TryAdd(client.Guid, DateTime.UtcNow);
+                _ClientManager.AddUnauthenticatedClient(client.Guid);
 
                 byte[] data = Encoding.UTF8.GetBytes("Authentication required");
                 WatsonMessage authMsg = new WatsonMessage();
@@ -1073,7 +1073,6 @@
 
             _Settings.Logger?.Invoke(Severity.Debug, _Header + "starting data receiver for " + client.ToString());
             client.DataReceiver = Task.Run(() => DataReceiver(client, token), token);
-            _Events.HandleClientConnected(this, new ConnectionEventArgs(client));
 
             #endregion 
         }
@@ -1162,34 +1161,6 @@
             }
         }
 
-        private void UpdateClientGuid(ClientMetadata client, Guid guid)
-        {
-            Guid original = client.Guid;
-
-            DateTime dt;
-            ClientMetadata md;
-
-            if (_UnauthenticatedClients.TryRemove(original, out dt))
-                _UnauthenticatedClients.TryAdd(guid, dt);
-
-            if (_Clients.TryRemove(original, out md))
-            {
-                md.Guid = guid;
-                _Clients.TryAdd(guid, md);
-            }
-
-            if (_ClientsLastSeen.TryRemove(original, out dt))
-                _ClientsLastSeen.TryAdd(guid, dt);
-
-            if (_ClientsKicked.TryRemove(original, out dt))
-                _ClientsKicked.TryAdd(guid, dt);
-
-            if (_ClientsTimedout.TryRemove(original, out dt))
-                _ClientsTimedout.TryAdd(guid, dt);
-
-            _Settings.Logger?.Invoke(Severity.Debug, _Header + "updated client GUID from " + original + " to " + client.Guid);
-        }
-
         #endregion
 
         #region Read
@@ -1213,7 +1184,7 @@
                      
                     if (!String.IsNullOrEmpty(_Settings.PresharedKey))
                     {
-                        if (_UnauthenticatedClients.ContainsKey(client.Guid))
+                        if (_ClientManager.ExistsUnauthenticatedClient(client.Guid))
                         {
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "message received from unauthenticated endpoint " + client.ToString());
 
@@ -1231,8 +1202,9 @@
                                     if (_Settings.PresharedKey.Trim().Equals(clientPsk))
                                     {
                                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "accepted authentication for " + client.ToString());
-                                        _UnauthenticatedClients.TryRemove(client.Guid, out _);
+                                        _ClientManager.RemoveUnauthenticatedClient(client.Guid);
                                         _Events.HandleAuthenticationSucceeded(this, new AuthenticationSucceededEventArgs(client));
+
                                         data = Encoding.UTF8.GetBytes("Authentication successful");
                                         WatsonCommon.BytesToStream(data, 0, out contentLength, out authStream);
                                         authMsg = _MessageBuilder.ConstructNew(contentLength, authStream, false, false, null, null);
@@ -1269,7 +1241,11 @@
                     else if (msg.Status == MessageStatus.RegisterClient)
                     {
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "client " + client.ToString() + " attempting to register GUID " + msg.SenderGuid.ToString());
-                        UpdateClientGuid(client, msg.SenderGuid);
+                        _ClientManager.ReplaceGuid(client.Guid, msg.SenderGuid);
+                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "updated client GUID from " + client.Guid + " to " + msg.SenderGuid);
+
+                        client.Guid = msg.SenderGuid;
+                        _Events.HandleClientConnected(this, new ConnectionEventArgs(client));
                         continue;
                     }
                      
@@ -1382,7 +1358,7 @@
 
                     _Statistics.IncrementReceivedMessages();
                     _Statistics.AddReceivedBytes(msg.ContentLength);
-                    _ClientsLastSeen.AddOrUpdate(client.Guid, DateTime.UtcNow, (key, value) => DateTime.UtcNow);
+                    _ClientManager.UpdateClientLastSeen(client.Guid, DateTime.UtcNow);
                 }
                 catch (ObjectDisposedException ode)
                 {
@@ -1419,16 +1395,12 @@
             if (_Settings != null && _Events != null)
             {
                 DisconnectionEventArgs cd = null;
-                if (_ClientsKicked.ContainsKey(client.Guid)) cd = new DisconnectionEventArgs(client, DisconnectReason.Removed);
-                else if (_ClientsTimedout.ContainsKey(client.Guid)) cd = new DisconnectionEventArgs(client, DisconnectReason.Timeout);
+                if (_ClientManager.ExistsClientKicked(client.Guid)) cd = new DisconnectionEventArgs(client, DisconnectReason.Removed);
+                else if (_ClientManager.ExistsClientTimedout(client.Guid)) cd = new DisconnectionEventArgs(client, DisconnectReason.Timeout);
                 else cd = new DisconnectionEventArgs(client, DisconnectReason.Normal);
                 _Events.HandleClientDisconnected(this, cd);
 
-                _Clients.TryRemove(client.Guid, out _);
-                _ClientsLastSeen.TryRemove(client.Guid, out _);
-                _ClientsKicked.TryRemove(client.Guid, out _);
-                _ClientsTimedout.TryRemove(client.Guid, out _);
-                _UnauthenticatedClients.TryRemove(client.Guid, out _);
+                _ClientManager.Remove(client.Guid);
                 Interlocked.Decrement(ref _Connections);
 
                 _Settings?.Logger?.Invoke(Severity.Debug, _Header + "client " + client.ToString() + " disconnected");
@@ -1603,23 +1575,30 @@
         {
             try
             {
+                Dictionary<Guid, DateTime> lastSeen = null;
+
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
 
                     await Task.Delay(5000, _Token).ConfigureAwait(false);
 
-                    if (_Settings.IdleClientTimeoutSeconds > 0 && _ClientsLastSeen.Count > 0)
+                    if (_Settings.IdleClientTimeoutSeconds > 0)
                     {
-                        DateTime idleTimestamp = DateTime.UtcNow.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds);
+                        lastSeen = _ClientManager.AllClientsLastSeen();
 
-                        foreach (KeyValuePair<Guid, DateTime> curr in _ClientsLastSeen)
+                        if (lastSeen != null && lastSeen.Count > 0)
                         {
-                            if (curr.Value < idleTimestamp)
+                            DateTime idleTimestamp = DateTime.UtcNow.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds);
+
+                            foreach (KeyValuePair<Guid, DateTime> curr in lastSeen)
                             {
-                                _ClientsTimedout.TryAdd(curr.Key, DateTime.UtcNow);
-                                _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to idle timeout");
-                                await DisconnectClientAsync(curr.Key, MessageStatus.Timeout, true);
+                                if (curr.Value < idleTimestamp)
+                                {
+                                    _ClientManager.AddClientTimedout(curr.Key);
+                                    _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to idle timeout");
+                                    await DisconnectClientAsync(curr.Key, MessageStatus.Timeout, true);
+                                }
                             }
                         }
                     } 

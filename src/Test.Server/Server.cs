@@ -55,7 +55,7 @@ namespace TestServer
 
                 _Server.Callbacks.SyncRequestReceivedAsync = SyncRequestReceived;
                 
-                // _Server.Settings.IdleClientTimeoutSeconds = 10;
+                _Server.Settings.IdleClientTimeoutSeconds = 10;
                 // _Server.Settings.PresharedKey = "0000000000000000";
                 _Server.Settings.Logger = Logger;
                 _Server.Settings.DebugMessages = _DebugMessages;
@@ -263,11 +263,7 @@ namespace TestServer
             if (args.Data != null) Console.WriteLine(Encoding.UTF8.GetString(args.Data));
             else Console.WriteLine("[null]");
 
-            if (args.Metadata == null)
-            {
-                Console.WriteLine("Metadata: (null)");
-            }
-            else
+            if (args.Metadata != null)
             {
                 Console.Write("Metadata: ");
                 if (args.Metadata.Count < 1)

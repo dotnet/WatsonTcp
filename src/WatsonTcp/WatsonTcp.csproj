@@ -4,7 +4,7 @@
 		<TargetFrameworks>net462;net48;net6.0;net7.0;net8.0</TargetFrameworks>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<Version>6.0.2</Version>
+		<Version>6.0.3</Version>
 		<Authors>Joel Christner</Authors>
 		<Company>Joel Christner</Company>
 		<Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
