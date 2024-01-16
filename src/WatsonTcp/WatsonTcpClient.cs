@@ -1182,17 +1182,33 @@
         {
             while (!token.IsCancellationRequested)
             {
-                await Task.Delay(_Settings.IdleServerEvaluationIntervalMs, token).ConfigureAwait(false);
-
-                if (_Settings.IdleServerTimeoutMs == 0) continue;
-
-                DateTime timeoutTime = _LastActivity.AddMilliseconds(_Settings.IdleServerTimeoutMs);
-
-                if (DateTime.UtcNow > timeoutTime)
+                try
                 {
-                    _Settings.Logger?.Invoke(Severity.Warn, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort + " due to timeout");
-                    _IsTimeout = true;
-                    Disconnect();
+                    await Task.Delay(_Settings.IdleServerEvaluationIntervalMs, token).ConfigureAwait(false);
+
+                    if (_Settings.IdleServerTimeoutMs == 0) continue;
+
+                    DateTime timeoutTime = _LastActivity.AddMilliseconds(_Settings.IdleServerTimeoutMs);
+
+                    if (DateTime.UtcNow > timeoutTime)
+                    {
+                        _Settings.Logger?.Invoke(Severity.Warn, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort + " due to timeout");
+                        _IsTimeout = true;
+                        Disconnect();
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+
+                }
+                catch (OperationCanceledException)
+                {
+
+                }
+                catch (Exception e)
+                {
+                    _Settings.Logger?.Invoke(Severity.Warn, _Header + "exception encountered while monitoring for idle server connection: " + e.Message);
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                 }
             }
         }
