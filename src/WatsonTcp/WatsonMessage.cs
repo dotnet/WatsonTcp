@@ -84,7 +84,7 @@
         /// Indicates the conversation GUID of the message. 
         /// </summary>
         [JsonPropertyName("convguid")]
-        public Guid ConversationGuid { get; set; } = default(Guid);
+        public Guid ConversationGuid { get; set; } = Guid.NewGuid();
 
         /// <summary>
         /// Sender GUID.
