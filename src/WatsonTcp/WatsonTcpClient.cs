@@ -492,6 +492,7 @@
                 {
                     _TokenSource.Cancel();
                     _TokenSource.Dispose();
+                    _Token = default(CancellationToken);
                 }
             }
              
@@ -510,12 +511,12 @@
                 _Client.Close();
             }
 
-            while (_DataReceiver?.Status == TaskStatus.Running)
+            while (_DataReceiver?.IsCompleted == false)
             {
                 Task.Delay(10).Wait();
             }
 
-            while (_IdleServerMonitor?.Status == TaskStatus.Running)
+            while (_IdleServerMonitor?.IsCompleted == false)
             {
                 Task.Delay(10).Wait();
             }
