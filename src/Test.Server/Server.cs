@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using GetSomeInput;
-using WatsonTcp;
-
-namespace TestServer
+﻿namespace TestServer
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using GetSomeInput;
+    using WatsonTcp;
+
     internal class TestServer
     {
         private static string _ServerIp = "";
@@ -242,7 +242,7 @@ namespace TestServer
 
         private static void ExceptionEncountered(object sender, ExceptionEventArgs e)
         {
-            Console.WriteLine(_Server.SerializationHelper.SerializeJson(e.Exception, true));
+            Console.WriteLine(e.Exception.ToString());
         }
 
         private static void ClientConnected(object sender, ConnectionEventArgs args)

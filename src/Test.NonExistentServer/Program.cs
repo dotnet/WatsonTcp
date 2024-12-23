@@ -1,11 +1,11 @@
-﻿using System;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace Test.NonExistentServer
+﻿namespace Test.NonExistentServer
 {
+    using System;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     class Program
     {
         static async Task Main(string[] args)

@@ -1,9 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace Test.FastDisconnect
+﻿namespace Test.FastDisconnect
 {
+    using System;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     class Program
     {
         static async Task Main(string[] args)

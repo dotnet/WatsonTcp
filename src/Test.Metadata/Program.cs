@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace Test.Metadata
+﻿namespace Test.Metadata
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Text;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     class Program
     {
         static int _ServerPort = 8000;

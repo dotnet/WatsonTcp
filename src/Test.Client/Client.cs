@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Threading.Tasks;
-using GetSomeInput;
-using WatsonTcp;
-
-namespace TestClient
+﻿namespace TestClient
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Text;
+    using System.Threading.Tasks;
+    using GetSomeInput;
+    using WatsonTcp;
+
     internal class TestClient
     {
         private static string _ServerIp = "";
@@ -215,7 +215,6 @@ namespace TestClient
 
         private static void ExceptionEncountered(object sender, ExceptionEventArgs e)
         {
-            Console.WriteLine("*** Exception ***");
             Console.WriteLine(e.Exception.ToString());
         }
 
@@ -226,7 +225,8 @@ namespace TestClient
             Console.WriteLine("");
             Console.WriteLine("Server requests authentication");
             Console.WriteLine("Press ENTER and THEN enter your preshared key");
-            if (String.IsNullOrEmpty(_PresharedKey)) _PresharedKey = Inputty.GetString("Preshared key:", "1234567812345678", false);
+            _PresharedKey = Inputty.GetString("Preshared key:", "1234567812345678", false);
+            _Client.Settings.PresharedKey = _PresharedKey;
             return _PresharedKey;
         }
          

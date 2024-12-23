@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using GetSomeInput;
-using WatsonTcp;
-
-namespace Test.TimeoutRecovery
+﻿namespace Test.TimeoutRecovery
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using GetSomeInput;
+    using WatsonTcp;
+
     internal class TestServer
     {
         private static string _ServerIp = "";

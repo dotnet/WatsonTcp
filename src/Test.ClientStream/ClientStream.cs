@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
-using GetSomeInput;
-using WatsonTcp;
-
-namespace TestClientStream
+﻿namespace TestClientStream
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Text;
+    using System.Threading.Tasks;
+    using GetSomeInput;
+    using WatsonTcp;
+
     internal class TestClientStream
     {
         private static string serverIp = "";

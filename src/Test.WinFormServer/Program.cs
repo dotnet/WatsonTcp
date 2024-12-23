@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using WatsonTcp;
-
-namespace Test.WinFormServer
+﻿namespace Test.WinFormServer
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using System.Windows.Forms;
+    using WatsonTcp;
+
     static class Program
     {
         /// <summary>

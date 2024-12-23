@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace WatsonTcp
+﻿namespace WatsonTcp
 {
+    using System;
+    using System.Collections.Generic;
+
     internal class ClientMetadataManager : IDisposable
     {
         #region Internal-Members
@@ -216,7 +216,8 @@ namespace WatsonTcp
         {
             lock (_ClientsLastSeenLock)
             {
-                _ClientsLastSeen.Add(guid, DateTime.UtcNow);
+                if (!_ClientsLastSeen.ContainsKey(guid))
+                    _ClientsLastSeen.Add(guid, DateTime.UtcNow);
             }
         }
 
@@ -278,7 +279,8 @@ namespace WatsonTcp
         {
             lock (_ClientsKickedLock)
             {
-                _ClientsKicked.Add(guid, DateTime.UtcNow);
+                if (!_ClientsKicked.ContainsKey(guid))
+                    _ClientsKicked.Add(guid, DateTime.UtcNow);
             }
         }
 
@@ -340,7 +342,8 @@ namespace WatsonTcp
         {
             lock (_ClientsTimedoutLock)
             {
-                _ClientsTimedout.Add(guid, DateTime.UtcNow);
+                if (!_ClientsTimedout.ContainsKey(guid))
+                    _ClientsTimedout.Add(guid, DateTime.UtcNow);
             }
         }
 

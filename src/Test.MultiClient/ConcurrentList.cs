@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading;
-
-namespace ConcurrentList
+﻿namespace ConcurrentList
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Threading;
+
     public sealed class ConcurrentList<T> : ThreadSafeList<T>
     {
         private static readonly int[] Sizes;

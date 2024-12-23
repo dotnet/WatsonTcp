@@ -1,12 +1,12 @@
-﻿using System;
-using System.ComponentModel.Design;
-using System.Text;
-using System.Threading.Tasks;
-using GetSomeInput;
-using WatsonTcp;
-
-namespace Test.SyncMessages
+﻿namespace Test.SyncMessages
 {
+    using System;
+    using System.ComponentModel.Design;
+    using System.Text;
+    using System.Threading.Tasks;
+    using GetSomeInput;
+    using WatsonTcp;
+
     internal class Program
     {
         static WatsonTcpServer _Server;

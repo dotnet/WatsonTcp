@@ -1,10 +1,10 @@
-﻿using System;
-using System.Text;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace Test.Reconnect
+﻿namespace Test.Reconnect
 {
+    using System;
+    using System.Text;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     class Program
     {
         static readonly Random _Random = new Random();

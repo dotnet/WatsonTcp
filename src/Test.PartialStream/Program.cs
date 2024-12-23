@@ -1,10 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace TestPartialStream
+﻿namespace TestPartialStream
 {
+    using System;
+    using System.IO;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     internal class TestPartialStream
     {
 

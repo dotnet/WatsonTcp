@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using GetSomeInput;
-using WatsonTcp;
-
-namespace Test.FileTransfer
+﻿namespace Test.FileTransfer
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Security.Cryptography;
+    using System.Text;
+    using System.Threading.Tasks;
+    using GetSomeInput;
+    using WatsonTcp;
+
     internal class Program
     {
         static WatsonTcpServer _Server = null;

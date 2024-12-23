@@ -383,22 +383,12 @@
         /// </summary>
         public void Stop()
         {
-            if (!_IsListening) throw new InvalidOperationException("WatsonTcpServer is not running.");
+            _IsListening = false;
+            _Listener.Stop();
+            _TokenSource.Cancel();
 
-            try
-            {
-                _IsListening = false;
-                _Listener.Stop();
-                _TokenSource.Cancel();
-
-                _Settings.Logger?.Invoke(Severity.Info, _Header + "stopped");
-                _Events.HandleServerStopped(this, EventArgs.Empty);
-            }
-            catch (Exception e)
-            {
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                throw;
-            }
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "stopped");
+            _Events.HandleServerStopped(this, EventArgs.Empty);
         }
 
         #region SendAsync

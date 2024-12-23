@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Test.SyncMessages
+﻿namespace Test.SyncMessages
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Text;
+
     public enum CommandTypeEnum
     {
         Echo,

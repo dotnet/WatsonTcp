@@ -2,11 +2,12 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-	  <TargetFrameworks>net462;net48;net6.0;net7.0;net8.0</TargetFrameworks>
+	  <TargetFrameworks>net462;net48;net6.0;net8.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Inputty" Version="1.0.5" />
+    <PackageReference Include="Inputty" Version="1.0.12" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
   <ItemGroup>

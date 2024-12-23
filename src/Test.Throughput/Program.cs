@@ -1,13 +1,13 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace TestThroughput
+﻿namespace TestThroughput
 {
+    using System;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     class Program
     {
         static bool _RunForever = true;

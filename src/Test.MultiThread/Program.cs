@@ -1,12 +1,12 @@
-﻿using System;
-using System.Security.Cryptography;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace TestMultiThread
+﻿namespace TestMultiThread
 {
+    using System;
+    using System.Security.Cryptography;
+    using System.IO;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     internal class Program
     {
         private static int _NumIterations = 128;

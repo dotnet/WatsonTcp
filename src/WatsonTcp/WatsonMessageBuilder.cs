@@ -103,12 +103,29 @@
 
             // {"len":0,"s":"Normal"}\r\n\r\n
             byte[] headerBytes = new byte[24];
-
-            await stream.ReadAsync(headerBytes, 0, 24, token).ConfigureAwait(false);
             byte[] headerBuffer = new byte[1];
+            int read = 0;
+            int readTotal = 0;
 
             while (true)
             {
+                #region Retrieve-First-24-Bytes
+
+                read = await stream.ReadAsync(headerBytes, readTotal, (24 - readTotal), token).ConfigureAwait(false);
+
+                if (read > 0)
+                {
+                    readTotal += read;
+                    if (readTotal >= 24) break;
+                }
+
+                #endregion
+            }
+
+            while (true)
+            {
+                #region Read-Byte-by-Byte
+
                 byte[] endCheck = headerBytes.Skip(headerBytes.Length - 4).Take(4).ToArray();
 
                 if ((int)endCheck[3] == 0
@@ -124,11 +141,15 @@
                     && (int)endCheck[1] == 10
                     && (int)endCheck[0] == 13)
                 {
+                    // delimiter reached
                     break;
                 }
 
-                await stream.ReadAsync(headerBuffer, 0, 1, token).ConfigureAwait(false);
-                headerBytes = WatsonCommon.AppendBytes(headerBytes, headerBuffer);
+                read = await stream.ReadAsync(headerBuffer, 0, 1, token).ConfigureAwait(false);
+                if (read > 0)
+                    headerBytes = WatsonCommon.AppendBytes(headerBytes, headerBuffer);
+
+                #endregion
             }
 
             msg = _SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(headerBytes));

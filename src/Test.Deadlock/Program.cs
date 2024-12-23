@@ -1,10 +1,10 @@
-﻿using System;
-using System.Text;
-using System.Threading.Tasks;
-using WatsonTcp;
-
-namespace Test.Deadlock
+﻿namespace Test.Deadlock
 {
+    using System;
+    using System.Text;
+    using System.Threading.Tasks;
+    using WatsonTcp;
+
     class Program
     {
         static string _ServerHostname = "127.0.0.1";
