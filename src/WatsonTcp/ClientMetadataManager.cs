@@ -1,7 +1,8 @@
-﻿namespace WatsonTcp
+namespace WatsonTcp
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
 
     internal class ClientMetadataManager : IDisposable
     {
@@ -11,19 +12,19 @@
 
         #region Private-Members
 
-        private readonly object _UnauthenticatedClientsLock = new object();
+        private readonly ReaderWriterLockSlim _UnauthenticatedClientsLock = new ReaderWriterLockSlim();
         private Dictionary<Guid, DateTime> _UnauthenticatedClients = new Dictionary<Guid, DateTime>();
 
-        private readonly object _ClientsLock = new object();
+        private readonly ReaderWriterLockSlim _ClientsLock = new ReaderWriterLockSlim();
         private Dictionary<Guid, ClientMetadata> _Clients = new Dictionary<Guid, ClientMetadata>();
 
-        private readonly object _ClientsLastSeenLock = new object();
+        private readonly ReaderWriterLockSlim _ClientsLastSeenLock = new ReaderWriterLockSlim();
         private Dictionary<Guid, DateTime> _ClientsLastSeen = new Dictionary<Guid, DateTime>();
 
-        private readonly object _ClientsKickedLock = new object();
+        private readonly ReaderWriterLockSlim _ClientsKickedLock = new ReaderWriterLockSlim();
         private Dictionary<Guid, DateTime> _ClientsKicked = new Dictionary<Guid, DateTime>();
 
-        private readonly object _ClientsTimedoutLock = new object();
+        private readonly ReaderWriterLockSlim _ClientsTimedoutLock = new ReaderWriterLockSlim();
         private Dictionary<Guid, DateTime> _ClientsTimedout = new Dictionary<Guid, DateTime>();
 
         #endregion
@@ -103,301 +104,607 @@
 
         #region Unauthenticated-Clients
 
-        internal void AddUnauthenticatedClient(Guid guid)
+        #region Helpers
+        private void _addUnauthenticatedClient(Guid guid, DateTime? dt = null)
         {
-            lock (_UnauthenticatedClientsLock)
+            _UnauthenticatedClientsLock.EnterWriteLock();
+
+            try
             {
-                _UnauthenticatedClients.Add(guid, DateTime.UtcNow);
+                if (dt == null)
+                {
+                    _UnauthenticatedClients.Add(guid, DateTime.UtcNow);
+                }
+                else
+                {
+                    _UnauthenticatedClients.Add(guid, dt.Value);
+                }
             }
+            finally
+            {
+                _UnauthenticatedClientsLock.ExitWriteLock();
+            }
+
         }
 
-        internal void RemoveUnauthenticatedClient(Guid guid)
+        private void _removeUnauthenticatedClient(Guid guid)
         {
-            lock (_UnauthenticatedClientsLock)
+            if (_existsUnauthenticatedClient(guid))
             {
-                if (_UnauthenticatedClients.ContainsKey(guid)) 
+                _UnauthenticatedClientsLock.EnterWriteLock();
+
+                try
+                {
                     _UnauthenticatedClients.Remove(guid);
+                }
+                finally
+                {
+                    _UnauthenticatedClientsLock.ExitWriteLock();
+                }
+
+
             }
         }
 
-        internal bool ExistsUnauthenticatedClient(Guid guid)
+        private bool _existsUnauthenticatedClient(Guid guid)
         {
-            lock (_UnauthenticatedClientsLock)
+            _UnauthenticatedClientsLock.EnterReadLock();
+
+            try
             {
                 return _UnauthenticatedClients.ContainsKey(guid);
             }
+            finally
+            {
+                _UnauthenticatedClientsLock.ExitReadLock();
+            }
         }
+
+        private DateTime _unauthenticatedClientsGetDateTime(Guid guid)
+        {
+            _UnauthenticatedClientsLock.EnterReadLock();
+
+            try
+            {
+                return _UnauthenticatedClients[guid];
+            }
+            finally
+            {
+                _UnauthenticatedClientsLock.ExitReadLock();
+            }
+
+        }
+        #endregion
+
+        internal void AddUnauthenticatedClient(Guid guid) => _addUnauthenticatedClient(guid);
+
+        internal void RemoveUnauthenticatedClient(Guid guid) => _removeUnauthenticatedClient(guid);
+
+
+        internal bool ExistsUnauthenticatedClient(Guid guid) => _existsUnauthenticatedClient(guid);
+
 
         internal void ReplaceUnauthenticatedClient(Guid original, Guid update)
         {
-            lock (_UnauthenticatedClientsLock)
+
+            if (_existsUnauthenticatedClient(original))
             {
-                if (_UnauthenticatedClients.ContainsKey(original))
-                {
-                    DateTime dt = _UnauthenticatedClients[original];
-                    _UnauthenticatedClients.Remove(original);
-                    _UnauthenticatedClients.Add(update, dt);
-                }
+                DateTime dt = _unauthenticatedClientsGetDateTime(original);
+                _removeUnauthenticatedClient(original);
+                _addUnauthenticatedClient(update, dt);
             }
+
         }
 
         internal Dictionary<Guid, DateTime> AllUnauthenticatedClients()
         {
-            lock (_UnauthenticatedClientsLock)
+
+            _UnauthenticatedClientsLock.EnterReadLock();
+
+            try
             {
                 return new Dictionary<Guid, DateTime>(_UnauthenticatedClients);
             }
+            finally
+            {
+                _UnauthenticatedClientsLock.ExitReadLock();
+            }
+
         }
 
         #endregion
 
+
+
         #region Clients
 
-        internal void AddClient(Guid guid, ClientMetadata client)
+
+        #region Helpers
+
+        private void _addClient(Guid guid, ClientMetadata client)
         {
-            lock (_ClientsLock)
+            _ClientsLock.EnterWriteLock();
+
+            try
             {
+
                 _Clients.Add(guid, client);
+
             }
+            finally
+            {
+                _ClientsLock.ExitWriteLock();
+            }
+
         }
 
-        internal ClientMetadata GetClient(Guid guid)
+        private void _removeClient(Guid guid)
         {
-            lock (_ClientsLock)
+            if (_existsClient(guid))
             {
-                if (_Clients.ContainsKey(guid)) return _Clients[guid];
-                return null;
-            }
-        }
+                _ClientsLock.EnterWriteLock();
 
-        internal void RemoveClient(Guid guid)
-        {
-            lock (_ClientsLock)
-            {
-                if (_Clients.ContainsKey(guid))
+                try
+                {
                     _Clients.Remove(guid);
+                }
+                finally
+                {
+                    _ClientsLock.ExitWriteLock();
+                }
+
+
             }
         }
 
-        internal bool ExistsClient(Guid guid)
+        private bool _existsClient(Guid guid)
         {
-            lock (_ClientsLock)
+            _ClientsLock.EnterReadLock();
+
+            try
             {
                 return _Clients.ContainsKey(guid);
             }
+            finally
+            {
+                _ClientsLock.ExitReadLock();
+            }
         }
+
+        private ClientMetadata _getClientMetadata(Guid guid)
+        {
+            _ClientsLock.EnterReadLock();
+
+            try
+            {
+                return _Clients[guid];
+            }
+            finally
+            {
+                _ClientsLock.ExitReadLock();
+            }
+
+        }
+
+
+        #endregion
+
+        internal void AddClient(Guid guid, ClientMetadata client) => _addClient(guid, client);
+
+        internal ClientMetadata GetClient(Guid guid) => _existsClient(guid) ? _Clients[guid] : null;
+
+        internal void RemoveClient(Guid guid) => _removeClient(guid);
+
+        internal bool ExistsClient(Guid guid) => _existsClient(guid);
 
         internal void ReplaceClient(Guid original, Guid update)
         {
-            lock (_ClientsLock)
+
+            if (_existsClient(original))
             {
-                if (_Clients.ContainsKey(original))
-                {
-                    ClientMetadata md = _Clients[original];
-                    _Clients.Remove(original);
-                    _Clients.Add(update, md);
-                }
+                ClientMetadata md = _getClientMetadata(original);
+                _removeClient(original);
+                _addClient(update, md);
             }
+
         }
 
         internal Dictionary<Guid, ClientMetadata> AllClients()
         {
-            lock (_ClientsLock)
+
+            _ClientsLock.EnterReadLock();
+
+            try
             {
                 return new Dictionary<Guid, ClientMetadata>(_Clients);
+            }
+            finally
+            {
+                _ClientsLock.ExitReadLock();
             }
         }
 
         #endregion
 
+
+
         #region Clients-Last-Seen
 
-        internal void AddClientLastSeen(Guid guid)
+
+        #region Helpers
+        private void _addClientLastSeen(Guid guid, DateTime? dt = null)
         {
-            lock (_ClientsLastSeenLock)
+            if (_existsClientLastSeen(guid)) return;
+
+            _ClientsLastSeenLock.EnterWriteLock();
+
+            try
             {
-                if (!_ClientsLastSeen.ContainsKey(guid))
+                if (dt == null)
+                {
                     _ClientsLastSeen.Add(guid, DateTime.UtcNow);
+                }
+                else
+                {
+                    _ClientsLastSeen.Add(guid, dt.Value);
+                }
             }
-        }
-
-        internal void RemoveClientLastSeen(Guid guid)
-        {
-            lock (_ClientsLastSeenLock)
+            finally
             {
-                if (_ClientsLastSeen.ContainsKey(guid))
-                    _ClientsLastSeen.Remove(guid);
+                _ClientsLastSeenLock.ExitWriteLock();
             }
+
         }
 
-        internal bool ExistsClientLastSeen(Guid guid)
+        private void _removeClientLastSeen(Guid guid)
         {
-            lock (_ClientsLastSeenLock)
+            if (!_existsClientLastSeen(guid)) return;
+
+            _ClientsLastSeenLock.EnterWriteLock();
+
+            try
+            {
+                _ClientsLastSeen.Remove(guid);
+            }
+            finally
+            {
+                _ClientsLastSeenLock.ExitWriteLock();
+            }
+
+
+
+        }
+
+        private bool _existsClientLastSeen(Guid guid)
+        {
+            _ClientsLastSeenLock.EnterReadLock();
+
+            try
             {
                 return _ClientsLastSeen.ContainsKey(guid);
             }
+            finally
+            {
+                _ClientsLastSeenLock.ExitReadLock();
+            }
         }
+
+        private DateTime _clientLastSeenGetDateTime(Guid guid)
+        {
+            _ClientsLastSeenLock.EnterReadLock();
+
+            try
+            {
+                return _ClientsLastSeen[guid];
+            }
+            finally
+            {
+                _ClientsLastSeenLock.ExitReadLock();
+            }
+
+        }
+        #endregion
+
+        internal void AddClientLastSeen(Guid guid) => _addClientLastSeen(guid);
+
+        internal void RemoveClientLastSeen(Guid guid) => _removeClientLastSeen(guid);
+
+        internal bool ExistsClientLastSeen(Guid guid) => _existsClientLastSeen(guid);
 
         internal void ReplaceClientLastSeen(Guid original, Guid update)
         {
-            lock (_ClientsLastSeenLock)
+
+            if (_existsClientLastSeen(original))
             {
-                if (_ClientsLastSeen.ContainsKey(original))
-                {
-                    DateTime dt = _ClientsLastSeen[original];
-                    _ClientsLastSeen.Remove(original);
-                    _ClientsLastSeen.Add(update, dt);
-                }
+                DateTime dt = _clientLastSeenGetDateTime(original);
+                _removeClientLastSeen(original);
+                _addClientLastSeen(update, dt);
             }
+
         }
 
         internal void UpdateClientLastSeen(Guid guid, DateTime dt)
         {
-            lock (_ClientsLastSeenLock)
+
+            if (_existsClientLastSeen(guid))
             {
-                if (_ClientsLastSeen.ContainsKey(guid))
-                {
-                    _ClientsLastSeen.Remove(guid);
-                    _ClientsLastSeen.Add(guid, dt.ToUniversalTime());
-                }
+                _removeClientLastSeen(guid);
+                _addClientLastSeen(guid, dt.ToUniversalTime());
             }
+
         }
 
         internal Dictionary<Guid, DateTime> AllClientsLastSeen()
         {
-            lock (_ClientsLastSeenLock)
+
+            _ClientsLastSeenLock.EnterReadLock();
+
+            try
             {
                 return new Dictionary<Guid, DateTime>(_ClientsLastSeen);
             }
+            finally
+            {
+                _ClientsLastSeenLock.ExitReadLock();
+            }
+
+
         }
 
         #endregion
 
+
+
+
         #region Clients-Kicked
 
-        internal void AddClientKicked(Guid guid)
+
+        #region Helpers
+        private void _addClientKicked(Guid guid, DateTime? dt = null)
         {
-            lock (_ClientsKickedLock)
+            if (_existsClientKicked(guid)) return;
+
+            _ClientsKickedLock.EnterWriteLock();
+
+            try
             {
-                if (!_ClientsKicked.ContainsKey(guid))
+                if (dt == null)
+                {
                     _ClientsKicked.Add(guid, DateTime.UtcNow);
+                }
+                else
+                {
+                    _ClientsKicked.Add(guid, dt.Value);
+                }
             }
-        }
-
-        internal void RemoveClientKicked(Guid guid)
-        {
-            lock (_ClientsKickedLock)
+            finally
             {
-                if (_ClientsKicked.ContainsKey(guid))
-                    _ClientsKicked.Remove(guid);
+                _ClientsKickedLock.ExitWriteLock();
             }
+
         }
 
-        internal bool ExistsClientKicked(Guid guid)
+        private void _removeClientKicked(Guid guid)
         {
-            lock (_ClientsKickedLock)
+            if (!_existsClientKicked(guid)) return;
+
+            _ClientsKickedLock.EnterWriteLock();
+
+            try
+            {
+                _ClientsKicked.Remove(guid);
+            }
+            finally
+            {
+                _ClientsKickedLock.ExitWriteLock();
+            }
+
+
+
+        }
+
+        private bool _existsClientKicked(Guid guid)
+        {
+            _ClientsKickedLock.EnterReadLock();
+
+            try
             {
                 return _ClientsKicked.ContainsKey(guid);
             }
+            finally
+            {
+                _ClientsKickedLock.ExitReadLock();
+            }
         }
+
+        private DateTime _clientKickedGetDateTime(Guid guid)
+        {
+            _ClientsKickedLock.EnterReadLock();
+
+            try
+            {
+                return _ClientsKicked[guid];
+            }
+            finally
+            {
+                _ClientsKickedLock.ExitReadLock();
+            }
+
+        }
+        #endregion
+
+
+
+        internal void AddClientKicked(Guid guid) => _addClientKicked(guid);
+
+        internal void RemoveClientKicked(Guid guid) => _removeClientKicked(guid);
+
+        internal bool ExistsClientKicked(Guid guid) => _existsClientKicked(guid);
 
         internal void ReplaceClientKicked(Guid original, Guid update)
         {
-            lock (_ClientsKickedLock)
+
+            if (_existsClientKicked(original))
             {
-                if (_ClientsKicked.ContainsKey(original))
-                {
-                    DateTime dt = _ClientsKicked[original];
-                    _ClientsKicked.Remove(original);
-                    _ClientsKicked.Add(update, dt);
-                }
+                DateTime dt = _clientKickedGetDateTime(original);
+                _removeClientKicked(original);
+                _addClientKicked(update, dt);
             }
+
         }
 
         internal void UpdateClientKicked(Guid guid, DateTime dt)
         {
-            lock (_ClientsKickedLock)
+
+            if (_existsClientKicked(guid))
             {
-                if (_ClientsKicked.ContainsKey(guid))
-                {
-                    _ClientsKicked.Remove(guid);
-                    _ClientsKicked.Add(guid, dt.ToUniversalTime());
-                }
+                _removeClientKicked(guid);
+                _addClientKicked(guid, dt.ToUniversalTime());
             }
+
         }
 
         internal Dictionary<Guid, DateTime> AllClientsKicked()
         {
-            lock (_ClientsKickedLock)
+
+            _ClientsKickedLock.EnterReadLock();
+
+            try
             {
                 return new Dictionary<Guid, DateTime>(_ClientsKicked);
             }
+            finally
+            {
+                _ClientsKickedLock.ExitReadLock();
+            }
+
         }
 
         #endregion
 
+
+
         #region Clients-Timedout
 
-        internal void AddClientTimedout(Guid guid)
+
+        #region Helpers
+        private void _addClientTimedout(Guid guid, DateTime? dt = null)
         {
-            lock (_ClientsTimedoutLock)
+            if (_existsClientTimedout(guid)) return;
+
+            _ClientsTimedoutLock.EnterWriteLock();
+
+            try
             {
-                if (!_ClientsTimedout.ContainsKey(guid))
+                if (dt == null)
+                {
                     _ClientsTimedout.Add(guid, DateTime.UtcNow);
+                }
+                else
+                {
+                    _ClientsTimedout.Add(guid, dt.Value);
+                }
             }
-        }
-
-        internal void RemoveClientTimedout(Guid guid)
-        {
-            lock (_ClientsTimedoutLock)
+            finally
             {
-                if (_ClientsTimedout.ContainsKey(guid))
-                    _ClientsTimedout.Remove(guid);
+                _ClientsTimedoutLock.ExitWriteLock();
             }
+
         }
 
-        internal bool ExistsClientTimedout(Guid guid)
+        private void _removeClientTimedout(Guid guid)
         {
-            lock (_ClientsTimedoutLock)
+            if (!_existsClientTimedout(guid)) return;
+
+            _ClientsTimedoutLock.EnterWriteLock();
+
+            try
+            {
+                _ClientsTimedout.Remove(guid);
+            }
+            finally
+            {
+                _ClientsTimedoutLock.ExitWriteLock();
+            }
+
+
+
+        }
+
+        private bool _existsClientTimedout(Guid guid)
+        {
+            _ClientsTimedoutLock.EnterReadLock();
+
+            try
             {
                 return _ClientsTimedout.ContainsKey(guid);
             }
+            finally
+            {
+                _ClientsTimedoutLock.ExitReadLock();
+            }
         }
+
+        private DateTime _clientTimeoutGetDateTime(Guid guid)
+        {
+            _ClientsTimedoutLock.EnterReadLock();
+
+            try
+            {
+                return _ClientsTimedout[guid];
+            }
+            finally
+            {
+                _ClientsTimedoutLock.ExitReadLock();
+            }
+
+        }
+        #endregion
+
+        internal void AddClientTimedout(Guid guid) => _addClientTimedout(guid);
+
+        internal void RemoveClientTimedout(Guid guid) => _removeClientTimedout(guid);
+
+        internal bool ExistsClientTimedout(Guid guid) => _existsClientTimedout(guid);
 
         internal void ReplaceClientTimedout(Guid original, Guid update)
         {
-            lock (_ClientsTimedoutLock)
+
+            if (_existsClientTimedout(original))
             {
-                if (_ClientsTimedout.ContainsKey(original))
-                {
-                    DateTime dt = _ClientsTimedout[original];
-                    _ClientsTimedout.Remove(original);
-                    _ClientsTimedout.Add(update, dt);
-                }
+                DateTime dt = _clientTimeoutGetDateTime(original);
+                _removeClientTimedout(original);
+                _addClientTimedout(update, dt);
             }
+
         }
 
         internal void UpdateClientTimeout(Guid guid, DateTime dt)
         {
-            lock (_ClientsTimedoutLock)
+            if (_existsClientTimedout(guid))
             {
-                if (_ClientsTimedout.ContainsKey(guid))
-                {
-                    _ClientsTimedout.Remove(guid);
-                    _ClientsTimedout.Add(guid, dt.ToUniversalTime());
-                }
+                _removeClientTimedout(guid);
+                _addClientTimedout(guid, dt.ToUniversalTime());
             }
+
         }
 
         internal Dictionary<Guid, DateTime> AllClientsTimedout()
         {
-            lock (_ClientsTimedoutLock)
+            _ClientsTimedoutLock.EnterReadLock();
+
+            try
             {
                 return new Dictionary<Guid, DateTime>(_ClientsTimedout);
+            }
+            finally
+            {
+                _ClientsTimedoutLock.ExitReadLock();
             }
         }
 
         #endregion
+
 
         #endregion
 
