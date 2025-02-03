@@ -207,8 +207,9 @@
             if (listenerPort < 1) throw new ArgumentOutOfRangeException(nameof(listenerPort));
 
             _Mode = Mode.Tcp; 
-             
-            if (String.IsNullOrEmpty(listenerIp))
+
+             // According to the https://github.com/dotnet/WatsonTcp?tab=readme-ov-file#local-vs-external-connections
+            if (string.IsNullOrEmpty(listenerIp) || listenerIp.Equals("*") || listenerIp.Equals("+") || listenerIp.Equals("0.0.0.0"))
             {
                 _ListenerIpAddress = IPAddress.Any;
                 _ListenerIp = _ListenerIpAddress.ToString();
