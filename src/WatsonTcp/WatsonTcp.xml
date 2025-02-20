@@ -40,6 +40,176 @@
             </summary>
             <param name="client">Client metadata.</param>
         </member>
+        <member name="T:WatsonTcp.WatsonTcpClient">
+            <summary>
+            Watson TCP client, with or without SSL.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.Settings">
+            <summary>
+            Watson TCP client settings.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.Events">
+            <summary>
+            Watson TCP client events.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.Callbacks">
+            <summary>
+            Watson TCP client callbacks.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.Statistics">
+            <summary>
+            Watson TCP statistics.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.Keepalive">
+            <summary>
+            Watson TCP keepalive settings.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.SslConfiguration">
+            <summary>
+            Watson TCP client SSL configuration.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.SerializationHelper">
+            <summary>
+            JSON serialization helper.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClient.Connected">
+            <summary>
+            Indicates whether or not the client is connected to the server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.Double,System.Int32)">
+            <summary>
+            Initialize the Watson TCP client without SSL.  Call Start() afterward to connect to the server.
+            </summary>
+            <param name="serverIp">The IP address or hostname of the server.</param>
+            <param name="serverPort">The TCP port on which the server is listening.</param>
+            <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
+            <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.String,System.String,WatsonTcp.TlsVersion,System.Double,System.Int32)">
+            <summary>
+            Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
+            </summary>
+            <param name="serverIp">The IP address or hostname of the server.</param>
+            <param name="serverPort">The TCP port on which the server is listening.</param>
+            <param name="pfxCertFile">The file containing the SSL certificate.</param>
+            <param name="pfxCertPass">The password for the SSL certificate.</param>
+            <param name="tlsVersion">The TLS version used for this connection.</param>
+            <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
+            <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2,WatsonTcp.TlsVersion,System.Double,System.Int32)">
+            <summary>
+            Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
+            </summary>
+            <param name="serverIp">The IP address or hostname of the server.</param>
+            <param name="serverPort">The TCP port on which the server is listening.</param>
+            <param name="cert">The SSL certificate</param>
+            <param name="tlsVersion">The TLS version used for this conenction.</param>
+            <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
+            <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Dispose">
+            <summary>        
+            Disconnect the client and dispose of background workers.
+            Do not reuse the object after disposal.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Connect">
+            <summary>
+            Connect to the server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Disconnect(System.Boolean)">
+            <summary>
+            Disconnect from the server.
+            </summary>
+            <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.AuthenticateAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Send a pre-shared key to the server to authenticate.
+            </summary>
+            <param name="presharedKey">Up to 16-character string.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.String,System.Collections.Generic.Dictionary{System.String,System.Object},System.Threading.CancellationToken)">
+            <summary>
+            Send data and metadata to the server asynchronously.
+            </summary>
+            <param name="data">String containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
+            <returns>Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Byte[],System.Collections.Generic.Dictionary{System.String,System.Object},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Send data and metadata to the server asynchronously.
+            </summary>
+            <param name="data">Byte array containing data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="start">Start position within the supplied array.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
+            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.String,System.Object},System.Threading.CancellationToken)">
+            <summary>
+            Send data and metadata to the server from a stream asynchronously.
+            </summary>
+            <param name="contentLength">The number of bytes to send.</param>
+            <param name="stream">The stream containing the data.</param>
+            <param name="metadata">Dictionary containing metadata.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
+            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWaitAsync(System.Int32,System.String,System.Collections.Generic.Dictionary{System.String,System.Object},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
+            </summary>
+            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+            <param name="data">Data to send.</param>
+            <param name="metadata">Metadata dictionary to attach to the message.</param>
+            <param name="start">Start position within the supplied array.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
+            <returns>SyncResponse.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWaitAsync(System.Int32,System.Byte[],System.Collections.Generic.Dictionary{System.String,System.Object},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
+            </summary>
+            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+            <param name="data">Data to send.</param>
+            <param name="metadata">Metadata dictionary to attach to the message.</param>
+            <param name="start">Start position within the supplied array.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
+            <returns>SyncResponse.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWaitAsync(System.Int32,System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.String,System.Object},System.Threading.CancellationToken)">
+            <summary>
+            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
+            </summary>
+            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
+            <param name="contentLength">The number of bytes to send from the supplied stream.</param>
+            <param name="stream">Stream containing data.</param>
+            <param name="metadata">Metadata dictionary to attach to the message.</param>
+            <param name="token">Cancellation token to cancel the request.</param>
+            <returns>SyncResponse.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonTcpClient.Dispose(System.Boolean)">
+            <summary>
+            Disconnect the client and dispose of background workers.
+            Do not reuse the object after disposal.
+            </summary>
+            <param name="disposing">Indicate if resources should be disposed.</param>
+        </member>
         <member name="T:WatsonTcp.ClientMetadata">
             <summary>
             Client metadata.
@@ -700,170 +870,6 @@
             <param name="buffer">The buffer containing the data that should be written to the stream.</param>
             <param name="offset">The offset within the buffer from which data should be read.</param>
             <param name="count">The number of bytes to read.</param>
-        </member>
-        <member name="T:WatsonTcp.WatsonTcpClient">
-            <summary>
-            Watson TCP client, with or without SSL.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.Settings">
-            <summary>
-            Watson TCP client settings.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.Events">
-            <summary>
-            Watson TCP client events.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.Callbacks">
-            <summary>
-            Watson TCP client callbacks.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.Statistics">
-            <summary>
-            Watson TCP statistics.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.Keepalive">
-            <summary>
-            Watson TCP keepalive settings.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.SslConfiguration">
-            <summary>
-            Watson TCP client SSL configuration.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.SerializationHelper">
-            <summary>
-            JSON serialization helper.
-            </summary>
-        </member>
-        <member name="P:WatsonTcp.WatsonTcpClient.Connected">
-            <summary>
-            Indicates whether or not the client is connected to the server.
-            </summary>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32)">
-            <summary>
-            Initialize the Watson TCP client without SSL.  Call Start() afterward to connect to the server.
-            </summary>
-            <param name="serverIp">The IP address or hostname of the server.</param>
-            <param name="serverPort">The TCP port on which the server is listening.</param>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.String,System.String,WatsonTcp.TlsVersion)">
-            <summary>
-            Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
-            </summary>
-            <param name="serverIp">The IP address or hostname of the server.</param>
-            <param name="serverPort">The TCP port on which the server is listening.</param>
-            <param name="pfxCertFile">The file containing the SSL certificate.</param>
-            <param name="pfxCertPass">The password for the SSL certificate.</param>
-            <param name="tlsVersion">The TLS version used for this connection.</param>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2,WatsonTcp.TlsVersion)">
-            <summary>
-            Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
-            </summary>
-            <param name="serverIp">The IP address or hostname of the server.</param>
-            <param name="serverPort">The TCP port on which the server is listening.</param>
-            <param name="cert">The SSL certificate</param>
-            <param name="tlsVersion">The TLS version used for this conenction.</param>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Dispose">
-            <summary>        
-            Disconnect the client and dispose of background workers.
-            Do not reuse the object after disposal.
-            </summary>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Connect">
-            <summary>
-            Connect to the server.
-            </summary>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Disconnect(System.Boolean)">
-            <summary>
-            Disconnect from the server.
-            </summary>
-            <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.AuthenticateAsync(System.String,System.Threading.CancellationToken)">
-            <summary>
-            Send a pre-shared key to the server to authenticate.
-            </summary>
-            <param name="presharedKey">Up to 16-character string.</param>
-            <param name="token">Cancellation token to cancel the request.</param>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.String,System.Collections.Generic.Dictionary{System.String,System.Object},System.Threading.CancellationToken)">
-            <summary>
-            Send data and metadata to the server asynchronously.
-            </summary>
-            <param name="data">String containing data.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
-            <param name="token">Cancellation token to cancel the request.</param>
-            <returns>Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Byte[],System.Collections.Generic.Dictionary{System.String,System.Object},System.Int32,System.Threading.CancellationToken)">
-            <summary>
-            Send data and metadata to the server asynchronously.
-            </summary>
-            <param name="data">Byte array containing data.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
-            <param name="start">Start position within the supplied array.</param>
-            <param name="token">Cancellation token to cancel the request.</param>
-            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAsync(System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.String,System.Object},System.Threading.CancellationToken)">
-            <summary>
-            Send data and metadata to the server from a stream asynchronously.
-            </summary>
-            <param name="contentLength">The number of bytes to send.</param>
-            <param name="stream">The stream containing the data.</param>
-            <param name="metadata">Dictionary containing metadata.</param>
-            <param name="token">Cancellation token to cancel the request.</param>
-            <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWaitAsync(System.Int32,System.String,System.Collections.Generic.Dictionary{System.String,System.Object},System.Int32,System.Threading.CancellationToken)">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="data">Data to send.</param>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="start">Start position within the supplied array.</param>
-            <param name="token">Cancellation token to cancel the request.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWaitAsync(System.Int32,System.Byte[],System.Collections.Generic.Dictionary{System.String,System.Object},System.Int32,System.Threading.CancellationToken)">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="data">Data to send.</param>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="start">Start position within the supplied array.</param>
-            <param name="token">Cancellation token to cancel the request.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.SendAndWaitAsync(System.Int32,System.Int64,System.IO.Stream,System.Collections.Generic.Dictionary{System.String,System.Object},System.Threading.CancellationToken)">
-            <summary>
-            Send data and wait for a response for the specified number of milliseconds.  A TimeoutException will be thrown if a response is not received.
-            </summary>
-            <param name="timeoutMs">Number of milliseconds to wait before considering a request to be expired.</param>
-            <param name="contentLength">The number of bytes to send from the supplied stream.</param>
-            <param name="stream">Stream containing data.</param>
-            <param name="metadata">Metadata dictionary to attach to the message.</param>
-            <param name="token">Cancellation token to cancel the request.</param>
-            <returns>SyncResponse.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Dispose(System.Boolean)">
-            <summary>
-            Disconnect the client and dispose of background workers.
-            Do not reuse the object after disposal.
-            </summary>
-            <param name="disposing">Indicate if resources should be disposed.</param>
         </member>
         <member name="T:WatsonTcp.WatsonTcpClientCallbacks">
             <summary>
