@@ -179,7 +179,7 @@
 
         #endregion
 
-        #region Auto Reconnect feature Constructors-and-Factories
+        #region Constructors-and-Factories
 
         /// <summary>
         /// Initialize the Watson TCP client without SSL.  Call Start() afterward to connect to the server.
@@ -545,17 +545,18 @@
             _LastActivity = DateTime.UtcNow;
             _IsTimeout = false;
 
-            _DataReceiver = Task.Run(() => DataReceiver(_Token), _Token);
-            _IdleServerMonitor = Task.Run(() => IdleServerMonitor(_Token), _Token);
-            _Events.HandleServerConnected(this, new ConnectionEventArgs());
-            _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
-
-
             // Start the Auto Reconnect feature
             if (AutoReconnectInterval > 0)
             {
                 StartAutoReconnect();
             }
+
+
+
+            _DataReceiver = Task.Run(() => DataReceiver(_Token), _Token);
+            _IdleServerMonitor = Task.Run(() => IdleServerMonitor(_Token), _Token);
+            _Events.HandleServerConnected(this, new ConnectionEventArgs());
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
 
 
 
@@ -565,7 +566,7 @@
         /// Disconnect from the server.
         /// </summary>
         /// <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
-        public void Disconnect(bool sendNotice = true)
+        public void Disconnect(bool sendNotice = true, bool DeactiveAutoReconnect = true)
         {
             if (!Connected) throw new InvalidOperationException("Not connected to the server.");
 
@@ -574,7 +575,7 @@
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
             //Stop the Auto Reconnect feature first to perevent unwanted reconnect !
-            StopAutoReconnect();
+            if (DeactiveAutoReconnect) StopAutoReconnect();
 
             if (Connected && sendNotice)
             {

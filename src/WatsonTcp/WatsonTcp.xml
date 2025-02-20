@@ -128,7 +128,7 @@
             Connect to the server.
             </summary>
         </member>
-        <member name="M:WatsonTcp.WatsonTcpClient.Disconnect(System.Boolean)">
+        <member name="M:WatsonTcp.WatsonTcpClient.Disconnect(System.Boolean,System.Boolean)">
             <summary>
             Disconnect from the server.
             </summary>

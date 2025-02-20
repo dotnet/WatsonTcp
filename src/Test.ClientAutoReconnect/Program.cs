@@ -27,7 +27,7 @@
 
             // Connect the client
 
-            _Client = new WatsonTcpClient(_ServerHostname, _ServerPort, 3_000,3);
+            _Client = new WatsonTcpClient(_ServerHostname, _ServerPort, 3_000);
             _Client.Events.MessageReceived += Events_MessageReceived1;
             _Client.Events.ServerConnected += Events_ServerConnected;
             _Client.Events.ServerDisconnected += Events_ServerDisconnected;
@@ -56,10 +56,10 @@
         private static void Events_ServerConnected(object sender, ConnectionEventArgs e)
         {
             Console.WriteLine("[Client]--> Bingo! , We are connected to the server.");
-            Console.WriteLine("[Client]--> Press any key to disconnect and test the 'Auto Reconnection' feature ( we should be reconnect again automatically)");
+            Console.WriteLine("[Client]--> Press any key to disconnect and test the 'Auto Reconnection' feature ( we should be reconnected again automatically)");
             Console.ReadKey();
 
-            _Client.Disconnect();
+            _Client.Disconnect(DeactiveAutoReconnect: false);
         }
 
         private static void Events_ClientDisconnected(object sender, DisconnectionEventArgs e)
