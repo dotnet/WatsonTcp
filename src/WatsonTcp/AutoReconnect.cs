@@ -1,70 +1,54 @@
-﻿
-// WatsonTCP Auto Reconnect feature.
+﻿// WatsonTCP Auto Reconnect feature.
 // By Shayan Firoozi , Bandar Abbas , Iran
-//https://github.com/ShayanFiroozi
+// https://github.com/ShayanFiroozi
 // Shayan.Firoozi@gmail.com
-
-
-using System;
-using System.Security.Cryptography.X509Certificates;
-using System.Timers;
 
 namespace WatsonTcp
 {
+    using System;
+    using System.Security.Cryptography.X509Certificates;
+    using System.Timers;
+
     public partial class WatsonTcpClient : IDisposable
     {
 
-        private double AutoReconnectInterval { get; set; } = 0;
-        private int AutoReconnectMaxTry { get; set; } = -1;
-
-        private int AutoReconnectTryCounter = 0;
-
-        private Timer AutoReconnectTimer = null;
-
-
-
-      
-
-
+        private double _AutoReconnectIntervalMs { get; set; } = 0;
+        private int _AutoReconnectMaxAttempts { get; set; } = -1;
+        private int _AutoReconnectAttempts = 0;
+        private Timer _AutoReconnectTimer = null;
 
         private void StartAutoReconnect()
         {
-
-
-            AutoReconnectTimer = new Timer(AutoReconnectInterval);
-            AutoReconnectTimer.Elapsed += AutoReconnecTimer_Elapsed;
-            AutoReconnectTimer.Enabled = true;
-            AutoReconnectTimer.AutoReset = true;
-            AutoReconnectTimer.Start();
-
-
+            _AutoReconnectTimer = new Timer(_AutoReconnectIntervalMs);
+            _AutoReconnectTimer.Elapsed += AutoReconnecTimer_Elapsed;
+            _AutoReconnectTimer.Enabled = true;
+            _AutoReconnectTimer.AutoReset = true;
+            _AutoReconnectTimer.Start();
         }
 
         private void StopAutoReconnect()
         {
             try
             {
-                if (AutoReconnectTimer != null)
+                if (_AutoReconnectTimer != null)
                 {
-                    AutoReconnectTimer.Enabled = false;
-                    AutoReconnectTimer.Stop();
-                    AutoReconnectTryCounter = 0;
+                    _AutoReconnectTimer.Enabled = false;
+                    _AutoReconnectTimer.Stop();
+                    _AutoReconnectAttempts = 0;
                 }
             }
             catch { }
         }
 
-
         private void AutoReconnecTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-
             try
             {
                 if (_Client is null) return;
 
                 if (!Connected)
                 {
-                    if (AutoReconnectMaxTry != -1 && AutoReconnectTryCounter > AutoReconnectMaxTry)
+                    if (_AutoReconnectMaxAttempts != -1 && _AutoReconnectAttempts > _AutoReconnectMaxAttempts)
                     {
                         StopAutoReconnect();
                         return;
@@ -73,19 +57,16 @@ namespace WatsonTcp
                     {
                         Connect();
 
-                        AutoReconnectTryCounter++;
+                        _AutoReconnectAttempts++;
                     }
                 }
                 else
                 {
-                    AutoReconnectTryCounter = 0;
+                    _AutoReconnectAttempts = 0;
                 }
             }
 
             catch { }
         }
-
-
-
     }
 }

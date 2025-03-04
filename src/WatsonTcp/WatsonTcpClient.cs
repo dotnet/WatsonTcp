@@ -186,48 +186,37 @@
         /// </summary>
         /// <param name="serverIp">The IP address or hostname of the server.</param>
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
-        /// <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-        /// <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+        /// <param name="autoReconnectIntervalMs">
+        /// Interval in which the connection is checked (in milliseconds).  
+        /// Minimum value is 100.
+        /// Default is 0 (disabled).
+        /// </param>
+        /// <param name="autoReconnectMaxAttempts">
+        /// Maximum number of connection retries.
+        /// A value of -1 indicates unlimited retries.
+        /// Default is -1.
+        /// Value must be either -1 or greater than zero.
+        /// </param>
         public WatsonTcpClient(
             string serverIp,
             int serverPort,
-            double AutoReconnectInterval = 0,
-            int AutoReconnectMaxTry = -1)
+            double autoReconnectIntervalMs = 0,
+            int autoReconnectMaxAttempts = -1)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
-
-            if (this.AutoReconnectInterval >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(WatsonTcpClient.AutoReconnectInterval));
-            }
-
-
-            if (AutoReconnectMaxTry >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(AutoReconnectMaxTry));
-            }
-
-            if (this.AutoReconnectInterval < 100)
-            {
-#warning 'Connection Check Interval' lesser than 100 milliseconds is not ideal and may cause the CPU overhead or has conflict with 'Connect' operation.
-            }
-
-            this.AutoReconnectInterval = AutoReconnectInterval;
-            this.AutoReconnectMaxTry = AutoReconnectMaxTry;
+            if (autoReconnectIntervalMs != 0 && autoReconnectIntervalMs < 100) throw new ArgumentOutOfRangeException(nameof(autoReconnectIntervalMs));
+            if (autoReconnectMaxAttempts < -1 || autoReconnectMaxAttempts == 0) throw new ArgumentOutOfRangeException(nameof(autoReconnectMaxAttempts));
 
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
             _SendBuffer = new byte[_Settings.StreamBufferSize];
+            _AutoReconnectIntervalMs = autoReconnectIntervalMs;
+            _AutoReconnectMaxAttempts = autoReconnectMaxAttempts;
 
             SerializationHelper.InstantiateConverter(); // Unity fix
-
-
         }
-
-
-
 
         /// <summary>
         /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
@@ -237,44 +226,38 @@
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
         /// <param name="tlsVersion">The TLS version used for this connection.</param>
-        /// <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-        /// <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+        /// <param name="autoReconnectIntervalMs">
+        /// Interval in which the connection is checked (in milliseconds).  
+        /// Minimum value is 100.
+        /// Default is 0 (disabled).
+        /// </param>
+        /// <param name="autoReconnectMaxAttempts">
+        /// Maximum number of connection retries.
+        /// A value of -1 indicates unlimited retries.
+        /// Default is -1.
+        /// Value must be either -1 or greater than zero.
+        /// </param>
         public WatsonTcpClient(
             string serverIp,
             int serverPort,
             string pfxCertFile,
             string pfxCertPass,
             TlsVersion tlsVersion = TlsVersion.Tls12,
-            double AutoReconnectInterval = 0,
-            int AutoReconnectMaxTry = -1)
+            double autoReconnectIntervalMs = 0,
+            int autoReconnectMaxAttempts = -1)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
-
-            if (this.AutoReconnectInterval >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(WatsonTcpClient.AutoReconnectInterval));
-            }
-
-
-            if (AutoReconnectMaxTry >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(AutoReconnectMaxTry));
-            }
-
-            if (this.AutoReconnectInterval < 100)
-            {
-#warning 'Connection Check Interval' lesser than 100 milliseconds is not ideal and may cause the CPU overhead or has conflict with 'Connect' operation.
-            }
-
-            this.AutoReconnectInterval = AutoReconnectInterval;
-            this.AutoReconnectMaxTry = AutoReconnectMaxTry;
+            if (autoReconnectIntervalMs != 0 && autoReconnectIntervalMs < 100) throw new ArgumentOutOfRangeException(nameof(autoReconnectIntervalMs));
+            if (autoReconnectMaxAttempts < -1 || autoReconnectMaxAttempts == 0) throw new ArgumentOutOfRangeException(nameof(autoReconnectMaxAttempts));
 
             _Mode = Mode.Ssl;
             _TlsVersion = tlsVersion;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
             _SendBuffer = new byte[_Settings.StreamBufferSize];
+            _AutoReconnectIntervalMs = autoReconnectIntervalMs;
+            _AutoReconnectMaxAttempts = autoReconnectMaxAttempts;
 
             if (!String.IsNullOrEmpty(pfxCertFile))
             {
@@ -298,14 +281,7 @@
             }
 
             SerializationHelper.InstantiateConverter(); // Unity fix
-
-
-
         }
-
-
-
-
 
         /// <summary>
         /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
@@ -314,38 +290,33 @@
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="cert">The SSL certificate</param>
         /// <param name="tlsVersion">The TLS version used for this conenction.</param>
-        /// <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-        /// <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+        /// <param name="autoReconnectIntervalMs">
+        /// Interval in which the connection is checked (in milliseconds).  
+        /// Minimum value is 100.
+        /// Default is 0 (disabled).
+        /// </param>
+        /// <param name="autoReconnectMaxAttempts">
+        /// Maximum number of connection retries.
+        /// A value of -1 indicates unlimited retries.
+        /// Default is -1.
+        /// Value must be either -1 or greater than zero.
+        /// </param>
         public WatsonTcpClient(
             string serverIp,
             int serverPort,
             X509Certificate2 cert,
             TlsVersion tlsVersion = TlsVersion.Tls12,
-            double AutoReconnectInterval = 0,
-            int AutoReconnectMaxTry = -1)
+            double autoReconnectIntervalMs = 0,
+            int autoReconnectMaxAttempts = -1)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (cert == null) throw new ArgumentNullException(nameof(cert));
+            if (autoReconnectIntervalMs != 0 && autoReconnectIntervalMs < 100) throw new ArgumentOutOfRangeException(nameof(autoReconnectIntervalMs));
+            if (autoReconnectMaxAttempts < -1 || autoReconnectMaxAttempts == 0) throw new ArgumentOutOfRangeException(nameof(autoReconnectMaxAttempts));
 
-            if (this.AutoReconnectInterval >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(WatsonTcpClient.AutoReconnectInterval));
-            }
-
-
-            if (AutoReconnectMaxTry >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(AutoReconnectMaxTry));
-            }
-
-            if (this.AutoReconnectInterval < 100)
-            {
-#warning 'Connection Check Interval' lesser than 100 milliseconds is not ideal and may cause the CPU overhead or has conflict with 'Connect' operation.
-            }
-
-            this.AutoReconnectInterval = AutoReconnectInterval;
-            this.AutoReconnectMaxTry = AutoReconnectMaxTry;
+            this._AutoReconnectIntervalMs = autoReconnectIntervalMs;
+            this._AutoReconnectMaxAttempts = autoReconnectMaxAttempts;
 
             _Mode = Mode.Ssl;
             _TlsVersion = tlsVersion;
@@ -353,6 +324,8 @@
             _ServerIp = serverIp;
             _ServerPort = serverPort;
             _SendBuffer = new byte[_Settings.StreamBufferSize];
+            _AutoReconnectIntervalMs = autoReconnectIntervalMs;
+            _AutoReconnectMaxAttempts = autoReconnectMaxAttempts;
 
             _SslCertificateCollection = new X509Certificate2Collection
             {
@@ -360,8 +333,6 @@
             };
 
             SerializationHelper.InstantiateConverter(); // Unity fix
-
-
         }
 
         #endregion
@@ -546,7 +517,7 @@
             _IsTimeout = false;
 
             // Start the Auto Reconnect feature
-            if (AutoReconnectInterval > 0)
+            if (_AutoReconnectIntervalMs > 0)
             {
                 StartAutoReconnect();
             }
@@ -566,7 +537,8 @@
         /// Disconnect from the server.
         /// </summary>
         /// <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
-        public void Disconnect(bool sendNotice = true, bool DeactiveAutoReconnect = true)
+        /// <param name="disableAutoReconnect">Disable automatic reconnect.</param>
+        public void Disconnect(bool sendNotice = true, bool disableAutoReconnect = true)
         {
             if (!Connected) throw new InvalidOperationException("Not connected to the server.");
 
@@ -575,7 +547,7 @@
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
             //Stop the Auto Reconnect feature first to perevent unwanted reconnect !
-            if (DeactiveAutoReconnect) StopAutoReconnect();
+            if (disableAutoReconnect) StopAutoReconnect();
 
             if (Connected && sendNotice)
             {

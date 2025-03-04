@@ -91,8 +91,17 @@
             </summary>
             <param name="serverIp">The IP address or hostname of the server.</param>
             <param name="serverPort">The TCP port on which the server is listening.</param>
-            <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-            <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+            <param name="autoReconnectIntervalMs">
+            Interval in which the connection is checked (in milliseconds).  
+            Minimum value is 100.
+            Default is 0 (disabled).
+            </param>
+            <param name="autoReconnectMaxAttempts">
+            Maximum number of connection retries.
+            A value of -1 indicates unlimited retries.
+            Default is -1.
+            Value must be either -1 or greater than zero.
+            </param>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.String,System.String,WatsonTcp.TlsVersion,System.Double,System.Int32)">
             <summary>
@@ -103,8 +112,17 @@
             <param name="pfxCertFile">The file containing the SSL certificate.</param>
             <param name="pfxCertPass">The password for the SSL certificate.</param>
             <param name="tlsVersion">The TLS version used for this connection.</param>
-            <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-            <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+            <param name="autoReconnectIntervalMs">
+            Interval in which the connection is checked (in milliseconds).  
+            Minimum value is 100.
+            Default is 0 (disabled).
+            </param>
+            <param name="autoReconnectMaxAttempts">
+            Maximum number of connection retries.
+            A value of -1 indicates unlimited retries.
+            Default is -1.
+            Value must be either -1 or greater than zero.
+            </param>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2,WatsonTcp.TlsVersion,System.Double,System.Int32)">
             <summary>
@@ -114,8 +132,17 @@
             <param name="serverPort">The TCP port on which the server is listening.</param>
             <param name="cert">The SSL certificate</param>
             <param name="tlsVersion">The TLS version used for this conenction.</param>
-            <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-            <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
+            <param name="autoReconnectIntervalMs">
+            Interval in which the connection is checked (in milliseconds).  
+            Minimum value is 100.
+            Default is 0 (disabled).
+            </param>
+            <param name="autoReconnectMaxAttempts">
+            Maximum number of connection retries.
+            A value of -1 indicates unlimited retries.
+            Default is -1.
+            Value must be either -1 or greater than zero.
+            </param>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Dispose">
             <summary>        
@@ -133,6 +160,7 @@
             Disconnect from the server.
             </summary>
             <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
+            <param name="disableAutoReconnect">Disable automatic reconnect.</param>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.AuthenticateAsync(System.String,System.Threading.CancellationToken)">
             <summary>
