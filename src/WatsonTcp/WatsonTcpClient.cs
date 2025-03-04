@@ -16,7 +16,7 @@
     /// <summary>
     /// Watson TCP client, with or without SSL.
     /// </summary>
-    public partial class WatsonTcpClient : IDisposable
+    public class WatsonTcpClient : IDisposable
     {
         #region Public-Members
 
@@ -152,7 +152,7 @@
         private string _SourceIp = null;
         private int _SourcePort = 0;
         private string _ServerIp = null;
-        private int _ServerPort = 0;
+        private int _ServerPort = 0; 
 
         private TcpClient _Client = null;
         private Stream _DataStream = null;
@@ -186,48 +186,20 @@
         /// </summary>
         /// <param name="serverIp">The IP address or hostname of the server.</param>
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
-        /// <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-        /// <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
         public WatsonTcpClient(
             string serverIp,
-            int serverPort,
-            double AutoReconnectInterval = 0,
-            int AutoReconnectMaxTry = -1)
+            int serverPort)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
-
-            if (this.AutoReconnectInterval >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(WatsonTcpClient.AutoReconnectInterval));
-            }
-
-
-            if (AutoReconnectMaxTry >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(AutoReconnectMaxTry));
-            }
-
-            if (this.AutoReconnectInterval < 100)
-            {
-#warning 'Connection Check Interval' lesser than 100 milliseconds is not ideal and may cause the CPU overhead or has conflict with 'Connect' operation.
-            }
-
-            this.AutoReconnectInterval = AutoReconnectInterval;
-            this.AutoReconnectMaxTry = AutoReconnectMaxTry;
-
+              
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
             _SendBuffer = new byte[_Settings.StreamBufferSize];
 
             SerializationHelper.InstantiateConverter(); // Unity fix
-
-
         }
-
-
-
 
         /// <summary>
         /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
@@ -237,39 +209,16 @@
         /// <param name="pfxCertFile">The file containing the SSL certificate.</param>
         /// <param name="pfxCertPass">The password for the SSL certificate.</param>
         /// <param name="tlsVersion">The TLS version used for this connection.</param>
-        /// <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-        /// <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
         public WatsonTcpClient(
             string serverIp,
             int serverPort,
             string pfxCertFile,
             string pfxCertPass,
-            TlsVersion tlsVersion = TlsVersion.Tls12,
-            double AutoReconnectInterval = 0,
-            int AutoReconnectMaxTry = -1)
+            TlsVersion tlsVersion = TlsVersion.Tls12)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
-
-            if (this.AutoReconnectInterval >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(WatsonTcpClient.AutoReconnectInterval));
-            }
-
-
-            if (AutoReconnectMaxTry >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(AutoReconnectMaxTry));
-            }
-
-            if (this.AutoReconnectInterval < 100)
-            {
-#warning 'Connection Check Interval' lesser than 100 milliseconds is not ideal and may cause the CPU overhead or has conflict with 'Connect' operation.
-            }
-
-            this.AutoReconnectInterval = AutoReconnectInterval;
-            this.AutoReconnectMaxTry = AutoReconnectMaxTry;
-
+              
             _Mode = Mode.Ssl;
             _TlsVersion = tlsVersion;
             _ServerIp = serverIp;
@@ -298,14 +247,7 @@
             }
 
             SerializationHelper.InstantiateConverter(); // Unity fix
-
-
-
         }
-
-
-
-
 
         /// <summary>
         /// Initialize the Watson TCP client with SSL.  Call Start() afterward to connect to the server.
@@ -314,39 +256,16 @@
         /// <param name="serverPort">The TCP port on which the server is listening.</param>
         /// <param name="cert">The SSL certificate</param>
         /// <param name="tlsVersion">The TLS version used for this conenction.</param>
-        /// <param name="AutoReconnectInterval">Interval to check the connection (in millisecond). deafult is 0 (disabled)</param>
-        /// <param name="AutoReconnectMaxTry">Maximum number of tries to connect (-1 = unlimited try !) default is -1 or unlimited try</param><remarks>This value will be reset if the client connected to the server.</remarks>
         public WatsonTcpClient(
-            string serverIp,
-            int serverPort,
+            string serverIp, 
+            int serverPort, 
             X509Certificate2 cert,
-            TlsVersion tlsVersion = TlsVersion.Tls12,
-            double AutoReconnectInterval = 0,
-            int AutoReconnectMaxTry = -1)
+            TlsVersion tlsVersion = TlsVersion.Tls12)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (cert == null) throw new ArgumentNullException(nameof(cert));
-
-            if (this.AutoReconnectInterval >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(WatsonTcpClient.AutoReconnectInterval));
-            }
-
-
-            if (AutoReconnectMaxTry >= int.MaxValue)
-            {
-                throw new ArgumentOutOfRangeException(nameof(AutoReconnectMaxTry));
-            }
-
-            if (this.AutoReconnectInterval < 100)
-            {
-#warning 'Connection Check Interval' lesser than 100 milliseconds is not ideal and may cause the CPU overhead or has conflict with 'Connect' operation.
-            }
-
-            this.AutoReconnectInterval = AutoReconnectInterval;
-            this.AutoReconnectMaxTry = AutoReconnectMaxTry;
-
+             
             _Mode = Mode.Ssl;
             _TlsVersion = tlsVersion;
             _SslCertificate = cert;
@@ -360,8 +279,6 @@
             };
 
             SerializationHelper.InstantiateConverter(); // Unity fix
-
-
         }
 
         #endregion
@@ -374,7 +291,7 @@
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            Dispose(true); 
             GC.SuppressFinalize(this);
         }
 
@@ -545,37 +462,21 @@
             _LastActivity = DateTime.UtcNow;
             _IsTimeout = false;
 
-            // Start the Auto Reconnect feature
-            if (AutoReconnectInterval > 0)
-            {
-                StartAutoReconnect();
-            }
-
-
-
             _DataReceiver = Task.Run(() => DataReceiver(_Token), _Token);
             _IdleServerMonitor = Task.Run(() => IdleServerMonitor(_Token), _Token);
             _Events.HandleServerConnected(this, new ConnectionEventArgs());
             _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
-
-
-
         }
 
         /// <summary>
         /// Disconnect from the server.
         /// </summary>
         /// <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
-        public void Disconnect(bool sendNotice = true, bool DeactiveAutoReconnect = true)
+        public void Disconnect(bool sendNotice = true)
         {
             if (!Connected) throw new InvalidOperationException("Not connected to the server.");
 
-
-
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
-
-            //Stop the Auto Reconnect feature first to perevent unwanted reconnect !
-            if (DeactiveAutoReconnect) StopAutoReconnect();
 
             if (Connected && sendNotice)
             {
@@ -594,7 +495,7 @@
                     _Token = default(CancellationToken);
                 }
             }
-
+             
             if (_SslStream != null)
             {
                 _SslStream.Close();
@@ -672,7 +573,7 @@
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return await SendAsync(contentLength, stream, metadata, token).ConfigureAwait(false);
         }
-
+         
         /// <summary>
         /// Send data and metadata to the server from a stream asynchronously.
         /// </summary>
@@ -795,7 +696,7 @@
                 _ReadLock = null;
 
                 _DataReceiver = null;
-            }
+            } 
         }
 
         #region Connection
@@ -824,10 +725,10 @@
 
                 // .NET Framework expects values in milliseconds
 
-                byte[] keepAlive = new byte[12];
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4);
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveTime * 1000)), 0, keepAlive, 4, 4);
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveInterval * 1000)), 0, keepAlive, 8, 4);
+                byte[] keepAlive = new byte[12]; 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveTime * 1000)), 0, keepAlive, 4, 4);  
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveInterval * 1000)), 0, keepAlive, 8, 4);  
                 _Client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
 
 #elif NETSTANDARD
@@ -854,7 +755,7 @@
                 try
                 {
                     token.ThrowIfCancellationRequested();
-
+                    
                     #region Check-for-Connection
 
                     if (_Client == null || !_Client.Connected)
@@ -870,7 +771,7 @@
                     await _ReadLock.WaitAsync(token);
                     WatsonMessage msg = await _MessageBuilder.BuildFromStream(_DataStream, token);
                     if (msg == null)
-                    {
+                    { 
                         await Task.Delay(30, token).ConfigureAwait(false);
                         continue;
                     }
@@ -914,7 +815,7 @@
                     }
                     else if (msg.Status == MessageStatus.AuthRequired)
                     {
-                        _Settings.Logger?.Invoke(Severity.Info, _Header + "authentication required by server; please authenticate using pre-shared key");
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "authentication required by server; please authenticate using pre-shared key"); 
                         string psk = _Callbacks.HandleAuthenticationRequested();
                         if (!String.IsNullOrEmpty(psk)) await AuthenticateAsync(psk, token);
                         continue;
@@ -927,7 +828,7 @@
                     if (msg.SyncRequest)
                     {
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous request received: " + msg.ConversationGuid.ToString());
-
+                        
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
 
@@ -970,12 +871,12 @@
                                     respMsg.ConversationGuid = msg.ConversationGuid;
                                     await SendInternalAsync(respMsg, contentLength, stream, token).ConfigureAwait(false);
                                 }
-                            }, _Token);
+                            }, _Token);                            
                         }
                         else
-                        {
+                        { 
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous request received and discarded");
-                        }
+                        } 
                     }
                     else if (msg.SyncResponse)
                     {
@@ -988,7 +889,7 @@
                         {
                             lock (_SyncResponseLock)
                             {
-                                _SyncResponseReceived?.Invoke(this, new SyncResponseReceivedEventArgs(msg, msgData));
+                                _SyncResponseReceived?.Invoke(this,new SyncResponseReceivedEventArgs(msg,msgData));
                             }
                         }
                         else
@@ -1001,8 +902,8 @@
                         byte[] msgData = null;
 
                         if (_Events.IsUsingMessages)
-                        {
-                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
+                        { 
+                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false); 
                             MessageReceivedEventArgs args = new MessageReceivedEventArgs(null, msg.Metadata, msgData);
                             await Task.Run(() => _Events.HandleMessageReceived(this, args));
                         }
@@ -1014,16 +915,16 @@
                             if (msg.ContentLength >= _Settings.MaxProxiedStreamSize)
                             {
                                 ws = new WatsonStream(msg.ContentLength, msg.DataStream);
-                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws);
+                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws); 
                                 _Events.HandleStreamReceived(this, sr);
                             }
                             else
                             {
                                 MemoryStream ms = await WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
                                 ws = new WatsonStream(msg.ContentLength, ms);
-                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws);
+                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws); 
                                 Task unawaited = Task.Run(() => _Events.HandleStreamReceived(this, sr), token);
-                            }
+                            } 
                         }
                         else
                         {
@@ -1067,7 +968,7 @@
                         _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ": " + e.Message + Environment.NewLine);
                     _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
-                }
+                } 
                 finally
                 {
                     if (_ReadLock != null) _ReadLock.Release();
@@ -1090,8 +991,8 @@
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (!Connected) return false;
-
-            if (contentLength > 0 && (stream == null || !stream.CanRead))
+            
+            if (contentLength > 0  && (stream == null || !stream.CanRead))
             {
                 throw new ArgumentException("Cannot read from supplied stream.");
             }
@@ -1103,17 +1004,17 @@
             }
 
             bool disconnectDetected = false;
-
+             
             if (_Client == null || !_Client.Connected)
             {
                 return false;
             }
-
+                 
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             try
-            {
-                await SendHeadersAsync(msg, token).ConfigureAwait(false);
+            { 
+                await SendHeadersAsync(msg, token).ConfigureAwait(false); 
                 await SendDataStreamAsync(contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
@@ -1141,7 +1042,7 @@
             }
             finally
             {
-                _WriteLock.Release();
+                _WriteLock.Release(); 
 
                 if (disconnectDetected)
                 {
@@ -1150,23 +1051,23 @@
                 }
             }
         }
-
+         
         private async Task<SyncResponse> SendAndWaitInternalAsync(WatsonMessage msg, int timeoutMs, long contentLength, Stream stream, CancellationToken token)
         {
-            if (msg == null) throw new ArgumentNullException(nameof(msg));
+            if (msg == null) throw new ArgumentNullException(nameof(msg)); 
             if (!Connected) throw new InvalidOperationException("Client is not connected to the server.");
 
             if (contentLength > 0 && (stream == null || !stream.CanRead))
                 throw new ArgumentException("Cannot read from supplied stream.");
 
             bool disconnectDetected = false;
-
+            
             if (_Client == null || !_Client.Connected)
             {
                 disconnectDetected = true;
                 throw new InvalidOperationException("Client is not connected to the server.");
             }
-
+              
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             SyncResponse ret = null;
@@ -1221,7 +1122,7 @@
             }
 
             // Wait for responded.Set() to be called
-            responded.WaitOne(new TimeSpan(0, 0, 0, 0, timeoutMs));
+            responded.WaitOne(new TimeSpan(0,0,0,0, timeoutMs));
 
             // Unsubscribe                
             _SyncResponseReceived -= handler;
@@ -1240,11 +1141,11 @@
         private async Task SendHeadersAsync(WatsonMessage msg, CancellationToken token)
         {
             msg.SenderGuid = _Settings.Guid;
-            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
+            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg); 
             await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length, token).ConfigureAwait(false);
             await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
-
+         
         private async Task SendDataStreamAsync(long contentLength, Stream stream, CancellationToken token)
         {
             if (contentLength <= 0) return;
@@ -1269,7 +1170,7 @@
                     await _DataStream.WriteAsync(_SendBuffer, 0, bytesRead, token).ConfigureAwait(false);
                     bytesRemaining -= bytesRead;
                 }
-            }
+            }  
 
             await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
