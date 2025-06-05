@@ -152,7 +152,7 @@
         private string _SourceIp = null;
         private int _SourcePort = 0;
         private string _ServerIp = null;
-        private int _ServerPort = 0; 
+        private int _ServerPort = 0;
 
         private TcpClient _Client = null;
         private Stream _DataStream = null;
@@ -192,7 +192,7 @@
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
-              
+
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
@@ -218,7 +218,7 @@
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
-              
+
             _Mode = Mode.Ssl;
             _TlsVersion = tlsVersion;
             _ServerIp = serverIp;
@@ -257,15 +257,15 @@
         /// <param name="cert">The SSL certificate</param>
         /// <param name="tlsVersion">The TLS version used for this conenction.</param>
         public WatsonTcpClient(
-            string serverIp, 
-            int serverPort, 
+            string serverIp,
+            int serverPort,
             X509Certificate2 cert,
             TlsVersion tlsVersion = TlsVersion.Tls12)
         {
             if (String.IsNullOrEmpty(serverIp)) throw new ArgumentNullException(nameof(serverIp));
             if (serverPort < 0) throw new ArgumentOutOfRangeException(nameof(serverPort));
             if (cert == null) throw new ArgumentNullException(nameof(cert));
-             
+
             _Mode = Mode.Ssl;
             _TlsVersion = tlsVersion;
             _SslCertificate = cert;
@@ -285,13 +285,13 @@
 
         #region Public-Methods
 
-        /// <summary>        
+        /// <summary>
         /// Disconnect the client and dispose of background workers.
         /// Do not reuse the object after disposal.
         /// </summary>
         public void Dispose()
         {
-            Dispose(true); 
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
@@ -495,7 +495,7 @@
                     _Token = default(CancellationToken);
                 }
             }
-             
+
             if (_SslStream != null)
             {
                 _SslStream.Close();
@@ -573,7 +573,7 @@
             WatsonCommon.BytesToStream(data, start, out int contentLength, out Stream stream);
             return await SendAsync(contentLength, stream, metadata, token).ConfigureAwait(false);
         }
-         
+
         /// <summary>
         /// Send data and metadata to the server from a stream asynchronously.
         /// </summary>
@@ -675,7 +675,7 @@
                 if (_ReadLock != null)
                     _ReadLock.Dispose();
 
-                _Settings = null;
+                Settings = null;
                 _Events = null;
                 _Callbacks = null;
                 _Statistics = null;
@@ -696,7 +696,7 @@
                 _ReadLock = null;
 
                 _DataReceiver = null;
-            } 
+            }
         }
 
         #region Connection
@@ -725,10 +725,10 @@
 
                 // .NET Framework expects values in milliseconds
 
-                byte[] keepAlive = new byte[12]; 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4); 
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveTime * 1000)), 0, keepAlive, 4, 4);  
-                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveInterval * 1000)), 0, keepAlive, 8, 4);  
+                byte[] keepAlive = new byte[12];
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)1), 0, keepAlive, 0, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveTime * 1000)), 0, keepAlive, 4, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes((uint)(_Keepalive.TcpKeepAliveInterval * 1000)), 0, keepAlive, 8, 4);
                 _Client.Client.IOControl(IOControlCode.KeepAliveValues, keepAlive, null);
 
 #elif NETSTANDARD
@@ -755,7 +755,7 @@
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    
+
                     #region Check-for-Connection
 
                     if (_Client == null || !_Client.Connected)
@@ -771,7 +771,7 @@
                     await _ReadLock.WaitAsync(token);
                     WatsonMessage msg = await _MessageBuilder.BuildFromStream(_DataStream, token);
                     if (msg == null)
-                    { 
+                    {
                         await Task.Delay(30, token).ConfigureAwait(false);
                         continue;
                     }
@@ -815,7 +815,7 @@
                     }
                     else if (msg.Status == MessageStatus.AuthRequired)
                     {
-                        _Settings.Logger?.Invoke(Severity.Info, _Header + "authentication required by server; please authenticate using pre-shared key"); 
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "authentication required by server; please authenticate using pre-shared key");
                         string psk = _Callbacks.HandleAuthenticationRequested();
                         if (!String.IsNullOrEmpty(psk)) await AuthenticateAsync(psk, token);
                         continue;
@@ -828,7 +828,7 @@
                     if (msg.SyncRequest)
                     {
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous request received: " + msg.ConversationGuid.ToString());
-                        
+
                         DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
 
@@ -871,17 +871,17 @@
                                     respMsg.ConversationGuid = msg.ConversationGuid;
                                     await SendInternalAsync(respMsg, contentLength, stream, token).ConfigureAwait(false);
                                 }
-                            }, _Token);                            
+                            }, _Token);
                         }
                         else
-                        { 
+                        {
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous request received and discarded");
-                        } 
+                        }
                     }
                     else if (msg.SyncResponse)
                     {
                         // No need to amend message expiration; it is copied from the request, which was set by this node
-                        // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg); 
+                        // DateTime expiration = WatsonCommon.GetExpirationTimestamp(msg);
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous response received: " + msg.ConversationGuid.ToString());
                         byte[] msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
 
@@ -902,8 +902,8 @@
                         byte[] msgData = null;
 
                         if (_Events.IsUsingMessages)
-                        { 
-                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false); 
+                        {
+                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
                             MessageReceivedEventArgs args = new MessageReceivedEventArgs(null, msg.Metadata, msgData);
                             await Task.Run(() => _Events.HandleMessageReceived(this, args));
                         }
@@ -915,16 +915,16 @@
                             if (msg.ContentLength >= _Settings.MaxProxiedStreamSize)
                             {
                                 ws = new WatsonStream(msg.ContentLength, msg.DataStream);
-                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws); 
+                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws);
                                 _Events.HandleStreamReceived(this, sr);
                             }
                             else
                             {
                                 MemoryStream ms = await WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
                                 ws = new WatsonStream(msg.ContentLength, ms);
-                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws); 
+                                sr = new StreamReceivedEventArgs(null, msg.Metadata, msg.ContentLength, ws);
                                 Task unawaited = Task.Run(() => _Events.HandleStreamReceived(this, sr), token);
-                            } 
+                            }
                         }
                         else
                         {
@@ -968,7 +968,7 @@
                         _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ": " + e.Message + Environment.NewLine);
                     _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
-                } 
+                }
                 finally
                 {
                     if (_ReadLock != null) _ReadLock.Release();
@@ -991,7 +991,7 @@
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (!Connected) return false;
-            
+
             if (contentLength > 0  && (stream == null || !stream.CanRead))
             {
                 throw new ArgumentException("Cannot read from supplied stream.");
@@ -1004,17 +1004,17 @@
             }
 
             bool disconnectDetected = false;
-             
+
             if (_Client == null || !_Client.Connected)
             {
                 return false;
             }
-                 
+
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             try
-            { 
-                await SendHeadersAsync(msg, token).ConfigureAwait(false); 
+            {
+                await SendHeadersAsync(msg, token).ConfigureAwait(false);
                 await SendDataStreamAsync(contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
@@ -1042,7 +1042,7 @@
             }
             finally
             {
-                _WriteLock.Release(); 
+                _WriteLock.Release();
 
                 if (disconnectDetected)
                 {
@@ -1051,23 +1051,23 @@
                 }
             }
         }
-         
+
         private async Task<SyncResponse> SendAndWaitInternalAsync(WatsonMessage msg, int timeoutMs, long contentLength, Stream stream, CancellationToken token)
         {
-            if (msg == null) throw new ArgumentNullException(nameof(msg)); 
+            if (msg == null) throw new ArgumentNullException(nameof(msg));
             if (!Connected) throw new InvalidOperationException("Client is not connected to the server.");
 
             if (contentLength > 0 && (stream == null || !stream.CanRead))
                 throw new ArgumentException("Cannot read from supplied stream.");
 
             bool disconnectDetected = false;
-            
+
             if (_Client == null || !_Client.Connected)
             {
                 disconnectDetected = true;
                 throw new InvalidOperationException("Client is not connected to the server.");
             }
-              
+
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             SyncResponse ret = null;
@@ -1083,7 +1083,7 @@
                 }
             };
 
-            // Subscribe                
+            // Subscribe
             _SyncResponseReceived += handler;
 
             try
@@ -1124,7 +1124,7 @@
             // Wait for responded.Set() to be called
             responded.WaitOne(new TimeSpan(0,0,0,0, timeoutMs));
 
-            // Unsubscribe                
+            // Unsubscribe
             _SyncResponseReceived -= handler;
 
             if (ret != null)
@@ -1141,11 +1141,11 @@
         private async Task SendHeadersAsync(WatsonMessage msg, CancellationToken token)
         {
             msg.SenderGuid = _Settings.Guid;
-            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg); 
+            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
             await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length, token).ConfigureAwait(false);
             await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
-         
+
         private async Task SendDataStreamAsync(long contentLength, Stream stream, CancellationToken token)
         {
             if (contentLength <= 0) return;
@@ -1170,7 +1170,7 @@
                     await _DataStream.WriteAsync(_SendBuffer, 0, bytesRead, token).ConfigureAwait(false);
                     bytesRemaining -= bytesRead;
                 }
-            }  
+            }
 
             await _DataStream.FlushAsync(token).ConfigureAwait(false);
         }
