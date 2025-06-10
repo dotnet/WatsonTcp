@@ -773,7 +773,7 @@
             <param name="tlsVersion">The TLS version used for this conenction.</param>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClient.Dispose">
-            <summary>        
+            <summary>
             Disconnect the client and dispose of background workers.
             Do not reuse the object after disposal.
             </summary>
@@ -1155,7 +1155,7 @@
             <summary>
             Initialize the Watson TCP server without SSL.
             Supply a specific IP address on which to listen.  Otherwise, use 'null' for the IP address to listen on any IP address.
-            If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.  
+            If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.
             Call Start() afterward to start the server.
             </summary>
             <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
@@ -1163,9 +1163,9 @@
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32,System.String,System.String,WatsonTcp.TlsVersion)">
             <summary>
-            Initialize the Watson TCP server with SSL.  
+            Initialize the Watson TCP server with SSL.
             Supply a specific IP address on which to listen.  Otherwise, use 'null' for the IP address to listen on any IP address.
-            If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.  
+            If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.
             Call Start() afterward to start the server.
             </summary>
             <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>
@@ -1176,9 +1176,9 @@
         </member>
         <member name="M:WatsonTcp.WatsonTcpServer.#ctor(System.String,System.Int32,System.Security.Cryptography.X509Certificates.X509Certificate2,WatsonTcp.TlsVersion)">
             <summary>
-            Initialize the Watson TCP server with SSL.  
+            Initialize the Watson TCP server with SSL.
             Supply a specific IP address on which to listen.  Otherwise, use 'null' for the IP address to listen on any IP address.
-            If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.  
+            If you do not specify an IP address, you may have to run WatsonTcp with administrative privileges.
             Call Start() afterward to start the server.
             </summary>
             <param name="listenerIp">The IP address on which the server should listen.  If null, listen on any IP address (may require administrative privileges).</param>

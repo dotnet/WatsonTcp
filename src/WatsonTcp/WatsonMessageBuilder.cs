@@ -118,6 +118,10 @@
                     readTotal += read;
                     if (readTotal >= 24) break;
                 }
+                else
+                {
+                    return null;
+                }
 
                 #endregion
             }
@@ -148,6 +152,10 @@
                 read = await stream.ReadAsync(headerBuffer, 0, 1, token).ConfigureAwait(false);
                 if (read > 0)
                     headerBytes = WatsonCommon.AppendBytes(headerBytes, headerBuffer);
+                else
+                {
+                    return null;
+                }
 
                 #endregion
             }
