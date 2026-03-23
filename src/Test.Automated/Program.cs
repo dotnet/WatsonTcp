@@ -70,6 +70,7 @@ namespace Test.Automated
             Console.WriteLine();
 
             _framework = new TestFramework();
+            _framework.StartSuite();
 
             // Run all tests
             await RunAllTests();
@@ -151,6 +152,37 @@ namespace Test.Automated
             await Test_AuthenticationSuccess();
             await Test_AuthenticationFailure();
             await Test_AuthenticationCallback();
+
+            // Throughput tests
+            await Test_ThroughputSmallMessages();
+            await Test_ThroughputMediumMessages();
+            await Test_ThroughputLargeMessages();
+
+            // v6.1.0 - MaxConnections enforcement tests
+            await Test_MaxConnectionsEnforced();
+            await Test_MaxConnectionsNotEnforced();
+
+            // v6.1.0 - MaxHeaderSize tests
+            await Test_MaxHeaderSizeEnforced();
+
+            // v6.1.0 - Rapid connect/disconnect
+            await Test_RapidConnectDisconnect();
+
+            // v6.1.0 - Concurrent sync requests
+            await Test_ConcurrentSyncRequests();
+
+            // v6.1.0 - SSL connectivity
+            await Test_SslConnectivity();
+            await Test_SslMessageExchange();
+
+            // v6.1.0 - Server stop while client connected
+            await Test_ServerStopWhileClientSending();
+
+            // v6.1.0 - Duplicate client GUID
+            await Test_DuplicateClientGuid();
+
+            // v6.1.0 - Send with offset
+            await Test_SendWithOffset();
         }
 
         #region Basic-Connection-Tests
@@ -158,6 +190,7 @@ namespace Test.Automated
         static async Task Test_BasicServerStartStop()
         {
             string testName = "Basic Server Start/Stop";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             try
             {
@@ -199,6 +232,7 @@ namespace Test.Automated
         static async Task Test_BasicClientConnection()
         {
             string testName = "Basic Client Connection";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
 
@@ -240,6 +274,7 @@ namespace Test.Automated
         static async Task Test_ClientServerConnection()
         {
             string testName = "Client-Server Connection";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
 
@@ -284,6 +319,7 @@ namespace Test.Automated
         static async Task Test_ClientSendServerReceive()
         {
             string testName = "Client Send -> Server Receive";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             string receivedData = null;
@@ -339,6 +375,7 @@ namespace Test.Automated
         static async Task Test_ServerSendClientReceive()
         {
             string testName = "Server Send -> Client Receive";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             string receivedData = null;
@@ -395,6 +432,7 @@ namespace Test.Automated
         static async Task Test_BidirectionalCommunication()
         {
             string testName = "Bidirectional Communication";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             string serverReceived = null;
@@ -467,6 +505,7 @@ namespace Test.Automated
         static async Task Test_EmptyMessage()
         {
             string testName = "Empty Message with Metadata";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             Dictionary<string, object> receivedMetadata = null;
@@ -526,6 +565,7 @@ namespace Test.Automated
         static async Task Test_SendWithMetadata()
         {
             string testName = "Send With Metadata";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             Dictionary<string, object> receivedMetadata = null;
@@ -595,6 +635,7 @@ namespace Test.Automated
         static async Task Test_ReceiveWithMetadata()
         {
             string testName = "Receive With Metadata";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             Dictionary<string, object> receivedMetadata = null;
@@ -655,6 +696,7 @@ namespace Test.Automated
         static async Task Test_SyncRequestResponse()
         {
             string testName = "Sync Request/Response";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
 
@@ -708,6 +750,7 @@ namespace Test.Automated
         static async Task Test_SyncRequestTimeout()
         {
             string testName = "Sync Request Timeout";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
 
@@ -767,6 +810,7 @@ namespace Test.Automated
         static async Task Test_ServerConnectedEvent()
         {
             string testName = "Server Connected Event";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool eventFired = false;
@@ -818,6 +862,7 @@ namespace Test.Automated
         static async Task Test_ServerDisconnectedEvent()
         {
             string testName = "Server Disconnected Event";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool eventFired = false;
@@ -874,6 +919,7 @@ namespace Test.Automated
         static async Task Test_ClientConnectedEvent()
         {
             string testName = "Client Connected Event";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool eventFired = false;
@@ -927,6 +973,7 @@ namespace Test.Automated
         static async Task Test_ClientDisconnectedEvent()
         {
             string testName = "Client Disconnected Event";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool eventFired = false;
@@ -981,6 +1028,7 @@ namespace Test.Automated
         static async Task Test_MessageReceivedEvent()
         {
             string testName = "Message Received Event";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             int messageCount = 0;
@@ -1039,6 +1087,7 @@ namespace Test.Automated
         static async Task Test_StreamSendReceive()
         {
             string testName = "Stream Send/Receive";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             long receivedLength = 0;
@@ -1099,6 +1148,7 @@ namespace Test.Automated
         static async Task Test_LargeStreamTransfer()
         {
             string testName = "Large Stream Transfer (10MB)";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             long receivedLength = 0;
@@ -1200,6 +1250,7 @@ namespace Test.Automated
         static async Task Test_ClientStatistics()
         {
             string testName = "Client Statistics";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
 
@@ -1257,6 +1308,7 @@ namespace Test.Automated
         static async Task Test_ServerStatistics()
         {
             string testName = "Server Statistics";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
 
@@ -1318,6 +1370,7 @@ namespace Test.Automated
         static async Task Test_MultipleClients()
         {
             string testName = "Multiple Clients";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             List<WatsonTcpClient> clients = new List<WatsonTcpClient>();
 
@@ -1375,6 +1428,7 @@ namespace Test.Automated
         static async Task Test_ListClients()
         {
             string testName = "List Clients";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client1 = null;
             WatsonTcpClient client2 = null;
@@ -1436,6 +1490,7 @@ namespace Test.Automated
         static async Task Test_ClientDisconnect()
         {
             string testName = "Client Disconnect";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
 
@@ -1484,6 +1539,7 @@ namespace Test.Automated
         static async Task Test_ServerDisconnectClient()
         {
             string testName = "Server Disconnect Client";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool clientDisconnected = false;
@@ -1546,6 +1602,7 @@ namespace Test.Automated
         static async Task Test_ServerStop()
         {
             string testName = "Server Stop Disconnects Clients";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool clientDisconnected = false;
@@ -1624,6 +1681,7 @@ namespace Test.Automated
         static async Task Test_LargeMessageTransfer()
         {
             string testName = "Large Message Transfer (1MB)";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             byte[] receivedData = null;
@@ -1695,6 +1753,7 @@ namespace Test.Automated
         static async Task Test_ManyMessages()
         {
             string testName = "Many Messages (100 messages)";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             int receivedCount = 0;
@@ -1754,6 +1813,7 @@ namespace Test.Automated
         static async Task Test_SendToNonExistentClient()
         {
             string testName = "Send To Non-Existent Client";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
 
             try
@@ -1802,6 +1862,7 @@ namespace Test.Automated
         static async Task Test_ConnectToNonExistentServer()
         {
             string testName = "Connect To Non-Existent Server";
+            _framework.StartTest(testName);
             WatsonTcpClient client = null;
 
             try
@@ -1848,6 +1909,7 @@ namespace Test.Automated
         static async Task Test_ConcurrentClientConnections()
         {
             string testName = "Concurrent Client Connections";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             List<WatsonTcpClient> clients = new List<WatsonTcpClient>();
 
@@ -1899,6 +1961,7 @@ namespace Test.Automated
         static async Task Test_ConcurrentMessageSends()
         {
             string testName = "Concurrent Message Sends";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             int receivedCount = 0;
@@ -1966,6 +2029,7 @@ namespace Test.Automated
         static async Task Test_SpecifyClientGuid()
         {
             string testName = "Specify Client GUID";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             Guid? receivedGuid = null;
@@ -2023,6 +2087,7 @@ namespace Test.Automated
         static async Task Test_IdleClientTimeout()
         {
             string testName = "Idle Client Timeout";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool clientDisconnected = false;
@@ -2081,6 +2146,7 @@ namespace Test.Automated
         static async Task Test_AuthenticationSuccess()
         {
             string testName = "Authentication Success (via Settings)";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool authSucceeded = false;
@@ -2138,6 +2204,7 @@ namespace Test.Automated
         static async Task Test_AuthenticationFailure()
         {
             string testName = "Authentication Failure (Wrong Key)";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool authFailed = false;
@@ -2210,6 +2277,7 @@ namespace Test.Automated
         static async Task Test_AuthenticationCallback()
         {
             string testName = "Authentication Callback (Fallback)";
+            _framework.StartTest(testName);
             WatsonTcpServer server = null;
             WatsonTcpClient client = null;
             bool authSucceeded = false;
@@ -2276,6 +2344,774 @@ namespace Test.Automated
         }
 
         #endregion
+
+        #region Throughput-Tests
+
+        static async Task Test_ThroughputSmallMessages()
+        {
+            string testName = "Throughput: 64-byte messages";
+            _framework.StartTest(testName);
+            await RunThroughputTest(testName, messageSize: 64, messageCount: 5000);
+        }
+
+        static async Task Test_ThroughputMediumMessages()
+        {
+            string testName = "Throughput: 64KB messages";
+            _framework.StartTest(testName);
+            await RunThroughputTest(testName, messageSize: 65536, messageCount: 500);
+        }
+
+        static async Task Test_ThroughputLargeMessages()
+        {
+            string testName = "Throughput: 4MB messages";
+            _framework.StartTest(testName);
+            await RunThroughputTest(testName, messageSize: 4 * 1024 * 1024, messageCount: 20);
+        }
+
+        static async Task RunThroughputTest(string testName, int messageSize, int messageCount)
+        {
+            WatsonTcpServer server = null;
+            WatsonTcpClient client = null;
+            int receivedCount = 0;
+            ManualResetEvent allReceived = new ManualResetEvent(false);
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                server.Events.MessageReceived += (s, e) =>
+                {
+                    if (Interlocked.Increment(ref receivedCount) >= messageCount)
+                        allReceived.Set();
+                };
+                server.Start();
+                await Task.Delay(100);
+
+                client = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client);
+                client.Connect();
+                await Task.Delay(200);
+
+                byte[] data = new byte[messageSize];
+                new Random(42).NextBytes(data);
+
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                for (int i = 0; i < messageCount; i++)
+                {
+                    bool sent = await client.SendAsync(data);
+                    if (!sent)
+                    {
+                        _framework.RecordFailure(testName, $"Send failed at message {i}");
+                        return;
+                    }
+                }
+
+                int timeoutMs = Math.Max(30000, messageCount * 100);
+                if (!allReceived.WaitOne(timeoutMs))
+                {
+                    _framework.RecordFailure(testName, $"Only {receivedCount}/{messageCount} messages received within timeout");
+                    return;
+                }
+
+                sw.Stop();
+
+                long totalBytes = (long)messageSize * messageCount;
+                double seconds = sw.Elapsed.TotalSeconds;
+                double bytesPerSec = totalBytes / seconds;
+                double msgsPerSec = messageCount / seconds;
+
+                string throughput;
+                if (bytesPerSec >= 1_073_741_824)
+                    throughput = (bytesPerSec / 1_073_741_824).ToString("F2") + " GB/s";
+                else if (bytesPerSec >= 1_048_576)
+                    throughput = (bytesPerSec / 1_048_576).ToString("F1") + " MB/s";
+                else if (bytesPerSec >= 1024)
+                    throughput = (bytesPerSec / 1024).ToString("F0") + " KB/s";
+                else
+                    throughput = bytesPerSec.ToString("F0") + " B/s";
+
+                Console.WriteLine($"       {messageCount} msgs x {FormatSize(messageSize)} = {FormatSize(totalBytes)} in {seconds:F2}s");
+                Console.WriteLine($"       {msgsPerSec:F0} msgs/s, {throughput}");
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        static string FormatSize(long bytes)
+        {
+            if (bytes >= 1_073_741_824) return (bytes / 1_073_741_824.0).ToString("F1") + " GB";
+            if (bytes >= 1_048_576) return (bytes / 1_048_576.0).ToString("F1") + " MB";
+            if (bytes >= 1024) return (bytes / 1024.0).ToString("F0") + " KB";
+            return bytes + " B";
+        }
+
+        #endregion
+
+        #region v6.1.0-MaxConnections-Tests
+
+        static async Task Test_MaxConnectionsEnforced()
+        {
+            string testName = "MaxConnections Enforced (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            List<WatsonTcpClient> clients = new List<WatsonTcpClient>();
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                server.Settings.MaxConnections = 2;
+                server.Settings.EnforceMaxConnections = true;
+                server.Start();
+                await Task.Delay(100);
+
+                // Connect 2 clients (should succeed)
+                for (int i = 0; i < 2; i++)
+                {
+                    var client = new WatsonTcpClient(_hostname, port);
+                    SetupDefaultClientHandlers(client);
+                    client.Connect();
+                    clients.Add(client);
+                    await Task.Delay(200);
+                }
+
+                if (server.Connections != 2)
+                {
+                    _framework.RecordFailure(testName, $"Expected 2 connections, got {server.Connections}");
+                    return;
+                }
+
+                // 3rd client - should fail to connect or be immediately disconnected
+                bool thirdClientFailed = false;
+                WatsonTcpClient thirdClient = null;
+                try
+                {
+                    thirdClient = new WatsonTcpClient(_hostname, port);
+                    SetupDefaultClientHandlers(thirdClient);
+                    thirdClient.Connect();
+                    await Task.Delay(500);
+                    // Even if the TCP connection succeeded, the server should have closed it
+                    // Check that the server still only has 2 connections
+                    if (server.Connections <= 2) thirdClientFailed = true;
+                }
+                catch
+                {
+                    thirdClientFailed = true;
+                }
+                finally
+                {
+                    SafeDispose(thirdClient);
+                }
+
+                if (!thirdClientFailed)
+                {
+                    _framework.RecordFailure(testName, "Third client should have been rejected but server accepted it");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                foreach (var c in clients) SafeDispose(c);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        static async Task Test_MaxConnectionsNotEnforced()
+        {
+            string testName = "MaxConnections Not Enforced (Legacy, v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            List<WatsonTcpClient> clients = new List<WatsonTcpClient>();
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                server.Settings.MaxConnections = 2;
+                server.Settings.EnforceMaxConnections = false;
+                server.Start();
+                await Task.Delay(100);
+
+                // Connect 3 clients - all should succeed when enforcement is off
+                for (int i = 0; i < 3; i++)
+                {
+                    var client = new WatsonTcpClient(_hostname, port);
+                    SetupDefaultClientHandlers(client);
+                    client.Connect();
+                    clients.Add(client);
+                    await Task.Delay(200);
+                }
+
+                await Task.Delay(500);
+
+                if (server.Connections < 3)
+                {
+                    _framework.RecordFailure(testName, $"Expected 3 connections with enforcement off, got {server.Connections}");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                foreach (var c in clients) SafeDispose(c);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        #endregion
+
+        #region v6.1.0-MaxHeaderSize-Tests
+
+        static async Task Test_MaxHeaderSizeEnforced()
+        {
+            string testName = "MaxHeaderSize Setting (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            WatsonTcpClient client = null;
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                // Verify the setting can be set
+                server.Settings.MaxHeaderSize = 1024;
+                if (server.Settings.MaxHeaderSize != 1024)
+                {
+                    _framework.RecordFailure(testName, "MaxHeaderSize not properly set on server");
+                    return;
+                }
+
+                server.Start();
+                await Task.Delay(100);
+
+                client = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client);
+                client.Settings.MaxHeaderSize = 2048;
+                if (client.Settings.MaxHeaderSize != 2048)
+                {
+                    _framework.RecordFailure(testName, "MaxHeaderSize not properly set on client");
+                    return;
+                }
+
+                client.Connect();
+                await Task.Delay(200);
+
+                // Verify normal messages still work with reasonable header sizes
+                string testData = "Hello with MaxHeaderSize set";
+                ManualResetEvent received = new ManualResetEvent(false);
+                string receivedData = null;
+                server.Events.MessageReceived += (s, e) =>
+                {
+                    receivedData = Encoding.UTF8.GetString(e.Data);
+                    received.Set();
+                };
+
+                await client.SendAsync(testData);
+                if (!received.WaitOne(5000))
+                {
+                    _framework.RecordFailure(testName, "Message not received with MaxHeaderSize set");
+                    return;
+                }
+
+                if (receivedData != testData)
+                {
+                    _framework.RecordFailure(testName, $"Expected '{testData}', got '{receivedData}'");
+                    return;
+                }
+
+                // Verify that setting an invalid MaxHeaderSize throws
+                bool exceptionThrown = false;
+                try
+                {
+                    server.Settings.MaxHeaderSize = 10; // too small, must be > 24
+                }
+                catch (ArgumentException)
+                {
+                    exceptionThrown = true;
+                }
+
+                if (!exceptionThrown)
+                {
+                    _framework.RecordFailure(testName, "Setting MaxHeaderSize too small should throw");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        #endregion
+
+        #region v6.1.0-Rapid-Connect-Disconnect
+
+        static async Task Test_RapidConnectDisconnect()
+        {
+            string testName = "Rapid Connect/Disconnect (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                server.Start();
+                await Task.Delay(100);
+
+                int iterations = 10;
+                for (int i = 0; i < iterations; i++)
+                {
+                    WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+                    SetupDefaultClientHandlers(client);
+                    client.Connect();
+                    await Task.Delay(50);
+                    SafeDispose(client);
+                    await Task.Delay(50);
+                }
+
+                await Task.Delay(500);
+
+                // Server should still be running with no connected clients
+                if (!server.IsListening)
+                {
+                    _framework.RecordFailure(testName, "Server stopped listening after rapid connect/disconnect");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        #endregion
+
+        #region v6.1.0-Concurrent-Sync-Requests
+
+        static async Task Test_ConcurrentSyncRequests()
+        {
+            string testName = "Concurrent Sync Requests (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            WatsonTcpClient client = null;
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                server.Callbacks.SyncRequestReceivedAsync = async (req) =>
+                {
+                    // Echo back with "Reply:" prefix
+                    string requestData = Encoding.UTF8.GetString(req.Data);
+                    await Task.Delay(50); // simulate processing
+                    return new SyncResponse(req, "Reply:" + requestData);
+                };
+                server.Start();
+                await Task.Delay(100);
+
+                client = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client);
+                client.Connect();
+                await Task.Delay(200);
+
+                // Send 5 concurrent sync requests
+                int numRequests = 5;
+                Task<SyncResponse>[] tasks = new Task<SyncResponse>[numRequests];
+                for (int i = 0; i < numRequests; i++)
+                {
+                    int idx = i;
+                    tasks[i] = client.SendAndWaitAsync(10000, "Request" + idx);
+                }
+
+                SyncResponse[] responses = await Task.WhenAll(tasks);
+
+                // Verify all responses
+                HashSet<string> expectedResponses = new HashSet<string>();
+                for (int i = 0; i < numRequests; i++)
+                    expectedResponses.Add("Reply:Request" + i);
+
+                HashSet<string> actualResponses = new HashSet<string>();
+                foreach (var resp in responses)
+                {
+                    if (resp == null || resp.Data == null)
+                    {
+                        _framework.RecordFailure(testName, "Null response received");
+                        return;
+                    }
+                    actualResponses.Add(Encoding.UTF8.GetString(resp.Data));
+                }
+
+                if (!expectedResponses.SetEquals(actualResponses))
+                {
+                    _framework.RecordFailure(testName, "Responses don't match expected values. Expected: " + string.Join(", ", expectedResponses) + " Got: " + string.Join(", ", actualResponses));
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        #endregion
+
+        #region v6.1.0-SSL-Tests
+
+        static async Task Test_SslConnectivity()
+        {
+            string testName = "SSL Connectivity (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            WatsonTcpClient client = null;
+
+            try
+            {
+                string pfxFile = "test.pfx";
+                if (!File.Exists(pfxFile))
+                {
+                    _framework.RecordSuccess(testName + " [SKIPPED - no test.pfx]");
+                    return;
+                }
+
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port, pfxFile, "password");
+                SetupDefaultServerHandlers(server);
+                server.Settings.AcceptInvalidCertificates = true;
+                server.Start();
+                await Task.Delay(100);
+
+                client = new WatsonTcpClient(_hostname, port, pfxFile, "password");
+                SetupDefaultClientHandlers(client);
+                client.Settings.AcceptInvalidCertificates = true;
+                client.Connect();
+                await Task.Delay(200);
+
+                if (!client.Connected)
+                {
+                    _framework.RecordFailure(testName, "SSL client not connected");
+                    return;
+                }
+
+                var clients = server.ListClients().ToList();
+                if (clients.Count != 1)
+                {
+                    _framework.RecordFailure(testName, $"Expected 1 SSL client, found {clients.Count}");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        static async Task Test_SslMessageExchange()
+        {
+            string testName = "SSL Message Exchange (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            WatsonTcpClient client = null;
+            ManualResetEvent messageReceived = new ManualResetEvent(false);
+            string receivedData = null;
+
+            try
+            {
+                string pfxFile = "test.pfx";
+                if (!File.Exists(pfxFile))
+                {
+                    _framework.RecordSuccess(testName + " [SKIPPED - no test.pfx]");
+                    return;
+                }
+
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port, pfxFile, "password");
+                server.Settings.AcceptInvalidCertificates = true;
+                server.Events.MessageReceived += (s, e) =>
+                {
+                    receivedData = Encoding.UTF8.GetString(e.Data);
+                    messageReceived.Set();
+                };
+                server.Start();
+                await Task.Delay(100);
+
+                client = new WatsonTcpClient(_hostname, port, pfxFile, "password");
+                SetupDefaultClientHandlers(client);
+                client.Settings.AcceptInvalidCertificates = true;
+                client.Connect();
+                await Task.Delay(200);
+
+                string testData = "Hello over SSL!";
+                await client.SendAsync(testData);
+
+                if (!messageReceived.WaitOne(5000))
+                {
+                    _framework.RecordFailure(testName, "Server did not receive SSL message");
+                    return;
+                }
+
+                if (receivedData != testData)
+                {
+                    _framework.RecordFailure(testName, $"Expected '{testData}', got '{receivedData}'");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        #endregion
+
+        #region v6.1.0-Edge-Cases
+
+        static async Task Test_ServerStopWhileClientSending()
+        {
+            string testName = "Server Stop While Client Connected (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            WatsonTcpClient client = null;
+            bool disconnectDetected = false;
+            ManualResetEvent disconnectEvent = new ManualResetEvent(false);
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                server.Start();
+                await Task.Delay(100);
+
+                client = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client);
+                client.Events.ServerDisconnected += (s, e) =>
+                {
+                    disconnectDetected = true;
+                    disconnectEvent.Set();
+                };
+                client.Connect();
+                await Task.Delay(200);
+
+                // Stop the server while client is connected
+                SafeDispose(server);
+                server = null;
+
+                // Try to send a message to trigger disconnect detection
+                try
+                {
+                    await client.SendAsync("trigger disconnect");
+                }
+                catch { }
+
+                // Client should detect the disconnect
+                disconnectEvent.WaitOne(10000);
+
+                // Also check that the client is no longer connected
+                if (!disconnectDetected && client.Connected)
+                {
+                    _framework.RecordFailure(testName, "Client did not detect server stop");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        static async Task Test_DuplicateClientGuid()
+        {
+            string testName = "Duplicate Client GUID (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            WatsonTcpClient client1 = null;
+            WatsonTcpClient client2 = null;
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                SetupDefaultServerHandlers(server);
+                server.Start();
+                await Task.Delay(100);
+
+                Guid sharedGuid = Guid.NewGuid();
+
+                client1 = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client1);
+                client1.Settings.Guid = sharedGuid;
+                client1.Connect();
+                await Task.Delay(300);
+
+                // Second client with the same GUID
+                client2 = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client2);
+                client2.Settings.Guid = sharedGuid;
+                client2.Connect();
+                await Task.Delay(500);
+
+                // At least one client should be connected
+                // The behavior may vary - the second connection should replace the first
+                // or the server should handle it gracefully
+                bool atLeastOneConnected = client1.Connected || client2.Connected;
+                if (!atLeastOneConnected)
+                {
+                    _framework.RecordFailure(testName, "Neither client is connected with duplicate GUID");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client1);
+                SafeDispose(client2);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        static async Task Test_SendWithOffset()
+        {
+            string testName = "Send With Byte Array Offset (v6.1.0)";
+            _framework.StartTest(testName);
+            WatsonTcpServer server = null;
+            WatsonTcpClient client = null;
+            ManualResetEvent messageReceived = new ManualResetEvent(false);
+            byte[] receivedBytes = null;
+
+            try
+            {
+                int port = GetNextPort();
+                server = new WatsonTcpServer(_hostname, port);
+                server.Events.MessageReceived += (s, e) =>
+                {
+                    receivedBytes = e.Data;
+                    messageReceived.Set();
+                };
+                server.Start();
+                await Task.Delay(100);
+
+                client = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client);
+                client.Connect();
+                await Task.Delay(200);
+
+                // Send with an offset - skip first 5 bytes
+                byte[] fullData = Encoding.UTF8.GetBytes("HEADERHello World");
+                int offset = 6; // skip "HEADER"
+                await client.SendAsync(fullData, null, offset);
+
+                if (!messageReceived.WaitOne(5000))
+                {
+                    _framework.RecordFailure(testName, "Message not received");
+                    return;
+                }
+
+                string received = Encoding.UTF8.GetString(receivedBytes);
+                if (received != "Hello World")
+                {
+                    _framework.RecordFailure(testName, $"Expected 'Hello World', got '{received}'");
+                    return;
+                }
+
+                _framework.RecordSuccess(testName);
+            }
+            catch (Exception ex)
+            {
+                _framework.RecordFailure(testName, ex.Message);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                await Task.Delay(100);
+            }
+        }
+
+        #endregion
     }
 
     #region Test-Framework
@@ -2284,13 +3120,31 @@ namespace Test.Automated
     {
         private List<TestResult> _results = new List<TestResult>();
         private object _lock = new object();
+        private Dictionary<string, System.Diagnostics.Stopwatch> _timers = new Dictionary<string, System.Diagnostics.Stopwatch>();
+        private System.Diagnostics.Stopwatch _totalTimer = new System.Diagnostics.Stopwatch();
+
+        public void StartSuite()
+        {
+            _totalTimer.Start();
+        }
+
+        public void StartTest(string testName)
+        {
+            lock (_lock)
+            {
+                var sw = new System.Diagnostics.Stopwatch();
+                sw.Start();
+                _timers[testName] = sw;
+            }
+        }
 
         public void RecordSuccess(string testName)
         {
             lock (_lock)
             {
-                _results.Add(new TestResult { TestName = testName, Passed = true });
-                Console.WriteLine($"[PASS] {testName}");
+                TimeSpan elapsed = StopTimer(testName);
+                _results.Add(new TestResult { TestName = testName, Passed = true, Duration = elapsed });
+                Console.WriteLine($"[PASS] {testName} ({FormatDuration(elapsed)})");
             }
         }
 
@@ -2298,19 +3152,22 @@ namespace Test.Automated
         {
             lock (_lock)
             {
-                _results.Add(new TestResult { TestName = testName, Passed = false, FailureReason = reason });
-                Console.WriteLine($"[FAIL] {testName}");
+                TimeSpan elapsed = StopTimer(testName);
+                _results.Add(new TestResult { TestName = testName, Passed = false, FailureReason = reason, Duration = elapsed });
+                Console.WriteLine($"[FAIL] {testName} ({FormatDuration(elapsed)})");
                 Console.WriteLine($"       Reason: {reason}");
             }
         }
 
         public void PrintSummary()
         {
+            _totalTimer.Stop();
+
             Console.WriteLine();
             foreach (var result in _results)
             {
                 string status = result.Passed ? "PASS" : "FAIL";
-                Console.WriteLine($"[{status}] {result.TestName}");
+                Console.WriteLine($"[{status}] {result.TestName} ({FormatDuration(result.Duration)})");
             }
 
             Console.WriteLine();
@@ -2318,9 +3175,21 @@ namespace Test.Automated
             int failed = _results.Count(r => !r.Passed);
             int total = _results.Count;
 
-            Console.WriteLine($"Total: {total} tests");
-            Console.WriteLine($"Passed: {passed}");
-            Console.WriteLine($"Failed: {failed}");
+            Console.WriteLine($"Total:    {total} tests");
+            Console.WriteLine($"Passed:   {passed}");
+            Console.WriteLine($"Failed:   {failed}");
+            Console.WriteLine($"Duration: {FormatDuration(_totalTimer.Elapsed)}");
+
+            if (failed > 0)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Failed tests:");
+                foreach (var result in _results.Where(r => !r.Passed))
+                {
+                    Console.WriteLine($"  - {result.TestName}: {result.FailureReason}");
+                }
+            }
+
             Console.WriteLine();
 
             if (failed == 0)
@@ -2336,6 +3205,24 @@ namespace Test.Automated
                 Console.WriteLine("===============================================");
             }
         }
+
+        private TimeSpan StopTimer(string testName)
+        {
+            if (_timers.TryGetValue(testName, out var sw))
+            {
+                sw.Stop();
+                _timers.Remove(testName);
+                return sw.Elapsed;
+            }
+            return TimeSpan.Zero;
+        }
+
+        private string FormatDuration(TimeSpan ts)
+        {
+            if (ts.TotalSeconds >= 1.0)
+                return ts.TotalSeconds.ToString("F2") + "s";
+            return ts.TotalMilliseconds.ToString("F0") + "ms";
+        }
     }
 
     class TestResult
@@ -2343,6 +3230,7 @@ namespace Test.Automated
         public string TestName { get; set; }
         public bool Passed { get; set; }
         public string FailureReason { get; set; }
+        public TimeSpan Duration { get; set; }
     }
 
     #endregion

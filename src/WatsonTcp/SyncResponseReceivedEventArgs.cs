@@ -3,7 +3,7 @@
     /// <summary>
     /// Internal EventArgs for passing arguments for SyncResponseReceived event.
     /// </summary>
-    internal class SyncResponseReceivedEventArgs
+    internal sealed class SyncResponseReceivedEventArgs
     {
         #region Public-Members
 

@@ -83,7 +83,7 @@ namespace WatsonTcp
         public WatsonTcpClientSslConfiguration(WatsonTcpClientSslConfiguration configuration)
         {
             if (configuration == null)
-                throw new ArgumentNullException("Can not copy from null client SSL configuration");
+                throw new ArgumentNullException(nameof(configuration), "Can not copy from null client SSL configuration");
 
             _ClientCertSelectionCallback = configuration._ClientCertSelectionCallback;
             _ServerCertValidationCallback = configuration._ServerCertValidationCallback;

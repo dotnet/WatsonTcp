@@ -163,7 +163,7 @@
 
         #region Private-Methods
 
-        internal void WrappedEventHandler(Action action, string handler, object sender)
+        internal static void WrappedEventHandler(Action action, string handler, object sender)
         {
             if (action == null) return;
 

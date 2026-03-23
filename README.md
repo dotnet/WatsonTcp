@@ -28,21 +28,56 @@ Special thanks to the following people for their support and contributions to th
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
-## New in v6.0.x
+## New in v6.1.0
+
+### Performance
+- Rewrote message header parsing to eliminate O(n^2) array allocations and per-byte LINQ overhead; now uses a ```MemoryStream``` accumulator with direct byte comparison
+- Send operations now use ```ArrayPool<byte>``` pooling instead of allocating new buffers on every iteration
+
+### Thread Safety
+- Consolidated ```ClientMetadataManager``` from 5 independent ```ReaderWriterLockSlim``` instances to a single lock, eliminating race conditions during multi-dictionary operations (```ReplaceGuid```, ```Remove```)
+- Fixed TOCTOU race in ```GetClient()``` (```ContainsKey``` then indexer across separate lock acquisitions); now uses ```TryGetValue```
+- Replaced ```AutoResetEvent``` + event-based sync response matching with ```ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>>``` in both client and server, eliminating handler registration race conditions and signal loss
+
+### Bug Fixes
+- Fixed ```WaitHandle``` resource leak in ```WatsonTcpClient.Connect()``` (was commented out, now properly closed)
+- Replaced busy-wait spin loops in ```ClientMetadata.Dispose()``` and ```WatsonTcpClient.Disconnect()``` with ```Task.Wait(timeout)```
+- Stale kicked/timed-out client records now automatically purged every 60 seconds (previously accumulated forever)
+
+### New Features
+- ```Settings.MaxHeaderSize``` (client and server, default 256KB) guards against memory exhaustion from oversized or malicious headers
+- ```Settings.EnforceMaxConnections``` (server, default ```true```) actively rejects connections at capacity; set to ```false``` for legacy behavior
+
+### Observability
+- Added debug-level logging to all previously silent ```TaskCanceledException``` and ```OperationCanceledException``` catch blocks
+
+### Testing
+- 10 new automated tests (46 total) covering MaxConnections enforcement, MaxHeaderSize validation, rapid connect/disconnect, concurrent sync requests, SSL, server stop detection, duplicate GUIDs, and send-with-offset
+
+### Breaking Changes
+- ```Settings.EnforceMaxConnections``` defaults to ```true```.  If you relied on accepting connections beyond ```MaxConnections```, set ```EnforceMaxConnections = false```.
+- All other changes are internal with identical public API and wire protocol.
+
+## Previous in v6.0.x
 
 - Remove unsupported frameworks
 - Async version of ```SyncMessageReceived``` callback
 - Moving usings inside namespace
 - Remove obsolete methods
-- Mark non-async APIs obsolete 
+- Mark non-async APIs obsolete
 - Modified test projects to use async
 - Ensured background tasks honored cancellation tokens
 - Ability to specify a client's GUID before attempting to connect
-- Remove obsolete methods
+
+## Architecture
+
+Refer to [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed overview of the internal design, message flow, threading model, and key design decisions.
+
+For the wire protocol specification (header format, delimiter, payload layout), see [FRAMING.md](FRAMING.md).
 
 ## Test Applications
 
-Test projects for both client and server are included which will help you understand and exercise the class library.
+Test projects for both client and server are included which will help you understand and exercise the class library.  The `Test.XUnit` project provides `dotnet test`-compatible xUnit tests suitable for CI/CD pipelines.
 
 ## SSL
 
@@ -76,7 +111,7 @@ This is not necessary if you are using simple types (int, string, etc).  Simply 
 
 **IMPORTANT**
 
-Identifying the demarcation between message header and payload is CPU intensive and requires evaluation of the tail end of an internally-managed buffer.  This process of evaluation is performed for *each byte read* until the end of the header is reached.  Thus, is it recommended that the metadata property be used sparingly and with very small amounts of data (less than 1KB).  When used with large amounts of data, CPU utilization will increase dramatically and response time will be very slow.   
+Metadata is serialized into the message header as JSON, increasing header size.  While v6.1.0 significantly improved header parsing performance (eliminating O(n^2) allocations), it is still recommended to keep metadata small (less than 1KB) as large metadata increases JSON serialization overhead and network transfer time.  Use ```Settings.MaxHeaderSize``` to control the maximum allowed header size (default 256KB).
 
 ### Local vs External Connections
 

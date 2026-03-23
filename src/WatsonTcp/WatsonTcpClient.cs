@@ -1,12 +1,16 @@
 ﻿namespace WatsonTcp
 {
     using System;
+    using System.Buffers;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
     using System.Net;
     using System.Net.Security;
     using System.Net.Sockets;
+#if NET5_0_OR_GREATER
     using System.Runtime.InteropServices;
+#endif
     using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
     using System.Text;
@@ -173,9 +177,7 @@
         private DateTime _LastActivity = DateTime.UtcNow;
         private bool _IsTimeout = false;
 
-        private byte[] _SendBuffer = new byte[65536];
-        private readonly object _SyncResponseLock = new object();
-        private event EventHandler<SyncResponseReceivedEventArgs> _SyncResponseReceived;
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>> _SyncRequests = new ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>>();
 
         #endregion
 
@@ -196,7 +198,6 @@
             _Mode = Mode.Tcp;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
-            _SendBuffer = new byte[_Settings.StreamBufferSize];
 
             SerializationHelper.InstantiateConverter(); // Unity fix
         }
@@ -223,7 +224,6 @@
             _TlsVersion = tlsVersion;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
-            _SendBuffer = new byte[_Settings.StreamBufferSize];
 
             if (!String.IsNullOrEmpty(pfxCertFile))
             {
@@ -284,7 +284,6 @@
             _SslCertificate = cert;
             _ServerIp = serverIp;
             _ServerPort = serverPort;
-            _SendBuffer = new byte[_Settings.StreamBufferSize];
 
             _SslCertificateCollection = new X509Certificate2Collection
             {
@@ -375,8 +374,7 @@
                 }
                 finally
                 {
-                    // https://social.msdn.microsoft.com/Forums/en-US/313cf28c-2a6d-498e-8188-7a0639dbd552/tcpclientbeginconnect-issue?forum=netfxnetcom
-                    // waitHandle.Close();
+                    waitHandle.Close();
                 }
 
                 #endregion TCP
@@ -445,8 +443,7 @@
                 }
                 finally
                 {
-                    // https://social.msdn.microsoft.com/Forums/en-US/313cf28c-2a6d-498e-8188-7a0639dbd552/tcpclientbeginconnect-issue?forum=netfxnetcom
-                    // waitHandle.Close();
+                    waitHandle.Close();
                 }
 
                 #endregion SSL
@@ -471,6 +468,7 @@
 
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
+            _MessageBuilder.MaxHeaderSize = _Settings.MaxHeaderSize;
 
             _LastActivity = DateTime.UtcNow;
             _IsTimeout = false;
@@ -524,15 +522,21 @@
                 _Client.Close();
             }
 
-            while (_DataReceiver?.IsCompleted == false)
+            try
             {
-                Task.Delay(10).Wait();
+                if (_DataReceiver != null && !_DataReceiver.IsCompleted)
+                    _DataReceiver.Wait(TimeSpan.FromSeconds(5));
             }
+            catch (AggregateException) { }
+            catch (ObjectDisposedException) { }
 
-            while (_IdleServerMonitor?.IsCompleted == false)
+            try
             {
-                Task.Delay(10).Wait();
+                if (_IdleServerMonitor != null && !_IdleServerMonitor.IsCompleted)
+                    _IdleServerMonitor.Wait(TimeSpan.FromSeconds(5));
             }
+            catch (AggregateException) { }
+            catch (ObjectDisposedException) { }
 
             Connected = false;
 
@@ -566,7 +570,7 @@
         /// <returns>Boolean indicating if the message was sent successfully.</returns>
         public async Task<bool> SendAsync(string data, Dictionary<string, object> metadata = null, CancellationToken token = default)
         {
-            if (String.IsNullOrEmpty(data)) return await SendAsync(Array.Empty<byte>(), metadata);
+            if (String.IsNullOrEmpty(data)) return await SendAsync(Array.Empty<byte>(), metadata, 0, token);
             if (token == default(CancellationToken)) token = _Token;
             return await SendAsync(Encoding.UTF8.GetBytes(data), metadata, 0, token).ConfigureAwait(false);
         }
@@ -936,14 +940,22 @@
 
                         if (DateTime.UtcNow < msg.ExpirationUtc.Value)
                         {
-                            lock (_SyncResponseLock)
+                            TaskCompletionSource<SyncResponse> tcs;
+                            if (_SyncRequests.TryRemove(msg.ConversationGuid, out tcs))
                             {
-                                _SyncResponseReceived?.Invoke(this,new SyncResponseReceivedEventArgs(msg,msgData));
+                                SyncResponse syncResp = new SyncResponse(msg.ConversationGuid, msg.ExpirationUtc.Value, msg.Metadata, msgData);
+                                tcs.TrySetResult(syncResp);
+                            }
+                            else
+                            {
+                                _Settings.Logger?.Invoke(Severity.Warn, _Header + "synchronous response received for unknown conversation: " + msg.ConversationGuid.ToString());
                             }
                         }
                         else
                         {
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous response received and discarded");
+                            TaskCompletionSource<SyncResponse> tcs;
+                            _SyncRequests.TryRemove(msg.ConversationGuid, out tcs);
                         }
                     }
                     else
@@ -954,7 +966,7 @@
                         {
                             msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
                             MessageReceivedEventArgs args = new MessageReceivedEventArgs(null, msg.Metadata, msgData);
-                            await Task.Run(() => _Events.HandleMessageReceived(this, args));
+                            await Task.Run(() => _Events.HandleMessageReceived(this, args), token);
                         }
                         else if (_Events.IsUsingStreams)
                         {
@@ -1072,10 +1084,12 @@
             }
             catch (TaskCanceledException)
             {
+                _Settings?.Logger?.Invoke(Severity.Debug, _Header + "send canceled");
                 return false;
             }
             catch (OperationCanceledException)
             {
+                _Settings?.Logger?.Invoke(Severity.Debug, _Header + "send operation canceled");
                 return false;
             }
             catch (Exception e)
@@ -1117,23 +1131,11 @@
                 throw new InvalidOperationException("Client is not connected to the server.");
             }
 
+            // Register a TaskCompletionSource for this conversation before sending
+            TaskCompletionSource<SyncResponse> tcs = new TaskCompletionSource<SyncResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _SyncRequests[msg.ConversationGuid] = tcs;
+
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
-
-            SyncResponse ret = null;
-            AutoResetEvent responded = new AutoResetEvent(false);
-
-            // Create a new handler specially for this conversation
-            EventHandler<SyncResponseReceivedEventArgs> handler = (sender, e) =>
-            {
-                if (e.Message.ConversationGuid == msg.ConversationGuid)
-                {
-                    ret = new SyncResponse(msg.ConversationGuid, e.Message.ExpirationUtc.Value, e.Message.Metadata, e.Data);
-                    responded.Set();
-                }
-            };
-
-            // Subscribe
-            _SyncResponseReceived += handler;
 
             try
             {
@@ -1146,16 +1148,18 @@
             }
             catch (TaskCanceledException)
             {
+                _SyncRequests.TryRemove(msg.ConversationGuid, out _);
                 return null;
             }
             catch (OperationCanceledException)
             {
+                _SyncRequests.TryRemove(msg.ConversationGuid, out _);
                 return null;
             }
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "failed to write message to " + _ServerIp + ":" + _ServerPort + ": " + e.Message);
-                _SyncResponseReceived -= handler;
+                _SyncRequests.TryRemove(msg.ConversationGuid, out _);
                 disconnectDetected = true;
                 throw;
             }
@@ -1170,20 +1174,30 @@
                 }
             }
 
-            // Wait for responded.Set() to be called
-            responded.WaitOne(new TimeSpan(0,0,0,0, timeoutMs));
-
-            // Unsubscribe
-            _SyncResponseReceived -= handler;
-
-            if (ret != null)
+            // Wait for the response with timeout
+            using (CancellationTokenSource timeoutCts = new CancellationTokenSource(timeoutMs))
             {
-                return ret;
-            }
-            else
-            {
-                _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
-                throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+                using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
+                {
+                    try
+                    {
+                        linkedCts.Token.Register(() => tcs.TrySetCanceled());
+                        SyncResponse ret = await tcs.Task.ConfigureAwait(false);
+                        return ret;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        _SyncRequests.TryRemove(msg.ConversationGuid, out _);
+
+                        if (timeoutCts.IsCancellationRequested)
+                        {
+                            _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
+                            throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+                        }
+
+                        throw;
+                    }
+                }
             }
         }
 
@@ -1201,27 +1215,28 @@
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
+            int bufferSize = _Settings.StreamBufferSize;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 
-            while (bytesRemaining > 0)
+            try
             {
-                if (bytesRemaining >= _Settings.StreamBufferSize)
+                while (bytesRemaining > 0)
                 {
-                    _SendBuffer = new byte[_Settings.StreamBufferSize];
-                }
-                else
-                {
-                    _SendBuffer = new byte[bytesRemaining];
+                    int toRead = (int)Math.Min(bufferSize, bytesRemaining);
+                    bytesRead = await stream.ReadAsync(buffer, 0, toRead, token).ConfigureAwait(false);
+                    if (bytesRead > 0)
+                    {
+                        await _DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                        bytesRemaining -= bytesRead;
+                    }
                 }
 
-                bytesRead = await stream.ReadAsync(_SendBuffer, 0, _SendBuffer.Length, token).ConfigureAwait(false);
-                if (bytesRead > 0)
-                {
-                    await _DataStream.WriteAsync(_SendBuffer, 0, bytesRead, token).ConfigureAwait(false);
-                    bytesRemaining -= bytesRead;
-                }
+                await _DataStream.FlushAsync(token).ConfigureAwait(false);
             }
-
-            await _DataStream.FlushAsync(token).ConfigureAwait(false);
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         #endregion
@@ -1249,11 +1264,11 @@
                 }
                 catch (TaskCanceledException)
                 {
-
+                    _Settings?.Logger?.Invoke(Severity.Debug, _Header + "idle server monitor task canceled");
                 }
                 catch (OperationCanceledException)
                 {
-
+                    _Settings?.Logger?.Invoke(Severity.Debug, _Header + "idle server monitor operation canceled");
                 }
                 catch (Exception e)
                 {

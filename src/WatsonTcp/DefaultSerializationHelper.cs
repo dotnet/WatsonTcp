@@ -1,7 +1,6 @@
 ﻿namespace WatsonTcp
 {
     using System;
-    using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.Linq;
     using System.Text.Json;
@@ -100,7 +99,7 @@
 
         #region Private-Classes
 
-        private class ExceptionConverter<TExceptionType> : JsonConverter<TExceptionType>
+        private sealed class ExceptionConverter<TExceptionType> : JsonConverter<TExceptionType>
         {
             public override bool CanConvert(Type typeToConvert)
             {
@@ -144,7 +143,7 @@
             }
         }
 
-        private class NameValueCollectionConverter : JsonConverter<NameValueCollection>
+        private sealed class NameValueCollectionConverter : JsonConverter<NameValueCollection>
         {
             public override NameValueCollection Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => throw new NotImplementedException();
 

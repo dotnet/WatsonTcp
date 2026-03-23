@@ -1,6 +1,7 @@
 ﻿namespace WatsonTcp
 {
     using System;
+    using System.Buffers;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
@@ -9,8 +10,9 @@
     using System.Net.NetworkInformation;
     using System.Net.Security;
     using System.Net.Sockets;
+#if NET5_0_OR_GREATER
     using System.Runtime.InteropServices;
-    using System.Security.AccessControl;
+#endif
     using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Threading;
@@ -185,8 +187,7 @@
         private Task _AcceptConnections = null;
         private Task _MonitorClients = null;
 
-        private readonly object _SyncResponseLock = new object();
-        private event EventHandler<SyncResponseReceivedEventArgs> _SyncResponseReceived;
+        private readonly ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>> _SyncRequests = new ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>>();
 
         #endregion
 
@@ -209,12 +210,12 @@
             _Mode = Mode.Tcp;
 
              // According to the https://github.com/dotnet/WatsonTcp?tab=readme-ov-file#local-vs-external-connections
-            if (string.IsNullOrEmpty(listenerIp) || listenerIp.Equals("*") || listenerIp.Equals("+") || listenerIp.Equals("0.0.0.0"))
+            if (string.IsNullOrEmpty(listenerIp) || listenerIp.Equals("*", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("+", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("0.0.0.0", StringComparison.OrdinalIgnoreCase))
             {
                 _ListenerIpAddress = IPAddress.Any;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
-            else if (listenerIp.Equals("localhost") || listenerIp.Equals("127.0.0.1") || listenerIp.Equals("::1"))
+            else if (listenerIp.Equals("localhost", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("::1", StringComparison.OrdinalIgnoreCase))
             {
                 _ListenerIpAddress = IPAddress.Loopback;
                 _ListenerIp = _ListenerIpAddress.ToString();
@@ -259,7 +260,7 @@
                 _ListenerIpAddress = IPAddress.Any;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
-            else if (listenerIp.Equals("localhost") || listenerIp.Equals("127.0.0.1") || listenerIp.Equals("::1"))
+            else if (listenerIp.Equals("localhost", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("::1", StringComparison.OrdinalIgnoreCase))
             {
                 _ListenerIpAddress = IPAddress.Loopback;
                 _ListenerIp = _ListenerIpAddress.ToString();
@@ -327,7 +328,7 @@
                 _ListenerIpAddress = IPAddress.Any;
                 _ListenerIp = _ListenerIpAddress.ToString();
             }
-            else if (listenerIp.Equals("localhost") || listenerIp.Equals("127.0.0.1") || listenerIp.Equals("::1"))
+            else if (listenerIp.Equals("localhost", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) || listenerIp.Equals("::1", StringComparison.OrdinalIgnoreCase))
             {
                 _ListenerIpAddress = IPAddress.Loopback;
                 _ListenerIp = _ListenerIpAddress.ToString();
@@ -386,6 +387,7 @@
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
+            _MessageBuilder.MaxHeaderSize = _Settings.MaxHeaderSize;
             _Listener.Start();
             _AcceptConnections = Task.Run(() => AcceptConnections(_Token), _Token); // sets _IsListening
             _MonitorClients = Task.Run(() => MonitorForIdleClients(_Token), _Token);
@@ -722,7 +724,7 @@
 
                     if (!_IsListening && (_Connections >= _Settings.MaxConnections))
                     {
-                        await Task.Delay(100);
+                        await Task.Delay(100, token);
                         continue;
                     }
                     else if (!_IsListening)
@@ -735,9 +737,21 @@
 
                     #region Accept-and-Validate
 
+#if NET6_0_OR_GREATER
+                    TcpClient tcpClient = await _Listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
+#else
                     TcpClient tcpClient = await _Listener.AcceptTcpClientAsync().ConfigureAwait(false);
+#endif
                     tcpClient.LingerState.Enabled = false;
                     tcpClient.NoDelay = _Settings.NoDelay;
+
+                    // Enforce max connections - reject if at capacity
+                    if (_Connections >= _Settings.MaxConnections && _Settings.EnforceMaxConnections)
+                    {
+                        _Settings.Logger?.Invoke(Severity.Info, _Header + "rejecting connection, maximum connections " + _Settings.MaxConnections + " reached (currently " + _Connections + " connections)");
+                        tcpClient.Close();
+                        continue;
+                    }
 
                     if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives(tcpClient);
 
@@ -757,7 +771,6 @@
                     }
 
                     ClientMetadata client = new ClientMetadata(tcpClient);
-                    client.SendBuffer = new byte[_Settings.StreamBufferSize];
 
                     _ClientManager.AddClient(client.Guid, client);
                     _ClientManager.AddClientLastSeen(client.Guid);
@@ -769,11 +782,15 @@
                     #region Check-for-Maximum-Connections
 
                     Interlocked.Increment(ref _Connections);
-                    if (_Connections >= _Settings.MaxConnections)
+                    if (_Connections >= _Settings.MaxConnections && _Settings.EnforceMaxConnections)
                     {
                         _Settings.Logger?.Invoke(Severity.Info, _Header + "maximum connections " + _Settings.MaxConnections + " met (currently " + _Connections + " connections), pausing");
                         _IsListening = false;
                         _Listener.Stop();
+                    }
+                    else if (_Connections >= _Settings.MaxConnections)
+                    {
+                        _Settings.Logger?.Invoke(Severity.Warn, _Header + "maximum connections " + _Settings.MaxConnections + " exceeded (currently " + _Connections + " connections), enforcement disabled");
                     }
 
                     #endregion
@@ -910,7 +927,7 @@
             #endregion
         }
 
-        private bool IsClientConnected(ClientMetadata client)
+        private static bool IsClientConnected(ClientMetadata client)
         {
             if (client != null && client.TcpClient != null)
             {
@@ -1008,7 +1025,9 @@
 
                     if (!IsClientConnected(client)) break;
 
+#pragma warning disable CA2016 // token intentionally not forwarded - stream closure is the proper disconnect signal
                     WatsonMessage msg = await _MessageBuilder.BuildFromStream(client.DataStream);
+#pragma warning restore CA2016
                     if (msg == null)
                     {
                         await Task.Delay(30, token).ConfigureAwait(false);
@@ -1032,7 +1051,7 @@
                                 if (msg.PresharedKey != null && msg.PresharedKey.Length > 0)
                                 {
                                     string clientPsk = Encoding.UTF8.GetString(msg.PresharedKey).Trim();
-                                    if (_Settings.PresharedKey.Trim().Equals(clientPsk))
+                                    if (_Settings.PresharedKey.Trim().Equals(clientPsk, StringComparison.Ordinal))
                                     {
                                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "accepted authentication for " + client.ToString());
                                         _ClientManager.RemoveUnauthenticatedClient(client.Guid);
@@ -1154,14 +1173,22 @@
 
                         if (DateTime.UtcNow < msg.ExpirationUtc.Value)
                         {
-                            lock (_SyncResponseLock)
+                            TaskCompletionSource<SyncResponse> tcs;
+                            if (_SyncRequests.TryRemove(msg.ConversationGuid, out tcs))
                             {
-                                _SyncResponseReceived?.Invoke(this, new SyncResponseReceivedEventArgs(msg, msgData));
+                                SyncResponse syncResp = new SyncResponse(msg.ConversationGuid, msg.ExpirationUtc.Value, msg.Metadata, msgData);
+                                tcs.TrySetResult(syncResp);
+                            }
+                            else
+                            {
+                                _Settings.Logger?.Invoke(Severity.Warn, _Header + "synchronous response received for unknown conversation from " + client.ToString() + ": " + msg.ConversationGuid.ToString());
                             }
                         }
                         else
                         {
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous response received and discarded from " + client.ToString());
+                            TaskCompletionSource<SyncResponse> tcs;
+                            _SyncRequests.TryRemove(msg.ConversationGuid, out tcs);
                         }
                     }
                     else
@@ -1288,10 +1315,12 @@
             }
             catch (TaskCanceledException)
             {
+                _Settings?.Logger?.Invoke(Severity.Debug, _Header + "send to " + client.ToString() + " canceled");
                 return false;
             }
             catch (OperationCanceledException)
             {
+                _Settings?.Logger?.Invoke(Severity.Debug, _Header + "send to " + client.ToString() + " operation canceled");
                 return false;
             }
             catch (Exception e)
@@ -1319,23 +1348,11 @@
                 }
             }
 
-            await client.WriteLock.WaitAsync();
+            // Register a TaskCompletionSource for this conversation before sending
+            TaskCompletionSource<SyncResponse> tcs = new TaskCompletionSource<SyncResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _SyncRequests[msg.ConversationGuid] = tcs;
 
-            SyncResponse ret = null;
-            AutoResetEvent responded = new AutoResetEvent(false);
-
-            // Create a new handler specially for this Conversation.
-            EventHandler<SyncResponseReceivedEventArgs> handler = (sender, e) =>
-            {
-                if (e.Message.ConversationGuid == msg.ConversationGuid)
-                {
-                    ret = new SyncResponse(e.Message.ConversationGuid, e.Message.ExpirationUtc.Value, e.Message.Metadata, e.Data);
-                    responded.Set();
-                }
-            };
-
-            // Subscribe
-            _SyncResponseReceived += handler;
+            await client.WriteLock.WaitAsync(token);
 
             try
             {
@@ -1350,7 +1367,7 @@
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + client.ToString() + " failed to write message: " + e.Message);
                 _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                _SyncResponseReceived -= handler;
+                _SyncRequests.TryRemove(msg.ConversationGuid, out _);
                 throw;
             }
             finally
@@ -1358,20 +1375,30 @@
                 if (client != null) client.WriteLock.Release();
             }
 
-            // Wait for responded.Set() to be called
-            responded.WaitOne(new TimeSpan(0, 0, 0, 0, timeoutMs));
-
-            // Unsubscribe
-            _SyncResponseReceived -= handler;
-
-            if (ret != null)
+            // Wait for the response with timeout
+            using (CancellationTokenSource timeoutCts = new CancellationTokenSource(timeoutMs))
             {
-                return ret;
-            }
-            else
-            {
-                _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
-                throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+                using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
+                {
+                    try
+                    {
+                        linkedCts.Token.Register(() => tcs.TrySetCanceled());
+                        SyncResponse ret = await tcs.Task.ConfigureAwait(false);
+                        return ret;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        _SyncRequests.TryRemove(msg.ConversationGuid, out _);
+
+                        if (timeoutCts.IsCancellationRequested)
+                        {
+                            _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
+                            throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
+                        }
+
+                        throw;
+                    }
+                }
             }
         }
 
@@ -1388,27 +1415,28 @@
 
             long bytesRemaining = contentLength;
             int bytesRead = 0;
+            int bufferSize = _Settings.StreamBufferSize;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 
-            while (bytesRemaining > 0)
+            try
             {
-                if (bytesRemaining >= _Settings.StreamBufferSize)
+                while (bytesRemaining > 0)
                 {
-                    client.SendBuffer = new byte[_Settings.StreamBufferSize];
-                }
-                else
-                {
-                    client.SendBuffer = new byte[bytesRemaining];
+                    int toRead = (int)Math.Min(bufferSize, bytesRemaining);
+                    bytesRead = await stream.ReadAsync(buffer, 0, toRead, token).ConfigureAwait(false);
+                    if (bytesRead > 0)
+                    {
+                        await client.DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+                        bytesRemaining -= bytesRead;
+                    }
                 }
 
-                bytesRead = await stream.ReadAsync(client.SendBuffer, 0, client.SendBuffer.Length, token).ConfigureAwait(false);
-                if (bytesRead > 0)
-                {
-                    await client.DataStream.WriteAsync(client.SendBuffer, 0, bytesRead, token).ConfigureAwait(false);
-                    bytesRemaining -= bytesRead;
-                }
+                await client.DataStream.FlushAsync(token).ConfigureAwait(false);
             }
-
-            await client.DataStream.FlushAsync(token).ConfigureAwait(false);
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         #endregion
@@ -1417,6 +1445,8 @@
 
         private async Task MonitorForIdleClients(CancellationToken token)
         {
+            int purgeCounter = 0;
+
             try
             {
                 Dictionary<Guid, DateTime> lastSeen = null;
@@ -1441,20 +1471,28 @@
                                 {
                                     _ClientManager.AddClientTimedout(curr.Key);
                                     _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to idle timeout");
-                                    await DisconnectClientAsync(curr.Key, MessageStatus.Timeout, true);
+                                    await DisconnectClientAsync(curr.Key, MessageStatus.Timeout, true, token);
                                 }
                             }
                         }
+                    }
+
+                    // Purge stale kicked/timed-out records every ~60 seconds (12 iterations * 5s)
+                    purgeCounter++;
+                    if (purgeCounter >= 12)
+                    {
+                        purgeCounter = 0;
+                        _ClientManager.PurgeStaleRecords(TimeSpan.FromMinutes(5));
                     }
                 }
             }
             catch (TaskCanceledException)
             {
-
+                _Settings?.Logger?.Invoke(Severity.Debug, _Header + "idle client monitor task canceled");
             }
             catch (OperationCanceledException)
             {
-
+                _Settings?.Logger?.Invoke(Severity.Debug, _Header + "idle client monitor operation canceled");
             }
         }
 

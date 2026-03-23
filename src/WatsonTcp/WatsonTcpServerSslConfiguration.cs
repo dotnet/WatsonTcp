@@ -80,7 +80,7 @@
         public WatsonTcpServerSslConfiguration(WatsonTcpServerSslConfiguration configuration)
         {
             if (configuration == null)
-                throw new ArgumentNullException("Can not copy from null server SSL configuration");
+                throw new ArgumentNullException(nameof(configuration), "Can not copy from null server SSL configuration");
 
             _ClientCertRequired = configuration._ClientCertRequired;
             _ClientCertValidationCallback = configuration._ClientCertValidationCallback;

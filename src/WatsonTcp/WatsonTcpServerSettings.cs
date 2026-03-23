@@ -149,6 +149,31 @@
         /// </summary>
         public bool NoDelay { get; set; } = true;
 
+        /// <summary>
+        /// Maximum header size in bytes.  Default is 262144 (256KB).
+        /// Headers larger than this value will be rejected to prevent memory exhaustion from malformed or malicious data.
+        /// Value must be greater than 24.
+        /// </summary>
+        public int MaxHeaderSize
+        {
+            get
+            {
+                return _MaxHeaderSize;
+            }
+            set
+            {
+                if (value < 25) throw new ArgumentException("MaxHeaderSize must be greater than 24.");
+                _MaxHeaderSize = value;
+            }
+        }
+
+        /// <summary>
+        /// Enable or disable enforcement of the MaxConnections setting.
+        /// When true (default), new connections will be rejected when MaxConnections is reached.
+        /// When false, connections will be accepted beyond MaxConnections (legacy behavior) with a warning logged.
+        /// </summary>
+        public bool EnforceMaxConnections { get; set; } = true;
+
         #endregion
 
         #region Private-Members
@@ -160,6 +185,7 @@
         private int _IdleClientTimeoutSeconds = 0;
         private List<string> _PermittedIPs = new List<string>();
         private List<string> _BlockedIPs = new List<string>();
+        private int _MaxHeaderSize = 262144;
 
         #endregion 
 

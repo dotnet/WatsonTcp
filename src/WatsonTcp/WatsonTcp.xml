@@ -87,6 +87,12 @@
             </summary>
             <param name="disposing">Indicate if resources should be disposed.</param>
         </member>
+        <member name="M:WatsonTcp.ClientMetadataManager.PurgeStaleRecords(System.TimeSpan)">
+            <summary>
+            Purge stale kicked and timed-out client records older than the specified age.
+            </summary>
+            <param name="maxAge">Maximum age of records to keep.</param>
+        </member>
         <member name="T:WatsonTcp.ConnectionEventArgs">
             <summary>
             Event arguments for when a connection is established.
@@ -1017,6 +1023,13 @@
             Nagle's algorithm.  Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is true.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.MaxHeaderSize">
+            <summary>
+            Maximum header size in bytes.  Default is 262144 (256KB).
+            Headers larger than this value will be rejected to prevent memory exhaustion from malformed or malicious data.
+            Value must be greater than 24.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpClientSettings.#ctor">
             <summary>
             Instantiate.
@@ -1469,6 +1482,20 @@
         <member name="P:WatsonTcp.WatsonTcpServerSettings.NoDelay">
             <summary>
             Nagle's algorithm.  Disable the delay when send or receive buffers are not full.  If true, disable the delay.  Default is true.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.MaxHeaderSize">
+            <summary>
+            Maximum header size in bytes.  Default is 262144 (256KB).
+            Headers larger than this value will be rejected to prevent memory exhaustion from malformed or malicious data.
+            Value must be greater than 24.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.EnforceMaxConnections">
+            <summary>
+            Enable or disable enforcement of the MaxConnections setting.
+            When true (default), new connections will be rejected when MaxConnections is reached.
+            When false, connections will be accepted beyond MaxConnections (legacy behavior) with a warning logged.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServerSettings.#ctor">

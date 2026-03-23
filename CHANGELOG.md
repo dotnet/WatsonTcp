@@ -2,17 +2,53 @@
 
 ## Current Version
 
+v6.1.0
+
+### Performance
+
+- **Header parsing rewrite** - The old ```BuildFromStream``` read one byte at a time, allocated a new array on every byte via ```AppendBytes```, and ran LINQ ```.Skip().Take().ToArray()``` on every iteration to check for the ```\r\n\r\n``` delimiter.  For a header of length H, that produced H-24 array allocations plus H-24 LINQ allocations.  The new version writes into a ```MemoryStream``` and tracks the last 4 bytes with simple variables.  Same byte-by-byte read (necessary to avoid over-reading past the delimiter into message body data on non-seekable ```NetworkStream```s), but zero per-byte allocations.
+- **Buffer pooling** - Both client and server ```SendDataStreamAsync``` methods were allocating ```new byte[bufferSize]``` on every loop iteration of every send.  Now they rent from ```ArrayPool<byte>.Shared``` once per send and return when done.  ```GetHeaderBytes``` also replaced ```AppendBytes``` with ```Buffer.BlockCopy```.
+
+### Thread Safety
+
+- **ClientMetadataManager consolidated** - Had 5 separate ```ReaderWriterLockSlim``` instances protecting 5 dictionaries that represent one logical unit of client state.  Operations like ```ReplaceGuid``` and ```Remove``` acquired/released each lock individually, creating windows where a client existed in one dictionary but not another.  Now uses a single lock; all mutations are atomic.  Also fixed ```GetClient``` which did ```ContainsKey``` then ```[guid]``` across two separate lock acquisitions (TOCTOU race leading to ```KeyNotFoundException```).  Now uses ```TryGetValue```.
+- **Sync response matching** - Both client and server used ```AutoResetEvent``` + multicast event handler subscription (```_SyncResponseReceived += handler```) with a ```lock``` around invocation.  Race conditions existed between handler registration and message send, and between concurrent sync requests.  Replaced with ```ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>>```: register before sending, ```DataReceiver``` does ```TryRemove``` + ```TrySetResult``` on response arrival.  Cleaner, lock-free, no signal loss.
+
+### Bug Fixes
+
+- **WaitHandle leak** - ```WatsonTcpClient.Connect()``` called ```BeginConnect```, got a ```WaitHandle```, but never closed it (commented out with a link to an MSDN forum post).  Now closed in ```finally```.
+- **Busy-wait spin loops** - ```ClientMetadata.Dispose()``` had ```while (DataReceiver?.Status == Running) Task.Delay(30).Wait()``` which blocks a thread pool thread spinning.  Same pattern in ```WatsonTcpClient.Disconnect()``` for both ```_DataReceiver``` and ```_IdleServerMonitor```.  Replaced with ```Task.Wait(TimeSpan.FromSeconds(5))```.
+- **Stale client records** - ```_ClientsKicked``` and ```_ClientsTimedout``` dictionaries accumulated entries forever.  Added ```PurgeStaleRecords(TimeSpan)``` to ```ClientMetadataManager```, called every ~60 seconds from ```MonitorForIdleClients```, purging records older than 5 minutes that don't correspond to active clients.
+
+### New Features
+
+- **```Settings.MaxHeaderSize```** (client and server, default 262144/256KB) - The old header parser had no upper bound.  A malformed or malicious peer could send megabytes without a ```\r\n\r\n``` delimiter and the server would allocate until OOM.  Now throws ```IOException``` when exceeded.
+- **```Settings.EnforceMaxConnections```** (server, default ```true```) - Previously, ```MaxConnections``` only paused the listener (stopped accepting) but the check happened after the connection was already accepted, so it was really just a soft warning.  Now, when enforcement is on, connections are actively rejected with ```tcpClient.Close()``` before any client state is created.  When off, the old behavior is preserved (accept anyway, log a warning, don't stop the listener).
+
+### Observability
+
+- Added ```Severity.Debug``` logging to all previously silent ```catch (TaskCanceledException) { }``` and ```catch (OperationCanceledException) { }``` blocks in ```IdleServerMonitor```, ```MonitorForIdleClients```, and ```SendInternalAsync``` on both client and server.
+
+### Testing
+
+- 10 new automated tests (46 total): MaxConnections enforcement (happy + sad), MaxHeaderSize validation, rapid connect/disconnect (10 cycles), concurrent sync requests (5 parallel ```SendAndWaitAsync``` with response verification), SSL connectivity + message exchange, server stop detection from client, duplicate client GUID handling, and send-with-byte-offset.
+
+### Breaking Changes
+
+- ```Settings.EnforceMaxConnections``` defaults to ```true```.  If you were relying on the server accepting unlimited connections despite ```MaxConnections``` being set, connections will now be rejected at capacity.  Set ```EnforceMaxConnections = false``` to restore the old behavior.
+- All other changes are internal implementation details with identical public API signatures and wire protocol.
+
+## Previous Versions
+
 v6.0.x
 
 - Remove unsupported frameworks
 - Async version of ```SyncMessageReceived``` callback
 - Moving usings inside namespace
 - Remove obsolete methods
-- Mark non-async APIs obsolete 
+- Mark non-async APIs obsolete
 - Modified test projects to use async
 - Ensured background tasks honored cancellation tokens
-
-## Previous Versions
 
 v5.1.x
 
