@@ -120,7 +120,7 @@
             }
             set
             {
-                if (value < 1) throw new ArgumentOutOfRangeException("IdleServerEvaluationIntervalMs must be one or greater.");
+                if (value < 1) throw new ArgumentOutOfRangeException(nameof(IdleServerEvaluationIntervalMs), "IdleServerEvaluationIntervalMs must be one or greater.");
                 _IdleServerEvaluationIntervalMs = value;
             }
         }
@@ -160,6 +160,24 @@
         /// </summary>
         public bool NoDelay { get; set; } = true;
 
+        /// <summary>
+        /// Maximum header size in bytes.  Default is 262144 (256KB).
+        /// Headers larger than this value will be rejected to prevent memory exhaustion from malformed or malicious data.
+        /// Value must be greater than 24.
+        /// </summary>
+        public int MaxHeaderSize
+        {
+            get
+            {
+                return _MaxHeaderSize;
+            }
+            set
+            {
+                if (value < 25) throw new ArgumentException("MaxHeaderSize must be greater than 24.");
+                _MaxHeaderSize = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
@@ -170,6 +188,7 @@
         private int _IdleServerTimeoutMs = 0;
         private int _IdleServerEvaluationIntervalMs = 1000;
         private int _LocalPort = 0;
+        private int _MaxHeaderSize = 262144;
 
         #endregion
 

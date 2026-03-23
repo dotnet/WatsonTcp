@@ -134,6 +134,7 @@
         /// </summary>
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
             if (TokenSource != null)
             {
                 if (!TokenSource.IsCancellationRequested)
@@ -152,9 +153,19 @@
                 _TcpClient.Dispose();
             }
 
-            while (DataReceiver?.Status == TaskStatus.Running)
+            if (DataReceiver != null)
             {
-                Task.Delay(30).Wait();
+                try
+                {
+                    DataReceiver.Wait(TimeSpan.FromSeconds(5));
+                }
+                catch (AggregateException)
+                {
+                    // Task may have been cancelled
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
         }
 
