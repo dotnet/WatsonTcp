@@ -7,7 +7,7 @@
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
 		<AnalysisLevel>latest-recommended</AnalysisLevel>
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-		<Version>6.1.0</Version>
+		<Version>6.2.0</Version>
 		<Authors>Joel Christner</Authors>
 		<Company>Joel Christner</Company>
 		<Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -17,7 +17,7 @@
 		<RepositoryUrl>https://github.com/dotnet/WatsonTcp</RepositoryUrl>
 		<RepositoryType>Github</RepositoryType>
 		<PackageLicenseUrl></PackageLicenseUrl>
-		<PackageReleaseNotes>Performance improvements, header parsing rewrite, connection management fixes, new settings</PackageReleaseNotes>
+		<PackageReleaseNotes>Connection authorization callback, framed handshake state machines, Touchstone-based shared automated tests, and new connection lifecycle events/statuses</PackageReleaseNotes>
 		<PackageIconUrl></PackageIconUrl>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 		<PackageIcon>watson.png</PackageIcon>

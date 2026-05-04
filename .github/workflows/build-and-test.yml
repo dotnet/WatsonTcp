@@ -25,32 +25,48 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Restore dependencies
-        run: dotnet restore src/WatsonTcp/WatsonTcp.csproj
-
-      - name: Restore test dependencies
-        run: dotnet restore src/Test.XUnit/Test.XUnit.csproj
+      - name: Restore solution
+        run: dotnet restore src/WatsonTcp.sln
 
       - name: Build library (Release)
         run: dotnet build src/WatsonTcp/WatsonTcp.csproj --configuration Release --no-restore
 
-      - name: Build tests (Release)
+      - name: Build shared tests (Release)
+        run: dotnet build src/Test.Shared/Test.Shared.csproj --configuration Release --no-restore
+
+      - name: Build CLI host (Release)
+        run: dotnet build src/Test.Automated/Test.Automated.csproj --configuration Release --no-restore
+
+      - name: Build xUnit host (Release)
         run: dotnet build src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-restore
 
-      - name: Run tests (Linux - net8.0 and net10.0 only)
+      - name: Build NUnit host (Release)
+        run: dotnet build src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-restore
+
+      - name: Run Touchstone CLI host
+        run: dotnet run --project src/Test.Automated/Test.Automated.csproj --configuration Release --framework net8.0 --no-build -- --results ./test-results/cli-results.json
+
+      - name: Run xUnit tests (Linux)
         if: runner.os == 'Linux'
         run: |
           dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=test-results-net8.0.trx" --results-directory ./test-results
           dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=test-results-net10.0.trx" --results-directory ./test-results
+          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=nunit-results-net8.0.trx" --results-directory ./test-results
+          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=nunit-results-net10.0.trx" --results-directory ./test-results
 
-      - name: Run tests (Windows - all frameworks)
+      - name: Run xUnit and NUnit tests (Windows)
         if: runner.os == 'Windows'
         run: |
-          dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./test-results
+          dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=test-results-net8.0.trx" --results-directory ./test-results
+          dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=test-results-net10.0.trx" --results-directory ./test-results
+          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=nunit-results-net8.0.trx" --results-directory ./test-results
+          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=nunit-results-net10.0.trx" --results-directory ./test-results
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.os }}
-          path: ./test-results/*.trx
+          path: |
+            ./test-results/*.trx
+            ./test-results/cli-results.json

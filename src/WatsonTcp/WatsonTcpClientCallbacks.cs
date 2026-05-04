@@ -1,6 +1,7 @@
 ﻿namespace WatsonTcp
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -46,12 +47,28 @@
             }
         }
 
+        /// <summary>
+        /// Callback to invoke when the server requests a framed handshake.
+        /// </summary>
+        public Func<ClientHandshakeSession, CancellationToken, Task<HandshakeResult>> HandshakeAsync
+        {
+            get
+            {
+                return _HandshakeAsync;
+            }
+            set
+            {
+                _HandshakeAsync = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
 
         private Func<SyncRequest, SyncResponse> _SyncRequestReceived = null;
         private Func<SyncRequest, Task<SyncResponse>> _SyncRequestReceivedAsync = null;
+        private Func<ClientHandshakeSession, CancellationToken, Task<HandshakeResult>> _HandshakeAsync = null;
 
         #endregion
 

@@ -178,6 +178,23 @@
             }
         }
 
+        /// <summary>
+        /// Number of milliseconds to wait for a custom handshake to complete before failing the connection attempt.
+        /// Value must be greater than zero.
+        /// </summary>
+        public int HandshakeTimeoutMs
+        {
+            get
+            {
+                return _HandshakeTimeoutMs;
+            }
+            set
+            {
+                if (value < 1) throw new ArgumentException("HandshakeTimeoutMs must be greater than zero.");
+                _HandshakeTimeoutMs = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
@@ -189,6 +206,7 @@
         private int _IdleServerEvaluationIntervalMs = 1000;
         private int _LocalPort = 0;
         private int _MaxHeaderSize = 262144;
+        private int _HandshakeTimeoutMs = 10000;
 
         #endregion
 

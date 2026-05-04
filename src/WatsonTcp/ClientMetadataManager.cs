@@ -14,6 +14,7 @@ namespace WatsonTcp
 
         private readonly ReaderWriterLockSlim _Lock = new ReaderWriterLockSlim();
         private Dictionary<Guid, DateTime> _UnauthenticatedClients = new Dictionary<Guid, DateTime>();
+        private Dictionary<Guid, ClientMetadata> _PendingClients = new Dictionary<Guid, ClientMetadata>();
         private Dictionary<Guid, ClientMetadata> _Clients = new Dictionary<Guid, ClientMetadata>();
         private Dictionary<Guid, DateTime> _ClientsLastSeen = new Dictionary<Guid, DateTime>();
         private Dictionary<Guid, DateTime> _ClientsKicked = new Dictionary<Guid, DateTime>();
@@ -53,6 +54,7 @@ namespace WatsonTcp
                 try
                 {
                     _UnauthenticatedClients = null;
+                    _PendingClients = null;
                     _Clients = null;
                     _ClientsLastSeen = null;
                     _ClientsKicked = null;
@@ -87,8 +89,15 @@ namespace WatsonTcp
                     _UnauthenticatedClients[replace] = dt;
                 }
 
-                // Clients
+                // Pending clients
                 ClientMetadata md;
+                if (_PendingClients.TryGetValue(original, out md))
+                {
+                    _PendingClients.Remove(original);
+                    _PendingClients[replace] = md;
+                }
+
+                // Clients
                 if (_Clients.TryGetValue(original, out md))
                 {
                     _Clients.Remove(original);
@@ -128,6 +137,7 @@ namespace WatsonTcp
             try
             {
                 _UnauthenticatedClients.Remove(guid);
+                _PendingClients.Remove(guid);
                 _Clients.Remove(guid);
                 _ClientsLastSeen.Remove(guid);
                 _ClientsKicked.Remove(guid);
@@ -231,6 +241,106 @@ namespace WatsonTcp
             try
             {
                 return new Dictionary<Guid, DateTime>(_UnauthenticatedClients);
+            }
+            finally
+            {
+                _Lock.ExitReadLock();
+            }
+        }
+
+        #endregion
+
+        #region Pending-Clients
+
+        internal void AddPendingClient(Guid guid, ClientMetadata client)
+        {
+            _Lock.EnterWriteLock();
+            try
+            {
+                _PendingClients[guid] = client;
+            }
+            finally
+            {
+                _Lock.ExitWriteLock();
+            }
+        }
+
+        internal ClientMetadata GetPendingClient(Guid guid)
+        {
+            _Lock.EnterReadLock();
+            try
+            {
+                ClientMetadata md;
+                if (_PendingClients.TryGetValue(guid, out md)) return md;
+                return null;
+            }
+            finally
+            {
+                _Lock.ExitReadLock();
+            }
+        }
+
+        internal void RemovePendingClient(Guid guid)
+        {
+            _Lock.EnterWriteLock();
+            try
+            {
+                _PendingClients.Remove(guid);
+            }
+            finally
+            {
+                _Lock.ExitWriteLock();
+            }
+        }
+
+        internal bool ExistsPendingClient(Guid guid)
+        {
+            _Lock.EnterReadLock();
+            try
+            {
+                return _PendingClients.ContainsKey(guid);
+            }
+            finally
+            {
+                _Lock.ExitReadLock();
+            }
+        }
+
+        internal Dictionary<Guid, ClientMetadata> AllPendingClients()
+        {
+            _Lock.EnterReadLock();
+            try
+            {
+                return new Dictionary<Guid, ClientMetadata>(_PendingClients);
+            }
+            finally
+            {
+                _Lock.ExitReadLock();
+            }
+        }
+
+        internal int PendingClientCount()
+        {
+            _Lock.EnterReadLock();
+            try
+            {
+                return _PendingClients.Count;
+            }
+            finally
+            {
+                _Lock.ExitReadLock();
+            }
+        }
+
+        internal ClientMetadata GetTrackedClient(Guid guid)
+        {
+            _Lock.EnterReadLock();
+            try
+            {
+                ClientMetadata md;
+                if (_Clients.TryGetValue(guid, out md)) return md;
+                if (_PendingClients.TryGetValue(guid, out md)) return md;
+                return null;
             }
             finally
             {

@@ -2,6 +2,44 @@
 
 ## Current Version
 
+v6.2.0
+
+### Connection Admission
+
+- Added `WatsonTcpServerCallbacks.AuthorizeConnectionAsync` for server-side admission decisions before a client is treated as connected
+- Added `Connections` vs `PendingConnections` visibility and moved `ListClients()` semantics to fully admitted, registered clients only
+- Added `ConnectionRejected` events and `ConnectionRejectedException` for explicit rejection handling
+
+### Handshake State Machines
+
+- Added framed handshake callbacks via `WatsonTcpServerCallbacks.HandshakeAsync` and `WatsonTcpClientCallbacks.HandshakeAsync`
+- Added `ServerHandshakeSession`, `ClientHandshakeSession`, `HandshakeMessage`, and `HandshakeResult`
+- Added control-plane statuses for handshake begin/data/success/failure
+- Added handshake success/failure events and `HandshakeFailedException`
+
+### Settings And Lifecycle
+
+- Added `WatsonTcpServerSettings.AuthorizationTimeoutMs`
+- Added `WatsonTcpServerSettings.HandshakeTimeoutMs`
+- Added `WatsonTcpClientSettings.HandshakeTimeoutMs`
+- Added pending-connection tracking and moved active registration to the end of admission
+
+### Testing
+
+- Migrated automated coverage into `Test.Shared` using Touchstone descriptors
+- Rewrote `Test.Automated` as a Touchstone CLI host
+- Rewrote `Test.XUnit` as a thin Touchstone xUnit host
+- Added `Test.Nunit` as a thin Touchstone NUnit host
+- Added shared authorization and API-key handshake success/failure coverage exercised through all three hosts
+
+### Compatibility Notes
+
+- This is a minor release because all new admission and handshake behavior is opt-in
+- Handshake-enabled servers require compatible clients that understand the new control-plane statuses
+- `Test.Automated` now targets `net8.0;net10.0`
+
+## Previous Version
+
 v6.1.0
 
 ### Performance
