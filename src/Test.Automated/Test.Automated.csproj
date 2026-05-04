@@ -1,22 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<TargetFrameworks>net462;net48;net8.0;net10.0</TargetFrameworks>
-	</PropertyGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="9.0.10" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Touchstone.Cli" Version="$(TouchstoneVersion)" />
+  </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\WatsonTcp\WatsonTcp.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="test.pfx">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Test.Shared\Test.Shared.csproj" />
+  </ItemGroup>
 
 </Project>

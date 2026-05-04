@@ -40,6 +40,26 @@
             </summary>
             <param name="client">Client metadata.</param>
         </member>
+        <member name="T:WatsonTcp.ClientHandshakeSession">
+            <summary>
+            Client-side handshake session.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ClientHandshakeSession.SendAsync(WatsonTcp.HandshakeMessage,System.Threading.CancellationToken)">
+            <summary>
+            Send a handshake message to the remote server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ClientHandshakeSession.ReceiveAsync(System.Threading.CancellationToken)">
+            <summary>
+            Receive a handshake message from the remote server.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ClientHandshakeSession.RejectAsync(System.String,WatsonTcp.MessageStatus,System.Threading.CancellationToken)">
+            <summary>
+            Reject the handshake.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.ClientMetadata">
             <summary>
             Client metadata.
@@ -93,6 +113,61 @@
             </summary>
             <param name="maxAge">Maximum age of records to keep.</param>
         </member>
+        <member name="T:WatsonTcp.ConnectionAuthorizationContext">
+            <summary>
+            Connection authorization context.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionAuthorizationContext.Client">
+            <summary>
+            Provisional client metadata.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionAuthorizationContext.IsSsl">
+            <summary>
+            Indicates whether SSL/TLS is in use for this connection.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionAuthorizationContext.ClientCertificate">
+            <summary>
+            Client certificate, if mutual TLS is in use.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionAuthorizationContext.IpPort">
+            <summary>
+            Remote endpoint expressed as IP:port.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.ConnectionAuthorizationResult">
+            <summary>
+            Connection authorization result.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionAuthorizationResult.Allowed">
+            <summary>
+            Indicates whether or not the connection is allowed.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionAuthorizationResult.Reason">
+            <summary>
+            Optional rejection reason.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionAuthorizationResult.RejectionStatus">
+            <summary>
+            Message status to use if the connection is rejected.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ConnectionAuthorizationResult.Allow">
+            <summary>
+            Create an allow result.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ConnectionAuthorizationResult.Reject(System.String,WatsonTcp.MessageStatus)">
+            <summary>
+            Create a rejection result.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.ConnectionEventArgs">
             <summary>
             Event arguments for when a connection is established.
@@ -101,6 +176,41 @@
         <member name="P:WatsonTcp.ConnectionEventArgs.Client">
             <summary>
             Client metadata.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.ConnectionRejectedEventArgs">
+            <summary>
+            Event arguments for rejected connections.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionRejectedEventArgs.Client">
+            <summary>
+            Client metadata.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionRejectedEventArgs.Reason">
+            <summary>
+            Rejection reason.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionRejectedEventArgs.Status">
+            <summary>
+            Rejection status.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.ConnectionRejectedException">
+            <summary>
+            Exception thrown when a connection is rejected during initialization.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ConnectionRejectedException.Status">
+            <summary>
+            Rejection status.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ConnectionRejectedException.#ctor(System.String,WatsonTcp.MessageStatus)">
+            <summary>
+            Instantiate.
             </summary>
         </member>
         <member name="T:WatsonTcp.DefaultSerializationHelper">
@@ -179,6 +289,16 @@
             Disconnect due to authentication failure.
             </summary>
         </member>
+        <member name="F:WatsonTcp.DisconnectReason.ConnectionRejected">
+            <summary>
+            Disconnect due to connection rejection.
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.DisconnectReason.HandshakeFailure">
+            <summary>
+            Disconnect due to handshake failure.
+            </summary>
+        </member>
         <member name="T:WatsonTcp.ExceptionEventArgs">
             <summary>
             Event arguments for when an exception is encountered. 
@@ -187,6 +307,101 @@
         <member name="P:WatsonTcp.ExceptionEventArgs.Exception">
             <summary>
             Exception.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.HandshakeFailedEventArgs">
+            <summary>
+            Event arguments for failed handshakes.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeFailedEventArgs.Client">
+            <summary>
+            Client metadata.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeFailedEventArgs.Reason">
+            <summary>
+            Failure reason.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeFailedEventArgs.Status">
+            <summary>
+            Failure status.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.HandshakeFailedException">
+            <summary>
+            Exception thrown when a handshake fails during initialization.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeFailedException.Status">
+            <summary>
+            Failure status.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.HandshakeFailedException.#ctor(System.String,WatsonTcp.MessageStatus)">
+            <summary>
+            Instantiate.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.HandshakeMessage">
+            <summary>
+            Framed handshake message.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeMessage.Type">
+            <summary>
+            Message type identifier.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeMessage.Metadata">
+            <summary>
+            Optional metadata.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeMessage.Data">
+            <summary>
+            Optional payload data.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.HandshakeResult">
+            <summary>
+            Handshake result.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeResult.Success">
+            <summary>
+            Indicates whether or not the handshake succeeded.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeResult.Reason">
+            <summary>
+            Optional failure reason.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeResult.FailureStatus">
+            <summary>
+            Message status to use if the handshake fails.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.HandshakeResult.Succeed">
+            <summary>
+            Create a success result.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.HandshakeResult.Fail(System.String,WatsonTcp.MessageStatus)">
+            <summary>
+            Create a failure result.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.HandshakeSucceededEventArgs">
+            <summary>
+            Event arguments for successful handshakes.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.HandshakeSucceededEventArgs.Client">
+            <summary>
+            Client metadata.
             </summary>
         </member>
         <member name="T:WatsonTcp.ISerializationHelper">
@@ -300,6 +515,31 @@
             RegisterClient
             </summary>
         </member>
+        <member name="F:WatsonTcp.MessageStatus.ConnectionRejected">
+            <summary>
+            ConnectionRejected
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.MessageStatus.HandshakeBegin">
+            <summary>
+            HandshakeBegin
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.MessageStatus.HandshakeData">
+            <summary>
+            HandshakeData
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.MessageStatus.HandshakeSuccess">
+            <summary>
+            HandshakeSuccess
+            </summary>
+        </member>
+        <member name="F:WatsonTcp.MessageStatus.HandshakeFailure">
+            <summary>
+            HandshakeFailure
+            </summary>
+        </member>
         <member name="T:WatsonTcp.Mode">
             <summary>
             Mode.
@@ -313,6 +553,31 @@
         <member name="F:WatsonTcp.Mode.Ssl">
             <summary>
             Ssl.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.ServerHandshakeSession">
+            <summary>
+            Server-side handshake session.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.ServerHandshakeSession.Client">
+            <summary>
+            Provisional client metadata.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ServerHandshakeSession.SendAsync(WatsonTcp.HandshakeMessage,System.Threading.CancellationToken)">
+            <summary>
+            Send a handshake message to the remote client.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ServerHandshakeSession.ReceiveAsync(System.Threading.CancellationToken)">
+            <summary>
+            Receive a handshake message from the remote client.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.ServerHandshakeSession.RejectAsync(System.String,WatsonTcp.MessageStatus,System.Threading.CancellationToken)">
+            <summary>
+            Reject the handshake.
             </summary>
         </member>
         <member name="T:WatsonTcp.Severity">
@@ -891,6 +1156,11 @@
             Callback to invoke when receiving a synchronous request that demands a response.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpClientCallbacks.HandshakeAsync">
+            <summary>
+            Callback to invoke when the server requests a framed handshake.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpClientCallbacks.#ctor">
             <summary>
             Instantiate.
@@ -909,6 +1179,21 @@
         <member name="E:WatsonTcp.WatsonTcpClientEvents.AuthenticationFailure">
             <summary>
             Event fired when authentication has failed.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpClientEvents.ConnectionRejected">
+            <summary>
+            Event fired when a connection is rejected during initialization.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpClientEvents.HandshakeSucceeded">
+            <summary>
+            Event fired when a handshake succeeds.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpClientEvents.HandshakeFailed">
+            <summary>
+            Event fired when a handshake fails.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpClientEvents.MessageReceived">
@@ -1028,6 +1313,12 @@
             Maximum header size in bytes.  Default is 262144 (256KB).
             Headers larger than this value will be rejected to prevent memory exhaustion from malformed or malicious data.
             Value must be greater than 24.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpClientSettings.HandshakeTimeoutMs">
+            <summary>
+            Number of milliseconds to wait for a custom handshake to complete before failing the connection attempt.
+            Value must be greater than zero.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpClientSettings.#ctor">
@@ -1157,6 +1448,11 @@
         <member name="P:WatsonTcp.WatsonTcpServer.Connections">
             <summary>
             Retrieve the number of current connected clients.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServer.PendingConnections">
+            <summary>
+            Retrieve the number of pending clients that have not yet completed admission.
             </summary>
         </member>
         <member name="P:WatsonTcp.WatsonTcpServer.IsListening">
@@ -1337,6 +1633,16 @@
             Callback to invoke when receiving a synchronous request that demands a response.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpServerCallbacks.AuthorizeConnectionAsync">
+            <summary>
+            Callback to invoke to authorize a pending connection.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerCallbacks.HandshakeAsync">
+            <summary>
+            Callback to invoke to execute a framed handshake.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpServerCallbacks.#ctor">
             <summary>
             Instantiate.
@@ -1368,10 +1674,25 @@
             The IP:port of the client is passed in the arguments.
             </summary>
         </member>
+        <member name="E:WatsonTcp.WatsonTcpServerEvents.ConnectionRejected">
+            <summary>
+            Event to fire when a pending connection is rejected.
+            </summary>
+        </member>
         <member name="E:WatsonTcp.WatsonTcpServerEvents.ClientDisconnected">
             <summary>
             Event to fire when a client disconnects from the server.
             The IP:port is passed in the arguments along with the reason for the disconnection.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpServerEvents.HandshakeSucceeded">
+            <summary>
+            Event to fire when a client handshake succeeds.
+            </summary>
+        </member>
+        <member name="E:WatsonTcp.WatsonTcpServerEvents.HandshakeFailed">
+            <summary>
+            Event to fire when a client handshake fails.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpServerEvents.MessageReceived">
@@ -1496,6 +1817,18 @@
             Enable or disable enforcement of the MaxConnections setting.
             When true (default), new connections will be rejected when MaxConnections is reached.
             When false, connections will be accepted beyond MaxConnections (legacy behavior) with a warning logged.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.AuthorizationTimeoutMs">
+            <summary>
+            Number of milliseconds to wait for the connection authorization callback before rejecting the connection.
+            Value must be greater than zero.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonTcpServerSettings.HandshakeTimeoutMs">
+            <summary>
+            Number of milliseconds to wait for a custom handshake to complete before rejecting the connection.
+            Value must be greater than zero.
             </summary>
         </member>
         <member name="M:WatsonTcp.WatsonTcpServerSettings.#ctor">

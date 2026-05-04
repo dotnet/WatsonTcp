@@ -145,6 +145,17 @@
         }
 
         /// <summary>
+        /// Retrieve the number of pending clients that have not yet completed admission.
+        /// </summary>
+        public int PendingConnections
+        {
+            get
+            {
+                return _ClientManager?.PendingClientCount() ?? 0;
+            }
+        }
+
+        /// <summary>
         /// Flag to indicate if Watson TCP is listening for incoming TCP connections.
         /// </summary>
         public bool IsListening
@@ -568,7 +579,7 @@
         /// <param name="token">Cancellation token to cancel the request.</param>
         public async Task DisconnectClientAsync(Guid guid, MessageStatus status = MessageStatus.Removed, bool sendNotice = true, CancellationToken token = default)
         {
-            ClientMetadata client = _ClientManager.GetClient(guid);
+            ClientMetadata client = _ClientManager.GetTrackedClient(guid);
             if (client == null)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "unable to find client " + guid.ToString());
@@ -584,8 +595,9 @@
                     await SendInternalAsync(client, removeMsg, 0, null, token).ConfigureAwait(false);
                 }
 
+                client.Phase = ConnectionPhase.Disconnected;
                 client.Dispose();
-                _ClientManager.RemoveClient(guid);
+                _ClientManager.Remove(guid);
             }
         }
 
@@ -601,6 +613,15 @@
             if (clients != null && clients.Count > 0)
             {
                 foreach (KeyValuePair<Guid, ClientMetadata> client in clients)
+                {
+                    await DisconnectClientAsync(client.Key, status, sendNotice, token).ConfigureAwait(false);
+                }
+            }
+
+            Dictionary<Guid, ClientMetadata> pendingClients = _ClientManager.AllPendingClients();
+            if (pendingClients != null && pendingClients.Count > 0)
+            {
+                foreach (KeyValuePair<Guid, ClientMetadata> client in pendingClients)
                 {
                     await DisconnectClientAsync(client.Key, status, sendNotice, token).ConfigureAwait(false);
                 }
@@ -771,9 +792,7 @@
                     }
 
                     ClientMetadata client = new ClientMetadata(tcpClient);
-
-                    _ClientManager.AddClient(client.Guid, client);
-                    _ClientManager.AddClientLastSeen(client.Guid);
+                    _ClientManager.AddPendingClient(client.Guid, client);
 
                     CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_Token, client.Token);
 
@@ -801,7 +820,7 @@
 
                     if (_Mode == Mode.Tcp)
                     {
-                        unawaited = Task.Run(() => FinalizeConnection(client, linkedCts.Token), linkedCts.Token);
+                        unawaited = Task.Run(() => ProcessAcceptedClientAsync(client, linkedCts.Token), linkedCts.Token);
                     }
                     else if (_Mode == Mode.Ssl)
                     {
@@ -819,16 +838,9 @@
                             bool success = await StartTls(client, linkedCts.Token).ConfigureAwait(false);
                             if (success)
                             {
-                                await FinalizeConnection(client, linkedCts.Token).ConfigureAwait(false);
+                                client.Phase = ConnectionPhase.TlsEstablished;
+                                await ProcessAcceptedClientAsync(client, linkedCts.Token).ConfigureAwait(false);
                             }
-                            else
-                            {
-                                _ClientManager.RemoveClient(client.Guid);
-                                _ClientManager.RemoveClientLastSeen(client.Guid);
-
-                                client.Dispose();
-                            }
-
                         }, linkedCts.Token);
                     }
                     else
@@ -868,24 +880,21 @@
                 if (!client.SslStream.IsEncrypted)
                 {
                     _Settings.Logger?.Invoke(Severity.Error, _Header + "stream from " + client.ToString() + " not encrypted");
-                    client.Dispose();
-                    Interlocked.Decrement(ref _Connections);
+                    CleanupPendingClient(client);
                     return false;
                 }
 
                 if (!client.SslStream.IsAuthenticated)
                 {
                     _Settings.Logger?.Invoke(Severity.Error, _Header + "stream from " + client.ToString() + " not authenticated");
-                    client.Dispose();
-                    Interlocked.Decrement(ref _Connections);
+                    CleanupPendingClient(client);
                     return false;
                 }
 
                 if (_Settings.MutuallyAuthenticate && !client.SslStream.IsMutuallyAuthenticated)
                 {
                     _Settings.Logger?.Invoke(Severity.Error, _Header + $"mutual authentication with {client.ToString()} ({_TlsVersion}) failed");
-                    client.Dispose();
-                    Interlocked.Decrement(ref _Connections);
+                    CleanupPendingClient(client);
                     return false;
                 }
             }
@@ -894,37 +903,243 @@
                 _Settings.Logger?.Invoke(Severity.Error, _Header + $"disconnected during SSL/TLS establishment with {client.ToString()} ({_TlsVersion}): " + e.Message);
                 _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
 
-                client.Dispose();
-                Interlocked.Decrement(ref _Connections);
+                CleanupPendingClient(client);
                 return false;
             }
 
             return true;
         }
 
-        private async Task FinalizeConnection(ClientMetadata client, CancellationToken token)
+        private async Task ProcessAcceptedClientAsync(ClientMetadata client, CancellationToken token)
         {
-            #region Request-Authentication
+            if (client == null) throw new ArgumentNullException(nameof(client));
 
-            if (!String.IsNullOrEmpty(_Settings.PresharedKey))
-            {
-                _Settings.Logger?.Invoke(Severity.Debug, _Header + "requesting authentication material from " + client.ToString());
-                _ClientManager.AddUnauthenticatedClient(client.Guid);
-
-                byte[] data = Encoding.UTF8.GetBytes("Authentication required");
-                WatsonMessage authMsg = new WatsonMessage();
-                authMsg.Status = MessageStatus.AuthRequired;
-                await SendInternalAsync(client, authMsg, 0, null, token).ConfigureAwait(false);
-            }
-
-            #endregion
-
-            #region Start-Data-Receiver
+            bool authorized = await AuthorizePendingClientAsync(client, token).ConfigureAwait(false);
+            if (!authorized) return;
 
             _Settings.Logger?.Invoke(Severity.Debug, _Header + "starting data receiver for " + client.ToString());
             client.DataReceiver = Task.Run(() => DataReceiver(client, token), token);
 
-            #endregion
+            if (!String.IsNullOrEmpty(_Settings.PresharedKey))
+            {
+                client.Phase = ConnectionPhase.PresharedKeyPending;
+                _Settings.Logger?.Invoke(Severity.Debug, _Header + "requesting authentication material from " + client.ToString());
+                _ClientManager.AddUnauthenticatedClient(client.Guid);
+                WatsonMessage authMsg = new WatsonMessage();
+                authMsg.Status = MessageStatus.AuthRequired;
+                await SendInternalAsync(client, authMsg, 0, null, token).ConfigureAwait(false);
+                return;
+            }
+
+            await BeginPostAuthenticationFlowAsync(client, token).ConfigureAwait(false);
+        }
+
+        private async Task<bool> AuthorizePendingClientAsync(ClientMetadata client, CancellationToken token)
+        {
+            if (_Callbacks.AuthorizeConnectionAsync == null) return true;
+
+            client.Phase = ConnectionPhase.Authorizing;
+            ConnectionAuthorizationResult result = null;
+
+            using (CancellationTokenSource timeoutCts = new CancellationTokenSource(_Settings.AuthorizationTimeoutMs))
+            using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
+            {
+                try
+                {
+                    X509Certificate clientCertificate = client.SslStream?.RemoteCertificate;
+                    ConnectionAuthorizationContext context = new ConnectionAuthorizationContext(client, _Mode == Mode.Ssl, clientCertificate);
+                    result = await _Callbacks.AuthorizeConnectionAsync(context, linkedCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (timeoutCts.IsCancellationRequested)
+                    {
+                        result = ConnectionAuthorizationResult.Reject("Connection authorization timed out.");
+                    }
+                    else
+                    {
+                        result = ConnectionAuthorizationResult.Reject("Connection authorization canceled.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _Settings.Logger?.Invoke(Severity.Error, _Header + "connection authorization exception for " + client.ToString() + ": " + e.Message);
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    result = ConnectionAuthorizationResult.Reject("Connection authorization failed: " + e.Message);
+                }
+            }
+
+            if (result == null) result = ConnectionAuthorizationResult.Allow();
+            if (result.Allowed) return true;
+
+            await RejectPendingClientBeforeReceiverAsync(client, result.Reason, result.RejectionStatus, token).ConfigureAwait(false);
+            return false;
+        }
+
+        private async Task BeginPostAuthenticationFlowAsync(ClientMetadata client, CancellationToken token)
+        {
+            if (_Callbacks.HandshakeAsync != null)
+            {
+                await StartHandshakePhaseAsync(client, token).ConfigureAwait(false);
+            }
+            else
+            {
+                client.Phase = ConnectionPhase.AwaitingRegistration;
+            }
+        }
+
+        private async Task StartHandshakePhaseAsync(ClientMetadata client, CancellationToken token)
+        {
+            client.HandshakeRequired = true;
+            client.Phase = ConnectionPhase.HandshakePending;
+            client.HandshakeTransport = new HandshakeSessionTransport(
+                async (msg, innerToken) => await SendHandshakeDataAsync(client, msg, innerToken).ConfigureAwait(false),
+                async (reason, status, innerToken) => await SendStatusMessageAsync(client, status, reason, innerToken).ConfigureAwait(false),
+                token);
+            client.ServerHandshakeSession = new ServerHandshakeSession(client, client.HandshakeTransport);
+
+            await SendStatusMessageAsync(client, MessageStatus.HandshakeBegin, "Handshake required", token).ConfigureAwait(false);
+            client.HandshakeTask = Task.Run(() => RunHandshakePhaseAsync(client, token), token);
+        }
+
+        private async Task RunHandshakePhaseAsync(ClientMetadata client, CancellationToken token)
+        {
+            HandshakeResult result = null;
+
+            using (CancellationTokenSource timeoutCts = new CancellationTokenSource(_Settings.HandshakeTimeoutMs))
+            using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
+            {
+                try
+                {
+                    result = await _Callbacks.HandshakeAsync(client.ServerHandshakeSession, linkedCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (timeoutCts.IsCancellationRequested)
+                    {
+                        result = HandshakeResult.Fail("Handshake timed out.");
+                    }
+                    else
+                    {
+                        result = HandshakeResult.Fail("Handshake canceled.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _Settings.Logger?.Invoke(Severity.Error, _Header + "handshake exception for " + client.ToString() + ": " + e.Message);
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    result = HandshakeResult.Fail("Handshake failed: " + e.Message);
+                }
+            }
+
+            if (result == null) result = HandshakeResult.Succeed();
+
+            if (result.Success)
+            {
+                client.HandshakeCompleted = true;
+                client.Phase = ConnectionPhase.AwaitingRegistration;
+                _Events.HandleHandshakeSucceeded(this, new HandshakeSucceededEventArgs(client));
+                await SendStatusMessageAsync(client, MessageStatus.HandshakeSuccess, "Handshake successful", token).ConfigureAwait(false);
+            }
+            else
+            {
+                client.HandshakeFailed = true;
+                client.FailureReason = result.Reason;
+                client.FailureStatus = result.FailureStatus;
+                _Events.HandleHandshakeFailed(this, new HandshakeFailedEventArgs(client, result.Reason, result.FailureStatus));
+                await SendStatusMessageAsync(client, result.FailureStatus, result.Reason, token).ConfigureAwait(false);
+                client.Dispose();
+            }
+        }
+
+        private async Task ActivateClientAsync(ClientMetadata client, Guid requestedGuid)
+        {
+            if (client == null) throw new ArgumentNullException(nameof(client));
+
+            _Settings.Logger?.Invoke(Severity.Debug, _Header + "client " + client.ToString() + " attempting to register GUID " + requestedGuid.ToString());
+            _ClientManager.ReplaceGuid(client.Guid, requestedGuid);
+            _ClientManager.RemovePendingClient(requestedGuid);
+            _ClientManager.AddClient(requestedGuid, client);
+            _ClientManager.AddClientLastSeen(requestedGuid);
+            _Settings.Logger?.Invoke(Severity.Debug, _Header + "updated client GUID from " + client.Guid + " to " + requestedGuid);
+
+            client.Guid = requestedGuid;
+            client.Registered = true;
+            client.Phase = ConnectionPhase.Connected;
+            _Events.HandleClientConnected(this, new ConnectionEventArgs(client));
+        }
+
+        private void CleanupPendingClient(ClientMetadata client)
+        {
+            if (client == null) return;
+
+            _ClientManager.Remove(client.Guid);
+            Interlocked.Decrement(ref _Connections);
+            client.Phase = ConnectionPhase.Disconnected;
+            client.Dispose();
+        }
+
+        private async Task RejectPendingClientBeforeReceiverAsync(ClientMetadata client, string reason, MessageStatus status, CancellationToken token)
+        {
+            if (client == null) return;
+
+            client.ConnectionRejected = true;
+            client.FailureReason = String.IsNullOrEmpty(reason) ? "Connection rejected." : reason;
+            client.FailureStatus = status;
+            client.Phase = ConnectionPhase.Rejected;
+
+            _Events.HandleConnectionRejected(this, new ConnectionRejectedEventArgs(client, client.FailureReason, status));
+            await SendStatusMessageAsync(client, status, client.FailureReason, token).ConfigureAwait(false);
+            CleanupPendingClient(client);
+        }
+
+        private async Task SendStatusMessageAsync(ClientMetadata client, MessageStatus status, string reason, CancellationToken token)
+        {
+            if (client == null) throw new ArgumentNullException(nameof(client));
+
+            byte[] data = Array.Empty<byte>();
+            if (!String.IsNullOrEmpty(reason)) data = Encoding.UTF8.GetBytes(reason);
+            WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
+            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, null);
+            msg.Status = status;
+            await SendInternalAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
+        }
+
+        private async Task<string> ReadStatusMessageAsync(WatsonMessage msg, CancellationToken token)
+        {
+            if (msg == null) return null;
+            if (msg.ContentLength <= 0) return null;
+            byte[] data = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
+            if (data == null || data.Length < 1) return null;
+            return Encoding.UTF8.GetString(data);
+        }
+
+        private async Task SendHandshakeDataAsync(ClientMetadata client, HandshakeMessage handshakeMessage, CancellationToken token)
+        {
+            if (client == null) throw new ArgumentNullException(nameof(client));
+            if (handshakeMessage == null) throw new ArgumentNullException(nameof(handshakeMessage));
+
+            byte[] data = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(handshakeMessage, false));
+            WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
+            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, null);
+            msg.Status = MessageStatus.HandshakeData;
+            await SendInternalAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
+        }
+
+        private async Task<HandshakeMessage> ReadHandshakeMessageAsync(WatsonMessage msg, CancellationToken token)
+        {
+            if (msg == null) return null;
+            if (msg.ContentLength <= 0) return new HandshakeMessage();
+
+            byte[] data = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
+            if (data == null || data.Length < 1) return new HandshakeMessage();
+            return SerializationHelper.DeserializeJson<HandshakeMessage>(Encoding.UTF8.GetString(data));
+        }
+
+        private async Task DrainMessageAsync(WatsonMessage msg, CancellationToken token)
+        {
+            if (msg == null || msg.ContentLength <= 0) return;
+            await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
         }
 
         private static bool IsClientConnected(ClientMetadata client)
@@ -1040,11 +1255,6 @@
                         {
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "message received from unauthenticated endpoint " + client.ToString());
 
-                            byte[] data = null;
-                            WatsonMessage authMsg = null;
-                            int contentLength = 0;
-                            Stream authStream = null;
-
                             if (msg.Status == MessageStatus.AuthRequested)
                             {
                                 // check preshared key
@@ -1057,18 +1267,18 @@
                                         _ClientManager.RemoveUnauthenticatedClient(client.Guid);
                                         _Events.HandleAuthenticationSucceeded(this, new AuthenticationSucceededEventArgs(client));
 
-                                        data = Encoding.UTF8.GetBytes("Authentication successful");
-                                        WatsonCommon.BytesToStream(data, 0, out contentLength, out authStream);
-                                        authMsg = _MessageBuilder.ConstructNew(contentLength, authStream, false, false, null, null);
-                                        authMsg.Status = MessageStatus.AuthSuccess;
-                                        await SendInternalAsync(client, authMsg, 0, null, token).ConfigureAwait(false);
+                                        await SendStatusMessageAsync(client, MessageStatus.AuthSuccess, "Authentication successful", token).ConfigureAwait(false);
+                                        await BeginPostAuthenticationFlowAsync(client, token).ConfigureAwait(false);
                                         continue;
                                     }
                                     else
                                     {
                                         _Settings.Logger?.Invoke(Severity.Warn, _Header + "declined authentication for " + client.ToString());
                                         _Events.HandleAuthenticationFailed(this, new AuthenticationFailedEventArgs(client.IpPort));
-                                        await DisconnectClientAsync(client.Guid, MessageStatus.AuthFailure, true, token).ConfigureAwait(false);
+                                        client.HandshakeFailed = false;
+                                        client.FailureReason = "Authentication failed.";
+                                        client.FailureStatus = MessageStatus.AuthFailure;
+                                        await SendStatusMessageAsync(client, MessageStatus.AuthFailure, client.FailureReason, token).ConfigureAwait(false);
                                         break;
                                     }
                                 }
@@ -1077,7 +1287,9 @@
                                     // AuthRequested message with no pre-shared key - decline and terminate
                                     _Settings.Logger?.Invoke(Severity.Warn, _Header + "no authentication material for " + client.ToString());
                                     _Events.HandleAuthenticationFailed(this, new AuthenticationFailedEventArgs(client.IpPort));
-                                    await DisconnectClientAsync(client.Guid, MessageStatus.AuthFailure, true, token).ConfigureAwait(false);
+                                    client.FailureReason = "Authentication failed.";
+                                    client.FailureStatus = MessageStatus.AuthFailure;
+                                    await SendStatusMessageAsync(client, MessageStatus.AuthFailure, client.FailureReason, token).ConfigureAwait(false);
                                     break;
                                 }
                             }
@@ -1085,6 +1297,7 @@
                             {
                                 // Non-auth message from unauthenticated client - ignore and wait for auth
                                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "ignoring message from unauthenticated client " + client.ToString() + " (waiting for authentication)");
+                                await DrainMessageAsync(msg, token).ConfigureAwait(false);
                                 await Task.Delay(30, token).ConfigureAwait(false);
                                 continue;
                             }
@@ -1101,14 +1314,39 @@
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "sent disconnect notice to " + client.ToString());
                         break;
                     }
+                    else if (client.HandshakeRequired && !client.HandshakeCompleted)
+                    {
+                        if (msg.Status == MessageStatus.HandshakeData)
+                        {
+                            HandshakeMessage handshakeMsg = await ReadHandshakeMessageAsync(msg, token).ConfigureAwait(false);
+                            client.HandshakeTransport?.Enqueue(handshakeMsg);
+                            continue;
+                        }
+                        else if (msg.Status == MessageStatus.HandshakeFailure)
+                        {
+                            string reason = await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
+                            client.HandshakeFailed = true;
+                            client.FailureReason = reason;
+                            client.FailureStatus = MessageStatus.HandshakeFailure;
+                            _Events.HandleHandshakeFailed(this, new HandshakeFailedEventArgs(client, reason, MessageStatus.HandshakeFailure));
+                            break;
+                        }
+                        else if (msg.Status == MessageStatus.RegisterClient)
+                        {
+                            _Settings.Logger?.Invoke(Severity.Debug, _Header + "ignoring registration from " + client.ToString() + " while handshake is pending");
+                            await DrainMessageAsync(msg, token).ConfigureAwait(false);
+                            continue;
+                        }
+                        else
+                        {
+                            _Settings.Logger?.Invoke(Severity.Debug, _Header + "ignoring message from " + client.ToString() + " while handshake is pending");
+                            await DrainMessageAsync(msg, token).ConfigureAwait(false);
+                            continue;
+                        }
+                    }
                     else if (msg.Status == MessageStatus.RegisterClient)
                     {
-                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "client " + client.ToString() + " attempting to register GUID " + msg.SenderGuid.ToString());
-                        _ClientManager.ReplaceGuid(client.Guid, msg.SenderGuid);
-                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "updated client GUID from " + client.Guid + " to " + msg.SenderGuid);
-
-                        client.Guid = msg.SenderGuid;
-                        _Events.HandleClientConnected(this, new ConnectionEventArgs(client));
+                        await ActivateClientAsync(client, msg.SenderGuid).ConfigureAwait(false);
                         continue;
                     }
 
@@ -1229,7 +1467,10 @@
 
                     _Statistics.IncrementReceivedMessages();
                     _Statistics.AddReceivedBytes(msg.ContentLength);
-                    _ClientManager.UpdateClientLastSeen(client.Guid, DateTime.UtcNow);
+                    if (client.Registered)
+                    {
+                        _ClientManager.UpdateClientLastSeen(client.Guid, DateTime.UtcNow);
+                    }
                 }
                 catch (ObjectDisposedException ode)
                 {
@@ -1265,11 +1506,17 @@
 
             if (_Settings != null && _Events != null)
             {
-                DisconnectionEventArgs cd = null;
-                if (_ClientManager.ExistsClientKicked(client.Guid)) cd = new DisconnectionEventArgs(client, DisconnectReason.Removed);
-                else if (_ClientManager.ExistsClientTimedout(client.Guid)) cd = new DisconnectionEventArgs(client, DisconnectReason.Timeout);
-                else cd = new DisconnectionEventArgs(client, DisconnectReason.Normal);
-                _Events.HandleClientDisconnected(this, cd);
+                DisconnectReason reason = DisconnectReason.Normal;
+                if (client.ConnectionRejected) reason = DisconnectReason.ConnectionRejected;
+                else if (client.HandshakeFailed && client.FailureStatus == MessageStatus.HandshakeFailure) reason = DisconnectReason.HandshakeFailure;
+                else if (_ClientManager.ExistsClientKicked(client.Guid)) reason = DisconnectReason.Removed;
+                else if (_ClientManager.ExistsClientTimedout(client.Guid)) reason = DisconnectReason.Timeout;
+                else if (client.FailureStatus == MessageStatus.AuthFailure) reason = DisconnectReason.AuthFailure;
+
+                if (client.Registered)
+                {
+                    _Events.HandleClientDisconnected(this, new DisconnectionEventArgs(client, reason));
+                }
 
                 _ClientManager.Remove(client.Guid);
                 Interlocked.Decrement(ref _Connections);

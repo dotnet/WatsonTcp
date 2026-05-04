@@ -68,6 +68,31 @@
         /// RegisterClient
         /// </summary>
         [EnumMember(Value = "RegisterClient")]
-        RegisterClient = 11
+        RegisterClient = 11,
+        /// <summary>
+        /// ConnectionRejected
+        /// </summary>
+        [EnumMember(Value = "ConnectionRejected")]
+        ConnectionRejected = 12,
+        /// <summary>
+        /// HandshakeBegin
+        /// </summary>
+        [EnumMember(Value = "HandshakeBegin")]
+        HandshakeBegin = 13,
+        /// <summary>
+        /// HandshakeData
+        /// </summary>
+        [EnumMember(Value = "HandshakeData")]
+        HandshakeData = 14,
+        /// <summary>
+        /// HandshakeSuccess
+        /// </summary>
+        [EnumMember(Value = "HandshakeSuccess")]
+        HandshakeSuccess = 15,
+        /// <summary>
+        /// HandshakeFailure
+        /// </summary>
+        [EnumMember(Value = "HandshakeFailure")]
+        HandshakeFailure = 16
     }
 }

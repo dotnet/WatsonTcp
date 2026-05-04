@@ -11,8 +11,26 @@ Beyond framing, WatsonTcp provides:
 - Synchronous request/response messaging (with timeout and expiration)
 - Optional SSL/TLS encryption
 - Preshared key authentication
+- Optional server-side connection authorization
+- Optional framed pre-registration handshakes
 - Idle connection detection and timeout
 - TCP keepalive configuration
+
+## 1.1 Admission Pipeline
+
+As of `v6.2.0`, server-side connection handling distinguishes pending connections from active clients.
+
+Pending connection flow:
+
+1. TCP accept
+2. SSL/TLS establishment when enabled
+3. `AuthorizeConnectionAsync`
+4. preshared-key flow when configured
+5. `HandshakeAsync` when configured
+6. `RegisterClient`
+7. active client registration and `ClientConnected`
+
+During steps 1-6, the connection is tracked as pending and does not appear in `ListClients()`.
 
 ## 2. Message Flow
 
@@ -85,6 +103,8 @@ MessageBuilder.BuildFromStream(dataStream)
 Process by MessageStatus:
   |
   +-- AuthRequired/AuthSuccess/AuthFailure --> authentication flow
+  +-- ConnectionRejected --> explicit admission failure
+  +-- HandshakeBegin/HandshakeData/HandshakeSuccess/HandshakeFailure --> framed pre-registration handshake
   +-- Shutdown/Removed/Timeout --> disconnect
   +-- RegisterClient --> GUID registration
   +-- Normal + SyncRequest --> invoke SyncRequestReceived callback, send response

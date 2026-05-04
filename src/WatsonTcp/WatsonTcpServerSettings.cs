@@ -174,6 +174,40 @@
         /// </summary>
         public bool EnforceMaxConnections { get; set; } = true;
 
+        /// <summary>
+        /// Number of milliseconds to wait for the connection authorization callback before rejecting the connection.
+        /// Value must be greater than zero.
+        /// </summary>
+        public int AuthorizationTimeoutMs
+        {
+            get
+            {
+                return _AuthorizationTimeoutMs;
+            }
+            set
+            {
+                if (value < 1) throw new ArgumentException("AuthorizationTimeoutMs must be greater than zero.");
+                _AuthorizationTimeoutMs = value;
+            }
+        }
+
+        /// <summary>
+        /// Number of milliseconds to wait for a custom handshake to complete before rejecting the connection.
+        /// Value must be greater than zero.
+        /// </summary>
+        public int HandshakeTimeoutMs
+        {
+            get
+            {
+                return _HandshakeTimeoutMs;
+            }
+            set
+            {
+                if (value < 1) throw new ArgumentException("HandshakeTimeoutMs must be greater than zero.");
+                _HandshakeTimeoutMs = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
@@ -186,6 +220,8 @@
         private List<string> _PermittedIPs = new List<string>();
         private List<string> _BlockedIPs = new List<string>();
         private int _MaxHeaderSize = 262144;
+        private int _AuthorizationTimeoutMs = 5000;
+        private int _HandshakeTimeoutMs = 10000;
 
         #endregion 
 

@@ -28,6 +28,68 @@ Special thanks to the following people for their support and contributions to th
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
+## New in v6.2.0
+
+### Connection Authorization
+
+WatsonTcp now supports an explicit server-side admission callback:
+
+```csharp
+server.Callbacks.AuthorizeConnectionAsync = async (ctx, token) =>
+{
+    if (!ctx.IpPort.StartsWith("127.0.0.1"))
+        return ConnectionAuthorizationResult.Reject("Local connections only.");
+
+    return ConnectionAuthorizationResult.Allow();
+};
+```
+
+Rejected connections raise `ConnectionRejected` events and can surface `ConnectionRejectedException` on compatible clients.
+
+### Custom Handshake State Machines
+
+WatsonTcp also supports framed pre-registration handshakes without exposing the raw stream:
+
+```csharp
+server.Callbacks.HandshakeAsync = async (session, token) =>
+{
+    HandshakeMessage msg = await session.ReceiveAsync(token);
+    string apiKey = Encoding.UTF8.GetString(msg.Data);
+    return apiKey == "valid-api-key-123"
+        ? HandshakeResult.Succeed()
+        : HandshakeResult.Fail("Invalid API key.");
+};
+
+client.Callbacks.HandshakeAsync = async (session, token) =>
+{
+    await session.SendAsync(new HandshakeMessage
+    {
+        Type = "api-key",
+        Data = Encoding.UTF8.GetBytes("valid-api-key-123")
+    }, token);
+
+    return HandshakeResult.Succeed();
+};
+```
+
+Handshake-enabled servers require compatible clients that understand the new control-plane statuses.
+
+### Testing
+
+Automated tests are now defined once in `src/Test.Shared` and exposed through:
+
+- `src/Test.Automated` for the Touchstone CLI runner
+- `src/Test.XUnit` for `dotnet test` via xUnit
+- `src/Test.Nunit` for `dotnet test` via NUnit
+
+Run them with:
+
+```bash
+dotnet run --project src/Test.Automated --framework net8.0 -- --results test-results/cli-results.json
+dotnet test src/Test.XUnit/Test.XUnit.csproj --framework net8.0
+dotnet test src/Test.Nunit/Test.Nunit.csproj --framework net8.0
+```
+
 ## New in v6.1.0
 
 ### Performance
@@ -77,7 +139,7 @@ For the wire protocol specification (header format, delimiter, payload layout), 
 
 ## Test Applications
 
-Test projects for both client and server are included which will help you understand and exercise the class library.  The `Test.XUnit` project provides `dotnet test`-compatible xUnit tests suitable for CI/CD pipelines.
+Test projects for both client and server are included which will help you understand and exercise the class library.  Shared automated coverage lives in `Test.Shared`, while `Test.Automated`, `Test.XUnit`, and `Test.Nunit` are the supported unattended test hosts.
 
 ## SSL
 

@@ -1,6 +1,7 @@
 ﻿namespace WatsonTcp
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -41,12 +42,44 @@
             }
         }
 
+        /// <summary>
+        /// Callback to invoke to authorize a pending connection.
+        /// </summary>
+        public Func<ConnectionAuthorizationContext, CancellationToken, Task<ConnectionAuthorizationResult>> AuthorizeConnectionAsync
+        {
+            get
+            {
+                return _AuthorizeConnectionAsync;
+            }
+            set
+            {
+                _AuthorizeConnectionAsync = value;
+            }
+        }
+
+        /// <summary>
+        /// Callback to invoke to execute a framed handshake.
+        /// </summary>
+        public Func<ServerHandshakeSession, CancellationToken, Task<HandshakeResult>> HandshakeAsync
+        {
+            get
+            {
+                return _HandshakeAsync;
+            }
+            set
+            {
+                _HandshakeAsync = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
 
         private Func<SyncRequest, SyncResponse> _SyncRequestReceived = null;
         private Func<SyncRequest, Task<SyncResponse>> _SyncRequestReceivedAsync = null;
+        private Func<ConnectionAuthorizationContext, CancellationToken, Task<ConnectionAuthorizationResult>> _AuthorizeConnectionAsync = null;
+        private Func<ServerHandshakeSession, CancellationToken, Task<HandshakeResult>> _HandshakeAsync = null;
 
         #endregion
 

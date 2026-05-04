@@ -176,6 +176,15 @@
 
         private DateTime _LastActivity = DateTime.UtcNow;
         private bool _IsTimeout = false;
+        private bool _TransportConnected = false;
+        private bool _ServerConnectedRaised = false;
+        private bool _HandshakeRequired = false;
+        private TaskCompletionSource<bool> _InitializationStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource<bool> _InitializationReady = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource<Exception> _InitializationFailure = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private HandshakeSessionTransport _ClientHandshakeTransport = null;
+        private ClientHandshakeSession _ClientHandshakeSession = null;
+        private Task _ClientHandshakeTask = null;
 
         private readonly ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>> _SyncRequests = new ConcurrentDictionary<Guid, TaskCompletionSource<SyncResponse>>();
 
@@ -312,7 +321,7 @@
         /// </summary>
         public void Connect()
         {
-            if (Connected) throw new InvalidOperationException("Already connected to the server.");
+            if (Connected || _TransportConnected) throw new InvalidOperationException("Already connected to the server.");
 
             if (_Settings.LocalPort == 0)
             {
@@ -363,8 +372,6 @@
                     _SslStream = null;
 
                     if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
-
-                    Connected = true;
                 }
                 catch (Exception e)
                 {
@@ -432,8 +439,6 @@
                     _DataStream = _SslStream;
 
                     if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
-
-                    Connected = true;
                 }
                 catch (Exception e)
                 {
@@ -453,18 +458,8 @@
                 throw new ArgumentException("Unknown mode: " + _Mode.ToString());
             }
 
-            if (Connected)
-            {
-                WatsonMessage msg = new WatsonMessage();
-                msg.Status = MessageStatus.RegisterClient;
-
-                if (!SendInternalAsync(msg, 0, null, default(CancellationToken)).Result)
-                {
-                    Connected = false;
-                    _Settings.Logger?.Invoke(Severity.Alert, _Header + "unable to register GUID " + _Settings.Guid + " with the server");
-                    throw new ArgumentException("Server rejected GUID " + _Settings.Guid);
-                }
-            }
+            _TransportConnected = true;
+            ResetInitializationState();
 
             _TokenSource = new CancellationTokenSource();
             _Token = _TokenSource.Token;
@@ -475,8 +470,26 @@
 
             _DataReceiver = Task.Run(() => DataReceiver(_Token), _Token);
             _IdleServerMonitor = Task.Run(() => IdleServerMonitor(_Token), _Token);
-            _Events.HandleServerConnected(this, new ConnectionEventArgs());
-            _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
+
+            WatsonMessage msg = new WatsonMessage();
+            msg.Status = MessageStatus.RegisterClient;
+
+            if (!SendInternalAsync(msg, 0, null, default(CancellationToken), true).Result)
+            {
+                Exception initException = null;
+                if (_InitializationFailure.Task.IsCompleted && !_InitializationFailure.Task.IsCanceled && !_InitializationFailure.Task.IsFaulted)
+                {
+                    initException = _InitializationFailure.Task.Result;
+                }
+
+                CloseTransport(false);
+                if (initException != null) throw initException;
+
+                _Settings.Logger?.Invoke(Severity.Alert, _Header + "unable to register GUID " + _Settings.Guid + " with the server");
+                throw new ArgumentException("Server rejected GUID " + _Settings.Guid);
+            }
+
+            CompleteConnectionInitialization();
         }
 
         /// <summary>
@@ -485,61 +498,18 @@
         /// <param name="sendNotice">Flag to indicate whether the server should be notified of the disconnect.  This message will not be sent until other send requests have been handled.</param>
         public void Disconnect(bool sendNotice = true)
         {
-            if (!Connected) throw new InvalidOperationException("Not connected to the server.");
+            if (!Connected && !_TransportConnected) throw new InvalidOperationException("Not connected to the server.");
 
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnecting from " + _ServerIp + ":" + _ServerPort);
 
-            if (Connected && sendNotice)
+            if (_TransportConnected && sendNotice)
             {
                 WatsonMessage msg = new WatsonMessage();
                 msg.Status = MessageStatus.Shutdown;
-                SendInternalAsync(msg, 0, null, default(CancellationToken)).Wait();
+                SendInternalAsync(msg, 0, null, default(CancellationToken), true).Wait();
             }
 
-            if (_TokenSource != null)
-            {
-                // stop background tasks
-                if (!_TokenSource.IsCancellationRequested)
-                {
-                    _TokenSource.Cancel();
-                    _TokenSource.Dispose();
-                    _Token = default(CancellationToken);
-                }
-            }
-
-            if (_SslStream != null)
-            {
-                _SslStream.Close();
-            }
-
-            if (_TcpStream != null)
-            {
-                _TcpStream.Close();
-            }
-
-            if (_Client != null)
-            {
-                _Client.Close();
-            }
-
-            try
-            {
-                if (_DataReceiver != null && !_DataReceiver.IsCompleted)
-                    _DataReceiver.Wait(TimeSpan.FromSeconds(5));
-            }
-            catch (AggregateException) { }
-            catch (ObjectDisposedException) { }
-
-            try
-            {
-                if (_IdleServerMonitor != null && !_IdleServerMonitor.IsCompleted)
-                    _IdleServerMonitor.Wait(TimeSpan.FromSeconds(5));
-            }
-            catch (AggregateException) { }
-            catch (ObjectDisposedException) { }
-
-            Connected = false;
-
+            CloseTransport(true);
             _Settings.Logger?.Invoke(Severity.Info, _Header + "disconnected from " + _ServerIp + ":" + _ServerPort);
         }
 
@@ -556,7 +526,7 @@
             WatsonMessage msg = new WatsonMessage();
             msg.Status = MessageStatus.AuthRequested;
             msg.PresharedKey = Encoding.UTF8.GetBytes(presharedKey);
-            await SendInternalAsync(msg, 0, null, token);
+            await SendInternalAsync(msg, 0, null, token, true).ConfigureAwait(false);
         }
 
         #region SendAsync
@@ -681,7 +651,7 @@
             {
                 _Settings.Logger?.Invoke(Severity.Info, _Header + "disposing");
 
-                if (Connected) Disconnect();
+                if (Connected || _TransportConnected) CloseTransport(true);
 
                 if (_SslCertificate != null)
                     _SslCertificate.Dispose();
@@ -714,6 +684,244 @@
 
                 _DataReceiver = null;
             }
+        }
+
+        private void ResetInitializationState()
+        {
+            _ServerConnectedRaised = false;
+            _HandshakeRequired = false;
+            _InitializationStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _InitializationReady = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _InitializationFailure = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            _ClientHandshakeTransport?.Dispose();
+            _ClientHandshakeTransport = null;
+            _ClientHandshakeSession = null;
+            _ClientHandshakeTask = null;
+        }
+
+        private void CompleteConnectionInitialization()
+        {
+            Task negotiationWindow = Task.Delay(50);
+            int winner = Task.WaitAny(
+                _InitializationFailure.Task,
+                _InitializationReady.Task,
+                _InitializationStarted.Task,
+                negotiationWindow);
+
+            if (winner == 0)
+            {
+                CloseTransport(false);
+                throw _InitializationFailure.Task.Result;
+            }
+
+            if (winner == 1)
+            {
+                MarkConnected();
+                return;
+            }
+
+            if (winner == 2)
+            {
+                int result = Task.WaitAny(_InitializationFailure.Task, _InitializationReady.Task, Task.Delay(_Settings.HandshakeTimeoutMs));
+                if (result == 0)
+                {
+                    CloseTransport(false);
+                    throw _InitializationFailure.Task.Result;
+                }
+
+                if (result == 1)
+                {
+                    MarkConnected();
+                    return;
+                }
+
+                HandshakeFailedException timeoutException = new HandshakeFailedException("Connection initialization timed out.");
+                _InitializationFailure.TrySetResult(timeoutException);
+                CloseTransport(false);
+                throw timeoutException;
+            }
+
+            MarkConnected();
+        }
+
+        private void MarkConnected()
+        {
+            if (Connected) return;
+
+            Connected = true;
+            _Events.HandleServerConnected(this, new ConnectionEventArgs());
+            _ServerConnectedRaised = true;
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
+        }
+
+        private void CloseTransport(bool waitForBackgroundTasks)
+        {
+            _TransportConnected = false;
+            Connected = false;
+
+            if (_TokenSource != null)
+            {
+                try
+                {
+                    if (!_TokenSource.IsCancellationRequested)
+                    {
+                        _TokenSource.Cancel();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+
+                _Token = default(CancellationToken);
+            }
+
+            try
+            {
+                _SslStream?.Close();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            try
+            {
+                _TcpStream?.Close();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            try
+            {
+                _Client?.Close();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            if (waitForBackgroundTasks)
+            {
+                try
+                {
+                    if (_DataReceiver != null && !_DataReceiver.IsCompleted)
+                        _DataReceiver.Wait(TimeSpan.FromSeconds(5));
+                }
+                catch (AggregateException) { }
+                catch (ObjectDisposedException) { }
+
+                try
+                {
+                    if (_IdleServerMonitor != null && !_IdleServerMonitor.IsCompleted)
+                        _IdleServerMonitor.Wait(TimeSpan.FromSeconds(5));
+                }
+                catch (AggregateException) { }
+                catch (ObjectDisposedException) { }
+            }
+        }
+
+        private async Task SendRegisterMessageAsync(CancellationToken token)
+        {
+            WatsonMessage registerMsg = new WatsonMessage();
+            registerMsg.Status = MessageStatus.RegisterClient;
+            await SendInternalAsync(registerMsg, 0, null, token, true).ConfigureAwait(false);
+        }
+
+        private async Task SendStatusMessageAsync(MessageStatus status, string reason, CancellationToken token)
+        {
+            byte[] data = Array.Empty<byte>();
+            if (!String.IsNullOrEmpty(reason)) data = Encoding.UTF8.GetBytes(reason);
+            WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
+            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, null);
+            msg.Status = status;
+            await SendInternalAsync(msg, contentLength, stream, token, true).ConfigureAwait(false);
+        }
+
+        private async Task<string> ReadStatusMessageAsync(WatsonMessage msg, CancellationToken token)
+        {
+            if (msg == null || msg.ContentLength <= 0) return null;
+            byte[] data = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
+            if (data == null || data.Length < 1) return null;
+            return Encoding.UTF8.GetString(data);
+        }
+
+        private async Task SendHandshakeDataAsync(HandshakeMessage handshakeMessage, CancellationToken token)
+        {
+            if (handshakeMessage == null) throw new ArgumentNullException(nameof(handshakeMessage));
+
+            byte[] data = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(handshakeMessage, false));
+            WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
+            WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, null);
+            msg.Status = MessageStatus.HandshakeData;
+            await SendInternalAsync(msg, contentLength, stream, token, true).ConfigureAwait(false);
+        }
+
+        private async Task<HandshakeMessage> ReadHandshakeMessageAsync(WatsonMessage msg, CancellationToken token)
+        {
+            if (msg == null) return null;
+            if (msg.ContentLength <= 0) return new HandshakeMessage();
+
+            byte[] data = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
+            if (data == null || data.Length < 1) return new HandshakeMessage();
+            return SerializationHelper.DeserializeJson<HandshakeMessage>(Encoding.UTF8.GetString(data));
+        }
+
+        private void FailInitialization(Exception exception)
+        {
+            if (exception == null) return;
+            _InitializationFailure.TrySetResult(exception);
+        }
+
+        private void StartClientHandshake(CancellationToken token)
+        {
+            if (_ClientHandshakeTask != null) return;
+
+            _ClientHandshakeTransport = new HandshakeSessionTransport(
+                async (msg, innerToken) => await SendHandshakeDataAsync(msg, innerToken).ConfigureAwait(false),
+                async (reason, status, innerToken) => await SendStatusMessageAsync(status, reason, innerToken).ConfigureAwait(false),
+                token);
+            _ClientHandshakeSession = new ClientHandshakeSession(_ClientHandshakeTransport);
+            _ClientHandshakeTask = Task.Run(() => RunClientHandshakeAsync(token), token);
+        }
+
+        private async Task RunClientHandshakeAsync(CancellationToken token)
+        {
+            HandshakeResult result = null;
+
+            using (CancellationTokenSource timeoutCts = new CancellationTokenSource(_Settings.HandshakeTimeoutMs))
+            using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
+            {
+                try
+                {
+                    result = await _Callbacks.HandshakeAsync(_ClientHandshakeSession, linkedCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (timeoutCts.IsCancellationRequested)
+                    {
+                        result = HandshakeResult.Fail("Handshake timed out.");
+                    }
+                    else
+                    {
+                        result = HandshakeResult.Fail("Handshake canceled.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _Settings.Logger?.Invoke(Severity.Error, _Header + "handshake exception: " + e.Message);
+                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    result = HandshakeResult.Fail("Handshake failed: " + e.Message);
+                }
+            }
+
+            if (result == null) result = HandshakeResult.Succeed();
+            if (result.Success) return;
+
+            HandshakeFailedException exception = new HandshakeFailedException(result.Reason, result.FailureStatus);
+            _Events.HandleHandshakeFailed(this, new HandshakeFailedEventArgs(null, result.Reason, result.FailureStatus));
+            FailInitialization(exception);
+            await SendStatusMessageAsync(result.FailureStatus, result.Reason, token).ConfigureAwait(false);
+            CloseTransport(false);
         }
 
         #region Connection
@@ -817,30 +1025,45 @@
                         reason = DisconnectReason.Timeout;
                         break;
                     }
+                    else if (msg.Status == MessageStatus.ConnectionRejected)
+                    {
+                        string rejectionReason = await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
+                        if (String.IsNullOrEmpty(rejectionReason)) rejectionReason = "Connection rejected.";
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + rejectionReason);
+                        reason = DisconnectReason.ConnectionRejected;
+                        ConnectionRejectedException exception = new ConnectionRejectedException(rejectionReason, MessageStatus.ConnectionRejected);
+                        _Events.HandleConnectionRejected(this, new ConnectionRejectedEventArgs(null, rejectionReason, MessageStatus.ConnectionRejected));
+                        FailInitialization(exception);
+                        break;
+                    }
                     else if (msg.Status == MessageStatus.AuthSuccess)
                     {
+                        await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "authentication successful");
+                        _InitializationStarted.TrySetResult(true);
                         Task unawaited = Task.Run(() => _Events.HandleAuthenticationSucceeded(this, EventArgs.Empty), token);
-
-                        // After successful authentication, send RegisterClient message
-                        // This is necessary because the initial RegisterClient sent during Connect()
-                        // was blocked by the server while the client was unauthenticated
-                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "registering client");
-                        WatsonMessage registerMsg = new WatsonMessage();
-                        registerMsg.Status = MessageStatus.RegisterClient;
-                        await SendInternalAsync(registerMsg, 0, null, token).ConfigureAwait(false);
+                        await SendRegisterMessageAsync(token).ConfigureAwait(false);
+                        if (!_HandshakeRequired)
+                        {
+                            _InitializationReady.TrySetResult(true);
+                        }
 
                         continue;
                     }
                     else if (msg.Status == MessageStatus.AuthFailure)
                     {
-                        _Settings.Logger?.Invoke(Severity.Error, _Header + "authentication failed");
+                        string authFailureReason = await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
+                        if (String.IsNullOrEmpty(authFailureReason)) authFailureReason = "Authentication failed.";
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + authFailureReason);
                         reason = DisconnectReason.AuthFailure;
                         Task unawaited = Task.Run(() => _Events.HandleAuthenticationFailure(this, EventArgs.Empty), token);
+                        FailInitialization(new ConnectionRejectedException(authFailureReason, MessageStatus.AuthFailure));
                         break;
                     }
                     else if (msg.Status == MessageStatus.AuthRequired)
                     {
+                        await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
+                        _InitializationStarted.TrySetResult(true);
                         _Settings.Logger?.Invoke(Severity.Info, _Header + "authentication required by server; please authenticate using pre-shared key");
 
                         string psk = null;
@@ -869,9 +1092,56 @@
                         {
                             // No pre-shared key available - neither in settings nor from callback
                             _Settings.Logger?.Invoke(Severity.Error, _Header + "authentication required by server but no pre-shared key available");
-                            throw new InvalidOperationException("Server requires authentication but no pre-shared key is configured. Set Settings.PresharedKey or implement Callbacks.AuthenticationRequested.");
+                            ConnectionRejectedException exception = new ConnectionRejectedException("Server requires authentication but no pre-shared key is configured. Set Settings.PresharedKey or implement Callbacks.AuthenticationRequested.", MessageStatus.AuthRequired);
+                            FailInitialization(exception);
+                            throw exception;
                         }
                         continue;
+                    }
+                    else if (msg.Status == MessageStatus.HandshakeBegin)
+                    {
+                        await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
+                        _InitializationStarted.TrySetResult(true);
+                        _HandshakeRequired = true;
+
+                        if (_Callbacks.HandshakeAsync == null)
+                        {
+                            HandshakeFailedException exception = new HandshakeFailedException("Server requested a handshake but no handshake callback is configured.");
+                            _Events.HandleHandshakeFailed(this, new HandshakeFailedEventArgs(null, exception.Message, MessageStatus.HandshakeFailure));
+                            FailInitialization(exception);
+                            await SendStatusMessageAsync(MessageStatus.HandshakeFailure, exception.Message, token).ConfigureAwait(false);
+                            reason = DisconnectReason.HandshakeFailure;
+                            break;
+                        }
+
+                        StartClientHandshake(token);
+                        continue;
+                    }
+                    else if (msg.Status == MessageStatus.HandshakeData)
+                    {
+                        HandshakeMessage handshakeMsg = await ReadHandshakeMessageAsync(msg, token).ConfigureAwait(false);
+                        _ClientHandshakeTransport?.Enqueue(handshakeMsg);
+                        continue;
+                    }
+                    else if (msg.Status == MessageStatus.HandshakeSuccess)
+                    {
+                        await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
+                        _Settings.Logger?.Invoke(Severity.Debug, _Header + "handshake successful");
+                        _Events.HandleHandshakeSucceeded(this, new HandshakeSucceededEventArgs());
+                        await SendRegisterMessageAsync(token).ConfigureAwait(false);
+                        _InitializationReady.TrySetResult(true);
+                        continue;
+                    }
+                    else if (msg.Status == MessageStatus.HandshakeFailure)
+                    {
+                        string handshakeFailureReason = await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
+                        if (String.IsNullOrEmpty(handshakeFailureReason)) handshakeFailureReason = "Handshake failed.";
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + handshakeFailureReason);
+                        reason = DisconnectReason.HandshakeFailure;
+                        HandshakeFailedException exception = new HandshakeFailedException(handshakeFailureReason, MessageStatus.HandshakeFailure);
+                        _Events.HandleHandshakeFailed(this, new HandshakeFailedEventArgs(null, handshakeFailureReason, MessageStatus.HandshakeFailure));
+                        FailInitialization(exception);
+                        break;
                     }
 
                     #endregion
@@ -1036,22 +1306,26 @@
                 }
             }
 
+            _TransportConnected = false;
             Connected = false;
 
             if (_IsTimeout) reason = DisconnectReason.Timeout;
 
             _Settings?.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
-            _Events?.HandleServerDisconnected(this, new DisconnectionEventArgs(null, reason));
+            if (_ServerConnectedRaised)
+            {
+                _Events?.HandleServerDisconnected(this, new DisconnectionEventArgs(null, reason));
+            }
         }
 
         #endregion
 
         #region Send
 
-        private async Task<bool> SendInternalAsync(WatsonMessage msg, long contentLength, Stream stream, CancellationToken token)
+        private async Task<bool> SendInternalAsync(WatsonMessage msg, long contentLength, Stream stream, CancellationToken token, bool allowWhilePending = false)
         {
             if (msg == null) throw new ArgumentNullException(nameof(msg));
-            if (!Connected) return false;
+            if (!Connected && !(allowWhilePending && _TransportConnected)) return false;
 
             if (contentLength > 0  && (stream == null || !stream.CanRead))
             {
@@ -1109,8 +1383,9 @@
 
                 if (disconnectDetected)
                 {
+                    _TransportConnected = false;
                     Connected = false;
-                    Dispose();
+                    CloseTransport(false);
                 }
             }
         }

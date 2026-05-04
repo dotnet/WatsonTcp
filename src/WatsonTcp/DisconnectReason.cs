@@ -33,6 +33,16 @@
         /// Disconnect due to authentication failure.
         /// </summary>
         [EnumMember(Value = "AuthFailure")]
-        AuthFailure
+        AuthFailure = 4,
+        /// <summary>
+        /// Disconnect due to connection rejection.
+        /// </summary>
+        [EnumMember(Value = "ConnectionRejected")]
+        ConnectionRejected = 5,
+        /// <summary>
+        /// Disconnect due to handshake failure.
+        /// </summary>
+        [EnumMember(Value = "HandshakeFailure")]
+        HandshakeFailure = 6
     }
 }

@@ -19,6 +19,21 @@
         /// </summary>
         public event EventHandler AuthenticationFailure;
 
+        /// <summary>
+        /// Event fired when a connection is rejected during initialization.
+        /// </summary>
+        public event EventHandler<ConnectionRejectedEventArgs> ConnectionRejected;
+
+        /// <summary>
+        /// Event fired when a handshake succeeds.
+        /// </summary>
+        public event EventHandler<HandshakeSucceededEventArgs> HandshakeSucceeded;
+
+        /// <summary>
+        /// Event fired when a handshake fails.
+        /// </summary>
+        public event EventHandler<HandshakeFailedEventArgs> HandshakeFailed;
+
         /// <summary>  
         /// This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload. 
         /// If MessageReceived is set, StreamReceived will not be used.
@@ -102,6 +117,21 @@
         internal void HandleAuthenticationFailure(object sender, EventArgs args)
         {
             WrappedEventHandler(() => AuthenticationFailure?.Invoke(sender, args), "AuthenticationFailure", sender);
+        }
+
+        internal void HandleConnectionRejected(object sender, ConnectionRejectedEventArgs args)
+        {
+            WrappedEventHandler(() => ConnectionRejected?.Invoke(sender, args), "ConnectionRejected", sender);
+        }
+
+        internal void HandleHandshakeSucceeded(object sender, HandshakeSucceededEventArgs args)
+        {
+            WrappedEventHandler(() => HandshakeSucceeded?.Invoke(sender, args), "HandshakeSucceeded", sender);
+        }
+
+        internal void HandleHandshakeFailed(object sender, HandshakeFailedEventArgs args)
+        {
+            WrappedEventHandler(() => HandshakeFailed?.Invoke(sender, args), "HandshakeFailed", sender);
         }
 
         internal void HandleMessageReceived(object sender, MessageReceivedEventArgs args)

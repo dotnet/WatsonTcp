@@ -100,6 +100,17 @@
 
         internal CancellationTokenSource TokenSource = new CancellationTokenSource();
         internal CancellationToken Token;
+        internal ConnectionPhase Phase { get; set; } = ConnectionPhase.Accepted;
+        internal bool HandshakeRequired { get; set; } = false;
+        internal bool HandshakeCompleted { get; set; } = false;
+        internal bool HandshakeFailed { get; set; } = false;
+        internal bool Registered { get; set; } = false;
+        internal bool ConnectionRejected { get; set; } = false;
+        internal string FailureReason { get; set; } = null;
+        internal MessageStatus FailureStatus { get; set; } = MessageStatus.Normal;
+        internal HandshakeSessionTransport HandshakeTransport { get; set; } = null;
+        internal ServerHandshakeSession ServerHandshakeSession { get; set; } = null;
+        internal Task HandshakeTask { get; set; } = null;
 
         #endregion
 

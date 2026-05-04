@@ -45,6 +45,38 @@ Authorization: hello@world.com[\r\n]
 
 As you can see in examples above, the content length (i.e. length prefixing) is contained in the header's ```len``` parameter, and a delimeter exists between metadata and data (a carriage return and newline followed by another carriage return and newline, i.e. [\r\n\r\n]).
 
+## Control-Plane Statuses
+
+WatsonTcp reserves several `MessageStatus` values for connection lifecycle control:
+
+- `AuthRequired`
+- `AuthRequested`
+- `AuthSuccess`
+- `AuthFailure`
+- `ConnectionRejected`
+- `HandshakeBegin`
+- `HandshakeData`
+- `HandshakeSuccess`
+- `HandshakeFailure`
+- `RegisterClient`
+- `Removed`
+- `Shutdown`
+- `Timeout`
+
+`HandshakeData` frames carry a serialized `HandshakeMessage` payload.  The handshake/session API owns these frames; application message handlers do not receive them.
+
+## Pre-Registration Handshake Sequence
+
+When a custom handshake is enabled, the sequence is:
+
+1. server accepts the socket
+2. server optionally authorizes and/or authenticates the pending connection
+3. server sends `HandshakeBegin`
+4. client and server exchange one or more `HandshakeData` frames
+5. server sends `HandshakeSuccess` or `HandshakeFailure`
+6. client sends `RegisterClient`
+7. server activates the client and fires `ClientConnected`
+
 ## What Changed?
 
 In versions of WatsonTcp prior to 4.0, a much more complicated framing model was used that resembled the following:

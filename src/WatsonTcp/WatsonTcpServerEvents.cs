@@ -31,10 +31,25 @@
         public event EventHandler<ConnectionEventArgs> ClientConnected;
 
         /// <summary>
+        /// Event to fire when a pending connection is rejected.
+        /// </summary>
+        public event EventHandler<ConnectionRejectedEventArgs> ConnectionRejected;
+
+        /// <summary>
         /// Event to fire when a client disconnects from the server.
         /// The IP:port is passed in the arguments along with the reason for the disconnection.
         /// </summary>
         public event EventHandler<DisconnectionEventArgs> ClientDisconnected;
+
+        /// <summary>
+        /// Event to fire when a client handshake succeeds.
+        /// </summary>
+        public event EventHandler<HandshakeSucceededEventArgs> HandshakeSucceeded;
+
+        /// <summary>
+        /// Event to fire when a client handshake fails.
+        /// </summary>
+        public event EventHandler<HandshakeFailedEventArgs> HandshakeFailed;
 
         /// <summary>
         /// This event is fired when a message is received from a client and it is desired that WatsonTcp pass the byte array containing the message payload.
@@ -129,9 +144,24 @@
             WrappedEventHandler(() => ClientConnected?.Invoke(sender, args), "ClientConnected", sender);
         }
 
+        internal void HandleConnectionRejected(object sender, ConnectionRejectedEventArgs args)
+        {
+            WrappedEventHandler(() => ConnectionRejected?.Invoke(sender, args), "ConnectionRejected", sender);
+        }
+
         internal void HandleClientDisconnected(object sender, DisconnectionEventArgs args)
         {
             WrappedEventHandler(() => ClientDisconnected?.Invoke(sender, args), "ClientDisconnected", sender);
+        }
+
+        internal void HandleHandshakeSucceeded(object sender, HandshakeSucceededEventArgs args)
+        {
+            WrappedEventHandler(() => HandshakeSucceeded?.Invoke(sender, args), "HandshakeSucceeded", sender);
+        }
+
+        internal void HandleHandshakeFailed(object sender, HandshakeFailedEventArgs args)
+        {
+            WrappedEventHandler(() => HandshakeFailed?.Invoke(sender, args), "HandshakeFailed", sender);
         }
 
         internal void HandleMessageReceived(object sender, MessageReceivedEventArgs args)
