@@ -643,6 +643,8 @@
         <member name="P:WatsonTcp.StreamReceivedEventArgs.DataStream">
             <summary>
             The stream containing the message data.
+            For large proxied streams, WatsonTcp owns the underlying connection stream and will drain any unread
+            bytes after the handler or callback returns.
             </summary>
         </member>
         <member name="P:WatsonTcp.StreamReceivedEventArgs.Data">
@@ -947,10 +949,28 @@
             <param name="count">The number of bytes to read.</param>
             <returns>Number of bytes read.</returns>
         </member>
+        <member name="M:WatsonTcp.WatsonStream.ReadAsync(System.Byte[],System.Int32,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Read data asynchronously from the stream.
+            </summary>
+            <param name="buffer">The buffer to which the data should be read.</param>
+            <param name="offset">The offset within the buffer where data should begin.</param>
+            <param name="count">The number of bytes to read.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>Number of bytes read.</returns>
+        </member>
+        <member name="M:WatsonTcp.WatsonStream.ReadAsync(System.Memory{System.Byte},System.Threading.CancellationToken)">
+            <summary>
+            Read data asynchronously from the stream.
+            </summary>
+            <param name="buffer">The buffer to which the data should be read.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>Number of bytes read.</returns>
+        </member>
         <member name="M:WatsonTcp.WatsonStream.Seek(System.Int64,System.IO.SeekOrigin)">
             <summary>
             Not supported.
-            Seek to a specific position within a stream.  
+            Seek to a specific position within a stream.
             </summary>
             <param name="offset"></param>
             <param name="origin"></param>
@@ -1161,6 +1181,13 @@
             Callback to invoke when the server requests a framed handshake.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpClientCallbacks.StreamReceivedAsync">
+            <summary>
+            Callback to invoke when receiving a stream payload that should be consumed asynchronously.
+            WatsonTcp retains ownership of the underlying connection stream and will not read the next
+            message on that connection until this callback returns.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpClientCallbacks.#ctor">
             <summary>
             Instantiate.
@@ -1198,14 +1225,15 @@
         </member>
         <member name="E:WatsonTcp.WatsonTcpClientEvents.MessageReceived">
             <summary>  
-            This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload. 
-            If MessageReceived is set, StreamReceived will not be used.
+            This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload.
+            MessageReceived takes precedence over Callbacks.StreamReceivedAsync and StreamReceived.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpClientEvents.StreamReceived">
-            <summary> 
-            This callback is called when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
-            If MessageReceived is set, StreamReceived will not be used.
+            <summary>
+            This event is fired when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application.
+            This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over this event, and
+            large proxied streams should be fully consumed before the handler returns.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpClientEvents.ServerConnected">
@@ -1643,6 +1671,13 @@
             Callback to invoke to execute a framed handshake.
             </summary>
         </member>
+        <member name="P:WatsonTcp.WatsonTcpServerCallbacks.StreamReceivedAsync">
+            <summary>
+            Callback to invoke when receiving a stream payload that should be consumed asynchronously.
+            WatsonTcp retains ownership of the underlying connection stream and will not read the next
+            message on that connection until this callback returns.
+            </summary>
+        </member>
         <member name="M:WatsonTcp.WatsonTcpServerCallbacks.#ctor">
             <summary>
             Instantiate.
@@ -1698,13 +1733,14 @@
         <member name="E:WatsonTcp.WatsonTcpServerEvents.MessageReceived">
             <summary>
             This event is fired when a message is received from a client and it is desired that WatsonTcp pass the byte array containing the message payload.
-            If MessageReceived is set, StreamReceived will not be used.
+            MessageReceived takes precedence over Callbacks.StreamReceivedAsync and StreamReceived.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpServerEvents.StreamReceived">
-            <summary> 
-            This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
-            If MessageReceived is set, StreamReceived will not be used.
+            <summary>
+            This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application.
+            This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over this event, and
+            large proxied streams should be fully consumed before the handler returns.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpServerEvents.ServerStarted">

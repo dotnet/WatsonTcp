@@ -66,6 +66,49 @@ namespace Test.Shared
             return Convert.ToBase64String(hmac.ComputeHash(nonceBytes));
         }
 
+        private static byte[] CreatePatternedPayload(int size)
+        {
+            if (size < 0) throw new ArgumentException("Size must be zero or greater.", nameof(size));
+
+            byte[] data = new byte[size];
+            for (int i = 0; i < size; i++) data[i] = (byte)(i % 251);
+            return data;
+        }
+
+        private static MemoryStream CreatePatternedStream(int size)
+        {
+            return new MemoryStream(CreatePatternedPayload(size), writable: false);
+        }
+
+        private static async Task<byte[]> ReadAllBytesAsync(Stream stream, CancellationToken token = default)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            using MemoryStream ms = new MemoryStream();
+            await stream.CopyToAsync(ms, 81920, token).ConfigureAwait(false);
+            return ms.ToArray();
+        }
+
+        private static List<string> CreateLogCapture(out Action<Severity, string> logger)
+        {
+            object logLock = new object();
+            List<string> messages = new List<string>();
+            logger = (severity, message) =>
+            {
+                lock (logLock)
+                {
+                    messages.Add(severity.ToString() + "|" + message);
+                }
+            };
+            return messages;
+        }
+
+        private static bool LogContains(IEnumerable<string> messages, string fragment)
+        {
+            if (messages == null) return false;
+            return messages.Any(msg => msg != null && msg.IndexOf(fragment, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
         private static async Task WaitForConditionAsync(Func<bool> condition, int timeoutMs = DefaultConditionTimeoutMs, string failureMessage = null)
         {
             if (condition == null) throw new ArgumentNullException(nameof(condition));
@@ -651,6 +694,7 @@ namespace Test.Shared
             var streamReceived = new ManualResetEvent(false);
 
             var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 1024;
             server.Events.StreamReceived += (s, e) =>
             {
                 receivedLength = e.ContentLength;
@@ -662,7 +706,7 @@ namespace Test.Shared
                     int bytesRead = e.DataStream.Read(buffer, 0, buffer.Length);
                     if (bytesRead <= 0) break;
                     for (int i = 0; i < bytesRead && valid; i++)
-                        if (buffer[i] != (byte)((totalRead + i) % 256)) valid = false;
+                        if (buffer[i] != (byte)((totalRead + i) % 251)) valid = false;
                     totalRead += bytesRead;
                 }
                 dataVerified = valid;
@@ -678,15 +722,899 @@ namespace Test.Shared
 
             try
             {
-                int dataSize = 10 * 1024 * 1024;
-                using var ms = new MemoryStream();
-                for (long i = 0; i < dataSize; i++) ms.WriteByte((byte)(i % 256));
-                ms.Seek(0, SeekOrigin.Begin);
+                const int dataSize = 512 * 1024;
+                using MemoryStream ms = CreatePatternedStream(dataSize);
                 await client.SendAsync(dataSize, ms);
 
-                WaitForSignal(streamReceived, timeoutMs: 30000);
+                WaitForSignal(streamReceived, timeoutMs: 10000);
                 TestAssert.Equal(dataSize, receivedLength);
                 TestAssert.True(dataVerified);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static void ServerStartFailsWithoutAnyReceiveHandler()
+        {
+            int port = GetNextPort();
+            var server = new WatsonTcpServer(_hostname, port);
+
+            try
+            {
+                InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(() => server.Start());
+                TestAssert.True(exception.Message.Contains("Callbacks.StreamReceivedAsync", StringComparison.Ordinal), "Expected updated validation message.");
+            }
+            finally
+            {
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientConnectFailsWithoutAnyReceiveHandler()
+        {
+            int port = GetNextPort();
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+
+            try
+            {
+                InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(() => client.Connect());
+                TestAssert.True(exception.Message.Contains("Callbacks.StreamReceivedAsync", StringComparison.Ordinal), "Expected updated validation message.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerStartsWithOnlyAsyncStreamCallback()
+        {
+            int port = GetNextPort();
+            bool callbackInvoked = false;
+            var payloadReceived = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                callbackInvoked = true;
+                await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                payloadReceived.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                byte[] payload = CreatePatternedPayload(32);
+                using MemoryStream ms = new MemoryStream(payload);
+                await client.SendAsync(payload.Length, ms);
+                WaitForSignal(payloadReceived);
+                TestAssert.True(callbackInvoked, "Async stream callback should be used as the sole receive handler.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientConnectsWithOnlyAsyncStreamCallback()
+        {
+            int port = GetNextPort();
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+            };
+
+            try
+            {
+                client.Connect();
+                await WaitForClientConnectedAsync(client, server, 1);
+                TestAssert.True(client.Connected, "Client should connect when only StreamReceivedAsync is configured.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task MessageReceivedTakesPrecedenceOverAsyncStreamCallbackOnServer()
+        {
+            int port = GetNextPort();
+            int messageReceivedCount = 0;
+            int asyncCallbackCount = 0;
+            var messageReceived = new ManualResetEvent(false);
+            List<string> logs = CreateLogCapture(out Action<Severity, string> logger);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.Logger = logger;
+            server.Events.MessageReceived += (s, e) =>
+            {
+                Interlocked.Increment(ref messageReceivedCount);
+                messageReceived.Set();
+            };
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                Interlocked.Increment(ref asyncCallbackCount);
+                await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                byte[] payload = CreatePatternedPayload(96);
+                using MemoryStream ms = new MemoryStream(payload);
+                await client.SendAsync(payload.Length, ms);
+                WaitForSignal(messageReceived);
+
+                TestAssert.Equal(1, messageReceivedCount);
+                TestAssert.Equal(0, asyncCallbackCount);
+                TestAssert.True(LogContains(logs, "MessageReceived and Callbacks.StreamReceivedAsync"), "Expected precedence warning through the logger.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task MessageReceivedTakesPrecedenceOverAsyncStreamCallbackOnClient()
+        {
+            int port = GetNextPort();
+            int messageReceivedCount = 0;
+            int asyncCallbackCount = 0;
+            var messageReceived = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            List<string> logs = CreateLogCapture(out Action<Severity, string> logger);
+            client.Settings.Logger = logger;
+            client.Events.MessageReceived += (s, e) =>
+            {
+                Interlocked.Increment(ref messageReceivedCount);
+                messageReceived.Set();
+            };
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                Interlocked.Increment(ref asyncCallbackCount);
+                await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                byte[] payload = CreatePatternedPayload(96);
+                using MemoryStream ms = new MemoryStream(payload);
+                await server.SendAsync(clientGuid, payload.Length, ms);
+                WaitForSignal(messageReceived);
+
+                TestAssert.Equal(1, messageReceivedCount);
+                TestAssert.Equal(0, asyncCallbackCount);
+                TestAssert.True(LogContains(logs, "MessageReceived and Callbacks.StreamReceivedAsync"), "Expected precedence warning through the logger.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task AsyncStreamCallbackTakesPrecedenceOverSyncStreamEventOnServer()
+        {
+            int port = GetNextPort();
+            int syncEventCount = 0;
+            int asyncCallbackCount = 0;
+            var callbackReceived = new ManualResetEvent(false);
+            List<string> logs = CreateLogCapture(out Action<Severity, string> logger);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.Logger = logger;
+            server.Events.StreamReceived += (s, e) =>
+            {
+                Interlocked.Increment(ref syncEventCount);
+            };
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                Interlocked.Increment(ref asyncCallbackCount);
+                await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                callbackReceived.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                byte[] payload = CreatePatternedPayload(128);
+                using MemoryStream ms = new MemoryStream(payload);
+                await client.SendAsync(payload.Length, ms);
+                WaitForSignal(callbackReceived);
+
+                TestAssert.Equal(0, syncEventCount);
+                TestAssert.Equal(1, asyncCallbackCount);
+                TestAssert.True(LogContains(logs, "Callbacks.StreamReceivedAsync and StreamReceived"), "Expected precedence warning through the logger.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task AsyncStreamCallbackTakesPrecedenceOverSyncStreamEventOnClient()
+        {
+            int port = GetNextPort();
+            int syncEventCount = 0;
+            int asyncCallbackCount = 0;
+            var callbackReceived = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            List<string> logs = CreateLogCapture(out Action<Severity, string> logger);
+            client.Settings.Logger = logger;
+            client.Events.StreamReceived += (s, e) =>
+            {
+                Interlocked.Increment(ref syncEventCount);
+            };
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                Interlocked.Increment(ref asyncCallbackCount);
+                await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                callbackReceived.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                byte[] payload = CreatePatternedPayload(128);
+                using MemoryStream ms = new MemoryStream(payload);
+                await server.SendAsync(clientGuid, payload.Length, ms);
+                WaitForSignal(callbackReceived);
+
+                TestAssert.Equal(0, syncEventCount);
+                TestAssert.Equal(1, asyncCallbackCount);
+                TestAssert.True(LogContains(logs, "Callbacks.StreamReceivedAsync and StreamReceived"), "Expected precedence warning through the logger.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerAsyncStreamReceiveSmallPayload()
+        {
+            int port = GetNextPort();
+            byte[] received = null;
+            var payloadReceived = new ManualResetEvent(false);
+            byte[] expected = CreatePatternedPayload(48);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 256;
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                received = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                payloadReceived.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                using MemoryStream ms = new MemoryStream(expected);
+                await client.SendAsync(expected.Length, ms);
+                WaitForSignal(payloadReceived);
+                TestAssert.Equal(expected.Length, received.Length);
+                TestAssert.True(expected.SequenceEqual(received), "Server should receive the exact small payload.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerAsyncStreamReceiveLargePayload()
+        {
+            int port = GetNextPort();
+            byte[] received = null;
+            var payloadReceived = new ManualResetEvent(false);
+            byte[] expected = CreatePatternedPayload(4096);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 64;
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                received = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                payloadReceived.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                using MemoryStream ms = new MemoryStream(expected);
+                await client.SendAsync(expected.Length, ms);
+                WaitForSignal(payloadReceived);
+                TestAssert.Equal(expected.Length, received.Length);
+                TestAssert.True(expected.SequenceEqual(received), "Server should receive the exact large payload via the async callback.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerAsyncStreamReceiveExactThresholdPayload()
+        {
+            int port = GetNextPort();
+            byte[] received = null;
+            var payloadReceived = new ManualResetEvent(false);
+            byte[] expected = CreatePatternedPayload(64);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 64;
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                received = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                payloadReceived.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                using MemoryStream ms = new MemoryStream(expected);
+                await client.SendAsync(expected.Length, ms);
+                WaitForSignal(payloadReceived);
+                TestAssert.True(expected.SequenceEqual(received), "Exact-threshold payload should be delivered intact.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientAsyncStreamReceiveSmallPayload()
+        {
+            int port = GetNextPort();
+            byte[] received = null;
+            var payloadReceived = new ManualResetEvent(false);
+            byte[] expected = CreatePatternedPayload(48);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Settings.MaxProxiedStreamSize = 256;
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                received = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                payloadReceived.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                using MemoryStream ms = new MemoryStream(expected);
+                await server.SendAsync(clientGuid, expected.Length, ms);
+                WaitForSignal(payloadReceived);
+                TestAssert.Equal(expected.Length, received.Length);
+                TestAssert.True(expected.SequenceEqual(received), "Client should receive the exact small payload.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientAsyncStreamReceiveLargePayload()
+        {
+            int port = GetNextPort();
+            byte[] received = null;
+            var payloadReceived = new ManualResetEvent(false);
+            byte[] expected = CreatePatternedPayload(4096);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Settings.MaxProxiedStreamSize = 64;
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                received = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                payloadReceived.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                using MemoryStream ms = new MemoryStream(expected);
+                await server.SendAsync(clientGuid, expected.Length, ms);
+                WaitForSignal(payloadReceived);
+                TestAssert.Equal(expected.Length, received.Length);
+                TestAssert.True(expected.SequenceEqual(received), "Client should receive the exact large payload via the async callback.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientAsyncStreamReceiveExactThresholdPayload()
+        {
+            int port = GetNextPort();
+            byte[] received = null;
+            var payloadReceived = new ManualResetEvent(false);
+            byte[] expected = CreatePatternedPayload(64);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Settings.MaxProxiedStreamSize = 64;
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                received = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                payloadReceived.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                using MemoryStream ms = new MemoryStream(expected);
+                await server.SendAsync(clientGuid, expected.Length, ms);
+                WaitForSignal(payloadReceived);
+                TestAssert.True(expected.SequenceEqual(received), "Exact-threshold payload should be delivered intact.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerAsyncStreamReceivePartialReadThenReturnDrainsRemainder()
+        {
+            int port = GetNextPort();
+            int invocation = 0;
+            byte[] secondPayload = Encoding.UTF8.GetBytes("follow-up");
+            byte[] secondReceived = null;
+            var secondReceivedEvent = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 64;
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                int current = Interlocked.Increment(ref invocation);
+                if (current == 1)
+                {
+                    byte[] partial = new byte[16];
+                    int bytesRead = await args.DataStream.ReadAsync(partial, 0, partial.Length, token).ConfigureAwait(false);
+                    TestAssert.Equal(16, bytesRead);
+                    return;
+                }
+
+                secondReceived = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                secondReceivedEvent.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                using MemoryStream large = new MemoryStream(CreatePatternedPayload(512));
+                await client.SendAsync((int)large.Length, large);
+
+                using MemoryStream followUp = new MemoryStream(secondPayload);
+                await client.SendAsync(secondPayload.Length, followUp);
+
+                WaitForSignal(secondReceivedEvent);
+                TestAssert.Equal(2, invocation);
+                TestAssert.True(secondPayload.SequenceEqual(secondReceived), "Second stream payload should remain intact after remainder drain.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientAsyncStreamReceivePartialReadThenReturnDrainsRemainder()
+        {
+            int port = GetNextPort();
+            int invocation = 0;
+            byte[] secondPayload = Encoding.UTF8.GetBytes("follow-up");
+            byte[] secondReceived = null;
+            var secondReceivedEvent = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Settings.MaxProxiedStreamSize = 64;
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                int current = Interlocked.Increment(ref invocation);
+                if (current == 1)
+                {
+                    byte[] partial = new byte[16];
+                    int bytesRead = await args.DataStream.ReadAsync(partial, 0, partial.Length, token).ConfigureAwait(false);
+                    TestAssert.Equal(16, bytesRead);
+                    return;
+                }
+
+                secondReceived = await ReadAllBytesAsync(args.DataStream, token).ConfigureAwait(false);
+                secondReceivedEvent.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                using MemoryStream large = new MemoryStream(CreatePatternedPayload(512));
+                await server.SendAsync(clientGuid, (int)large.Length, large);
+
+                using MemoryStream followUp = new MemoryStream(secondPayload);
+                await server.SendAsync(clientGuid, secondPayload.Length, followUp);
+
+                WaitForSignal(secondReceivedEvent);
+                TestAssert.Equal(2, invocation);
+                TestAssert.True(secondPayload.SequenceEqual(secondReceived), "Second stream payload should remain intact after remainder drain.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerAsyncStreamReceiveCallbackThrowsBeforeRead()
+        {
+            int port = GetNextPort();
+            string exceptionMessage = null;
+            var exceptionEncountered = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 64;
+            server.Callbacks.StreamReceivedAsync = (args, token) => throw new InvalidOperationException("server stream callback exploded");
+            server.Events.ExceptionEncountered += (s, e) =>
+            {
+                exceptionMessage = e.Exception.Message;
+                exceptionEncountered.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                using MemoryStream ms = new MemoryStream(CreatePatternedPayload(256));
+                await client.SendAsync((int)ms.Length, ms);
+                WaitForSignal(exceptionEncountered);
+                await WaitForServerClientCountAsync(server, 0, timeoutMs: 5000);
+
+                TestAssert.Equal("server stream callback exploded", exceptionMessage);
+                TestAssert.Equal(0, server.ListClients().Count());
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerAsyncStreamReceiveCallbackThrowsAfterPartialRead()
+        {
+            int port = GetNextPort();
+            string exceptionMessage = null;
+            var exceptionEncountered = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 64;
+            server.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                byte[] partial = new byte[16];
+                await args.DataStream.ReadAsync(partial, 0, partial.Length, token).ConfigureAwait(false);
+                throw new InvalidOperationException("server partial stream callback exploded");
+            };
+            server.Events.ExceptionEncountered += (s, e) =>
+            {
+                exceptionMessage = e.Exception.Message;
+                exceptionEncountered.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                using MemoryStream ms = new MemoryStream(CreatePatternedPayload(256));
+                await client.SendAsync((int)ms.Length, ms);
+                WaitForSignal(exceptionEncountered);
+                await WaitForServerClientCountAsync(server, 0, timeoutMs: 5000);
+
+                TestAssert.Equal("server partial stream callback exploded", exceptionMessage);
+                TestAssert.Equal(0, server.ListClients().Count());
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientAsyncStreamReceiveCallbackThrowsBeforeRead()
+        {
+            int port = GetNextPort();
+            string exceptionMessage = null;
+            var exceptionEncountered = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Settings.MaxProxiedStreamSize = 64;
+            client.Callbacks.StreamReceivedAsync = (args, token) => throw new InvalidOperationException("client stream callback exploded");
+            client.Events.ExceptionEncountered += (s, e) =>
+            {
+                exceptionMessage = e.Exception.Message;
+                exceptionEncountered.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                using MemoryStream ms = new MemoryStream(CreatePatternedPayload(256));
+                await server.SendAsync(clientGuid, (int)ms.Length, ms);
+                WaitForSignal(exceptionEncountered);
+                await WaitForClientDisconnectedAsync(client, timeoutMs: 5000);
+
+                TestAssert.Equal("client stream callback exploded", exceptionMessage);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientAsyncStreamReceiveCallbackThrowsAfterPartialRead()
+        {
+            int port = GetNextPort();
+            string exceptionMessage = null;
+            var exceptionEncountered = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Settings.MaxProxiedStreamSize = 64;
+            client.Callbacks.StreamReceivedAsync = async (args, token) =>
+            {
+                byte[] partial = new byte[16];
+                await args.DataStream.ReadAsync(partial, 0, partial.Length, token).ConfigureAwait(false);
+                throw new InvalidOperationException("client partial stream callback exploded");
+            };
+            client.Events.ExceptionEncountered += (s, e) =>
+            {
+                exceptionMessage = e.Exception.Message;
+                exceptionEncountered.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                using MemoryStream ms = new MemoryStream(CreatePatternedPayload(256));
+                await server.SendAsync(clientGuid, (int)ms.Length, ms);
+                WaitForSignal(exceptionEncountered);
+                await WaitForClientDisconnectedAsync(client, timeoutMs: 5000);
+
+                TestAssert.Equal("client partial stream callback exploded", exceptionMessage);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ServerSyncStreamPartialReadThenReturnDrainsRemainder()
+        {
+            int port = GetNextPort();
+            int invocation = 0;
+            byte[] secondPayload = Encoding.UTF8.GetBytes("follow-up");
+            byte[] secondReceived = null;
+            var secondReceivedEvent = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            server.Settings.MaxProxiedStreamSize = 64;
+            server.Events.StreamReceived += (s, e) =>
+            {
+                int current = Interlocked.Increment(ref invocation);
+                if (current == 1)
+                {
+                    byte[] partial = new byte[16];
+                    int bytesRead = e.DataStream.Read(partial, 0, partial.Length);
+                    TestAssert.Equal(16, bytesRead);
+                    return;
+                }
+
+                using MemoryStream ms = new MemoryStream();
+                e.DataStream.CopyTo(ms);
+                secondReceived = ms.ToArray();
+                secondReceivedEvent.Set();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                using MemoryStream large = new MemoryStream(CreatePatternedPayload(512));
+                await client.SendAsync((int)large.Length, large);
+
+                using MemoryStream followUp = new MemoryStream(secondPayload);
+                await client.SendAsync(secondPayload.Length, followUp);
+
+                WaitForSignal(secondReceivedEvent);
+                TestAssert.Equal(2, invocation);
+                TestAssert.True(secondPayload.SequenceEqual(secondReceived), "Second sync stream payload should remain intact after remainder drain.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+
+        public static async Task ClientSyncStreamPartialReadThenReturnDrainsRemainder()
+        {
+            int port = GetNextPort();
+            int invocation = 0;
+            byte[] secondPayload = Encoding.UTF8.GetBytes("follow-up");
+            byte[] secondReceived = null;
+            var secondReceivedEvent = new ManualResetEvent(false);
+
+            var server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server);
+
+            var client = new WatsonTcpClient(_hostname, port);
+            client.Settings.MaxProxiedStreamSize = 64;
+            client.Events.StreamReceived += (s, e) =>
+            {
+                int current = Interlocked.Increment(ref invocation);
+                if (current == 1)
+                {
+                    byte[] partial = new byte[16];
+                    int bytesRead = e.DataStream.Read(partial, 0, partial.Length);
+                    TestAssert.Equal(16, bytesRead);
+                    return;
+                }
+
+                using MemoryStream ms = new MemoryStream();
+                e.DataStream.CopyTo(ms);
+                secondReceived = ms.ToArray();
+                secondReceivedEvent.Set();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                using MemoryStream large = new MemoryStream(CreatePatternedPayload(512));
+                await server.SendAsync(clientGuid, (int)large.Length, large);
+
+                using MemoryStream followUp = new MemoryStream(secondPayload);
+                await server.SendAsync(clientGuid, secondPayload.Length, followUp);
+
+                WaitForSignal(secondReceivedEvent);
+                TestAssert.Equal(2, invocation);
+                TestAssert.True(secondPayload.SequenceEqual(secondReceived), "Second sync stream payload should remain intact after remainder drain.");
             }
             finally
             {

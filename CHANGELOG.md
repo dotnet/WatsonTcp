@@ -2,6 +2,38 @@
 
 ## Current Version
 
+v6.3.0
+
+### Async Stream Receive
+
+- Added `WatsonTcpServerCallbacks.StreamReceivedAsync` and `WatsonTcpClientCallbacks.StreamReceivedAsync`
+- Added awaited large-stream consumption support for payloads at or above `MaxProxiedStreamSize`
+- Added unread-byte drain handling after stream callbacks and stream events return so the next frame stays aligned
+- Added receive-mode precedence warnings through `Settings.Logger`
+
+### Stream Lifecycle
+
+- `MessageReceived` now takes precedence over both stream receive modes
+- `StreamReceivedAsync` now takes precedence over legacy `StreamReceived`
+- Large proxied streams can now be consumed safely with `await` without relying on `async void` event handlers
+
+### Testing
+
+- Expanded `Test.Shared` with shared client/server stream coverage for:
+  - precedence and configuration validation
+  - small, large, and exact-threshold payloads
+  - partial-read remainder drain behavior
+  - callback exception handling
+  - sync stream regression coverage
+- Added a dedicated `streaming` Touchstone suite while keeping the same cases in regression
+
+### Compatibility Notes
+
+- This is a minor release because the new async stream path is opt-in
+- Legacy `Events.StreamReceived` remains supported
+
+## Previous Version
+
 v6.2.0
 
 ### Connection Admission
@@ -38,7 +70,7 @@ v6.2.0
 - Handshake-enabled servers require compatible clients that understand the new control-plane statuses
 - `Test.Automated` now targets `net8.0;net10.0`
 
-## Previous Version
+## Earlier Version
 
 v6.1.0
 

@@ -25,6 +25,34 @@ namespace Test.Shared
             nameof(WatsonTcpScenarios.AuthorizationStateMachineClientFailure)
         };
 
+        private static readonly string[] _StreamingScenarioNames =
+        {
+            nameof(WatsonTcpScenarios.AsyncStreamCallbackTakesPrecedenceOverSyncStreamEventOnClient),
+            nameof(WatsonTcpScenarios.AsyncStreamCallbackTakesPrecedenceOverSyncStreamEventOnServer),
+            nameof(WatsonTcpScenarios.ClientAsyncStreamReceiveCallbackThrowsAfterPartialRead),
+            nameof(WatsonTcpScenarios.ClientAsyncStreamReceiveCallbackThrowsBeforeRead),
+            nameof(WatsonTcpScenarios.ClientAsyncStreamReceiveExactThresholdPayload),
+            nameof(WatsonTcpScenarios.ClientAsyncStreamReceiveLargePayload),
+            nameof(WatsonTcpScenarios.ClientAsyncStreamReceivePartialReadThenReturnDrainsRemainder),
+            nameof(WatsonTcpScenarios.ClientAsyncStreamReceiveSmallPayload),
+            nameof(WatsonTcpScenarios.ClientConnectFailsWithoutAnyReceiveHandler),
+            nameof(WatsonTcpScenarios.ClientConnectsWithOnlyAsyncStreamCallback),
+            nameof(WatsonTcpScenarios.ClientSyncStreamPartialReadThenReturnDrainsRemainder),
+            nameof(WatsonTcpScenarios.LargeStreamTransfer),
+            nameof(WatsonTcpScenarios.MessageReceivedTakesPrecedenceOverAsyncStreamCallbackOnClient),
+            nameof(WatsonTcpScenarios.MessageReceivedTakesPrecedenceOverAsyncStreamCallbackOnServer),
+            nameof(WatsonTcpScenarios.ServerAsyncStreamReceiveCallbackThrowsAfterPartialRead),
+            nameof(WatsonTcpScenarios.ServerAsyncStreamReceiveCallbackThrowsBeforeRead),
+            nameof(WatsonTcpScenarios.ServerAsyncStreamReceiveExactThresholdPayload),
+            nameof(WatsonTcpScenarios.ServerAsyncStreamReceiveLargePayload),
+            nameof(WatsonTcpScenarios.ServerAsyncStreamReceivePartialReadThenReturnDrainsRemainder),
+            nameof(WatsonTcpScenarios.ServerAsyncStreamReceiveSmallPayload),
+            nameof(WatsonTcpScenarios.ServerStartFailsWithoutAnyReceiveHandler),
+            nameof(WatsonTcpScenarios.ServerStartsWithOnlyAsyncStreamCallback),
+            nameof(WatsonTcpScenarios.ServerSyncStreamPartialReadThenReturnDrainsRemainder),
+            nameof(WatsonTcpScenarios.StreamSendReceive)
+        };
+
         private static readonly IReadOnlyList<TestSuiteDescriptor> _All = BuildSuites();
 
         public static IReadOnlyList<TestSuiteDescriptor> All
@@ -43,13 +71,17 @@ namespace Test.Shared
                 new TestSuiteDescriptor(
                     "auth-handshake",
                     "Authorization And Handshake",
-                    BuildCases(excludeAuthorizationScenarios: false, includeOnlyAuthorizationScenarios: true))
+                    BuildCases(excludeAuthorizationScenarios: false, includeOnlyAuthorizationScenarios: true)),
+                new TestSuiteDescriptor(
+                    "streaming",
+                    "Streaming",
+                    BuildCases(includeOnlyStreamingScenarios: true))
             };
 
             return suites;
         }
 
-        private static IReadOnlyList<TestCaseDescriptor> BuildCases(bool excludeAuthorizationScenarios = false, bool includeOnlyAuthorizationScenarios = false)
+        private static IReadOnlyList<TestCaseDescriptor> BuildCases(bool excludeAuthorizationScenarios = false, bool includeOnlyAuthorizationScenarios = false, bool includeOnlyStreamingScenarios = false)
         {
             IEnumerable<MethodInfo> methods = typeof(WatsonTcpScenarios)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -66,10 +98,17 @@ namespace Test.Shared
                 methods = methods.Where(m => _AuthorizationScenarioNames.Contains(m.Name, StringComparer.Ordinal));
             }
 
+            if (includeOnlyStreamingScenarios)
+            {
+                methods = methods.Where(m => _StreamingScenarioNames.Contains(m.Name, StringComparer.Ordinal));
+            }
+
             return methods
                 .OrderBy(m => m.Name, StringComparer.Ordinal)
                 .Select(m => new TestCaseDescriptor(
-                    includeOnlyAuthorizationScenarios ? "auth-handshake" : "regression",
+                    includeOnlyAuthorizationScenarios
+                        ? "auth-handshake"
+                        : (includeOnlyStreamingScenarios ? "streaming" : "regression"),
                     m.Name,
                     ToDisplayName(m.Name),
                     token =>

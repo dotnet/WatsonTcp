@@ -6,7 +6,7 @@
 
 WatsonTcp is the fastest, easiest, most efficient way to build TCP-based clients and servers in C# with integrated framing, reliable transmission, and fast disconnect detection.
 
-**IMPORTANT** WatsonTcp provides framing to ensure message-level delivery which also dictates that you must either 1) use WatsonTcp for both the server and the client, or, 2) ensure that your client/server exchange messages with the WatsonTcp node using WatsonTcp's framing.  Refer to ```FRAMING.md``` for a reference on WatsonTcp message structure.
+**IMPORTANT** WatsonTcp provides framing to ensure message-level delivery which also dictates that you must either 1) use WatsonTcp for both the server and the client, or, 2) ensure that your client/server exchange messages with the WatsonTcp node using WatsonTcp's framing.  Refer to `FRAMING.md` for a reference on WatsonTcp message structure.
 
 - If you want a library that doesn't use framing, but has a similar implementation, use [SuperSimpleTcp](https://github.com/jchristn/supersimpletcp)
 - If you want a library that doesn't use framing and provides explicit control over how much data to read, use [CavemanTcp](https://github.com/jchristn/cavemantcp)
@@ -27,6 +27,50 @@ Special thanks to the following people for their support and contributions to th
 @YorVeX @tovich37 @sancheolz @lunedis @ShayanFiroozi
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
+
+## New in v6.3.0
+
+### Async Stream Receive
+
+WatsonTcp now supports awaited stream callbacks on both server and client:
+
+```csharp
+server.Callbacks.StreamReceivedAsync = async (args, token) =>
+{
+    await using var file = File.Create("payload.bin");
+    await args.DataStream.CopyToAsync(file, 81920, token);
+};
+```
+
+```csharp
+client.Callbacks.StreamReceivedAsync = async (args, token) =>
+{
+    await using var file = File.Create("server-payload.bin");
+    await args.DataStream.CopyToAsync(file, 81920, token);
+};
+```
+
+Use `Callbacks.StreamReceivedAsync` when you need to `await` stream processing, especially for payloads at or above `Settings.MaxProxiedStreamSize`.
+
+### Stream Receive Precedence
+
+Receive mode selection is now:
+
+- `Events.MessageReceived`
+- `Callbacks.StreamReceivedAsync`
+- `Events.StreamReceived`
+
+Warnings for conflicting receive-mode configuration are emitted through `Settings.Logger`.
+
+### Testing
+
+Shared Touchstone-backed coverage now includes:
+
+- async stream callback precedence on both client and server
+- small, large, and exact-threshold async stream receive paths
+- partial-read remainder drain validation on both client and server
+- callback exception handling on both client and server
+- sync stream regression checks for partial-read cleanup
 
 ## New in v6.2.0
 
@@ -147,21 +191,41 @@ WatsonTcp supports data exchange with or without SSL.  The server and client cla
 
 ## To Stream or Not To Stream...
 
-WatsonTcp allows you to receive messages using either byte arrays or streams.  Set ```Events.MessageReceived``` if you wish to consume a byte array, or, set ```Events.StreamReceived``` if you wish to consume a stream. 
+WatsonTcp allows you to receive messages using either byte arrays or streams.
+
+- Set `Events.MessageReceived` if you want a buffered `byte[]`
+- Set `Callbacks.StreamReceivedAsync` if you want awaited stream ownership
+- Set `Events.StreamReceived` if you want the legacy synchronous stream event
 
 It is important to note the following:
 
-- When using ```Events.MessageReceived```
+- When using `Events.MessageReceived`
   - The message payload is read from the stream and sent to your application
-  - The event is fired asynchronously and Watson can continue reading messages while your application processes
-- When using ```Events.StreamReceived```
-  - If the message payload is smaller than ```Settings.MaxProxiedStreamSize```, the data is read into a ```MemoryStream``` and sent to your application asynchronously
-  - If the message payload is larger than ```Settings.MaxProxiedStreamSize```, the underlying data stream is sent to your application synchronously, and WatsonTcp will wait until your application responds before continuing to read
-- Only one of ```Events.MessageReceived``` and ```Events.StreamReceived``` should be set; ```Events.MessageReceived``` will be used if both are set
+- When using `Callbacks.StreamReceivedAsync`
+  - If the message payload is smaller than `Settings.MaxProxiedStreamSize`, WatsonTcp first copies it into a `MemoryStream`
+  - If the message payload is at or larger than `Settings.MaxProxiedStreamSize`, the callback receives a live proxied stream over the underlying connection
+  - WatsonTcp will not read the next message on that connection until the callback returns
+  - If the callback returns without consuming all bytes, WatsonTcp drains the unread remainder before continuing
+- When using `Events.StreamReceived`
+  - Large proxied streams are still synchronous and should be fully consumed before the handler returns
+  - This is the legacy stream API; prefer `Callbacks.StreamReceivedAsync` for new work
+- Receive-mode precedence is `MessageReceived` > `Callbacks.StreamReceivedAsync` > `StreamReceived`
+- Precedence warnings are logged through `Settings.Logger`
+
+Example:
+
+```csharp
+server.Callbacks.StreamReceivedAsync = async (args, token) =>
+{
+    using MemoryStream ms = new MemoryStream();
+    await args.DataStream.CopyToAsync(ms, 81920, token);
+    Console.WriteLine("Received " + ms.Length + " bytes");
+};
+```
 
 ## Including Metadata with a Message
 
-Should you with to include metadata with any message, use the ```Send``` or ```SendAsync``` method that allows you to pass in metadata (```Dictionary<string, object>```).  Refer to the ```TestClient```, ```TestServer```, ```TestClientStream```, and ```TestServerStream``` projects for a full example.  Keys must be of type ```string```.
+Should you with to include metadata with any message, use the `Send` or `SendAsync` method that allows you to pass in metadata (`Dictionary<string, object>`).  Refer to the `TestClient`, `TestServer`, `TestClientStream`, and `TestServerStream` projects for a full example.  Keys must be of type `string`.
  
 Note: if you use a class instance as either the value, you'll need to deserialize on the receiving end from JSON.  
 ```
@@ -173,7 +237,7 @@ This is not necessary if you are using simple types (int, string, etc).  Simply 
 
 **IMPORTANT**
 
-Metadata is serialized into the message header as JSON, increasing header size.  While v6.1.0 significantly improved header parsing performance (eliminating O(n^2) allocations), it is still recommended to keep metadata small (less than 1KB) as large metadata increases JSON serialization overhead and network transfer time.  Use ```Settings.MaxHeaderSize``` to control the maximum allowed header size (default 256KB).
+Metadata is serialized into the message header as JSON, increasing header size.  While v6.1.0 significantly improved header parsing performance (eliminating O(n^2) allocations), it is still recommended to keep metadata small (less than 1KB) as large metadata increases JSON serialization overhead and network transfer time.  Use `Settings.MaxHeaderSize` to control the maximum allowed header size (default 256KB).
 
 ### Local vs External Connections
 

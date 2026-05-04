@@ -4,7 +4,7 @@
 
 WatsonTcp is a C# TCP client/server library that provides reliable message-level delivery over TCP by implementing a custom framing protocol. TCP is a bidirectional byte stream with no inherent message boundaries; WatsonTcp solves this by prepending each message with a JSON header that declares the payload length, followed by a `\r\n\r\n` delimiter, followed by the raw data bytes. This allows receivers to know exactly how many bytes constitute each application-level message.
 
-The library targets .NET Standard 2.0/2.1, .NET Framework 4.62/4.8, and .NET 6.0/8.0. Both endpoints of a connection must either use WatsonTcp or implement compatible framing (see [FRAMING.md](FRAMING.md) for the wire protocol specification).
+The library targets .NET Standard 2.0/2.1, .NET Framework 4.62/4.8, and .NET 8.0/10.0. Both endpoints of a connection must either use WatsonTcp or implement compatible framing (see [FRAMING.md](FRAMING.md) for the wire protocol specification).
 
 Beyond framing, WatsonTcp provides:
 - Automatic connection lifecycle management with event-driven notifications
@@ -109,15 +109,32 @@ Process by MessageStatus:
   +-- RegisterClient --> GUID registration
   +-- Normal + SyncRequest --> invoke SyncRequestReceived callback, send response
   +-- Normal + SyncResponse --> resolve matching TaskCompletionSource
-  +-- Normal --> read data, fire MessageReceived or StreamReceived event
+  +-- Normal --> read data, dispatch MessageReceived, StreamReceivedAsync, or StreamReceived
 ```
 
 ### Stream vs. Byte Array Delivery
 
-When `Events.MessageReceived` is set, the data receiver reads the full payload into a `byte[]` via `WatsonCommon.ReadMessageDataAsync()` before firing the event. When `Events.StreamReceived` is set instead, behavior depends on message size:
+Receive-mode precedence is:
 
-- **Large messages** (ContentLength >= `Settings.MaxProxiedStreamSize`): A `WatsonStream` wrapping the raw TCP/SSL stream is delivered synchronously. The event handler must consume the stream before returning, as the underlying connection stream advances.
-- **Small messages**: Data is first copied into a `MemoryStream`, then wrapped in a `WatsonStream` and delivered asynchronously via `Task.Run`.
+1. `Events.MessageReceived`
+2. `Callbacks.StreamReceivedAsync`
+3. `Events.StreamReceived`
+
+When `Events.MessageReceived` is set, the data receiver reads the full payload into a `byte[]` via `WatsonCommon.ReadMessageDataAsync()` before firing the event.
+
+When `Callbacks.StreamReceivedAsync` is used instead:
+
+- **Large messages** (ContentLength >= `Settings.MaxProxiedStreamSize`): A `WatsonStream` wrapping the raw TCP/SSL stream is delivered to the callback and awaited. WatsonTcp will not parse the next message on that connection until the callback returns.
+- **Small messages**: Data is first copied into a `MemoryStream`, then wrapped in a `WatsonStream` and passed to the callback.
+- **Unread remainder**: If the callback returns without consuming all bytes, WatsonTcp drains the unread remainder before continuing, so framing stays aligned for the next message.
+
+When `Events.StreamReceived` is used:
+
+- it remains the legacy synchronous stream API
+- large proxied streams must still be consumed before the handler returns
+- unread remainder is drained after handler return before the next message is parsed
+
+Configuration conflicts are reported through `Settings.Logger` warnings rather than console/debug output.
 
 ## 3. Component Diagram
 
@@ -464,13 +481,13 @@ Key details:
 
 **`WatsonTcpServerEvents`**: `ClientConnected`, `ClientDisconnected`, `MessageReceived`, `StreamReceived`, `ExceptionEncountered`, `ServerStarted`, `ServerStopped`, `AuthenticationSucceeded`, `AuthenticationFailed`
 
-Only one of `MessageReceived` or `StreamReceived` should be set. `MessageReceived` takes precedence if both are set.
+`MessageReceived` takes precedence over both stream receive modes. `Callbacks.StreamReceivedAsync` takes precedence over `Events.StreamReceived`.
 
 ### Callbacks Classes
 
-**`WatsonTcpClientCallbacks`**: `AuthenticationRequested` (returns PSK string), `SyncRequestReceived` / `SyncRequestReceivedAsync` (handles sync requests from the server)
+**`WatsonTcpClientCallbacks`**: `AuthenticationRequested` (returns PSK string), `SyncRequestReceived` / `SyncRequestReceivedAsync` (handles sync requests from the server), `HandshakeAsync`, `StreamReceivedAsync`
 
-**`WatsonTcpServerCallbacks`**: `SyncRequestReceived` / `SyncRequestReceivedAsync` (handles sync requests from clients)
+**`WatsonTcpServerCallbacks`**: `SyncRequestReceived` / `SyncRequestReceivedAsync` (handles sync requests from clients), `AuthorizeConnectionAsync`, `HandshakeAsync`, `StreamReceivedAsync`
 
 ### Keepalive Settings
 

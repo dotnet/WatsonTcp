@@ -39,6 +39,8 @@
 
         /// <summary>
         /// The stream containing the message data.
+        /// For large proxied streams, WatsonTcp owns the underlying connection stream and will drain any unread
+        /// bytes after the handler or callback returns.
         /// </summary>
         public Stream DataStream { get; }
 

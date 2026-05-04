@@ -35,14 +35,15 @@
         public event EventHandler<HandshakeFailedEventArgs> HandshakeFailed;
 
         /// <summary>  
-        /// This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload. 
-        /// If MessageReceived is set, StreamReceived will not be used.
+        /// This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload.
+        /// MessageReceived takes precedence over Callbacks.StreamReceivedAsync and StreamReceived.
         /// </summary>
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
 
-        /// <summary> 
-        /// This callback is called when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application. 
-        /// If MessageReceived is set, StreamReceived will not be used.
+        /// <summary>
+        /// This event is fired when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application.
+        /// This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over this event, and
+        /// large proxied streams should be fully consumed before the handler returns.
         /// </summary>
         public event EventHandler<StreamReceivedEventArgs> StreamReceived;
 

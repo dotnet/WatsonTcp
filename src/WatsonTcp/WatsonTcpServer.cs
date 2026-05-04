@@ -382,8 +382,7 @@
             _Statistics = new WatsonTcpStatistics();
             _Listener = new TcpListener(_ListenerIpAddress, _ListenerPort);
 
-            if (!_Events.IsUsingMessages && !_Events.IsUsingStreams)
-                throw new InvalidOperationException("One of either 'MessageReceived' or 'StreamReceived' events must first be set.");
+            ValidateReceiveHandlerConfiguration();
 
             if (_Mode == Mode.Tcp)
             {
@@ -1142,6 +1141,95 @@
             await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
         }
 
+        private void ValidateReceiveHandlerConfiguration()
+        {
+            bool usingMessages = _Events.IsUsingMessages;
+            bool usingSyncStreams = _Events.IsUsingStreams;
+            bool usingAsyncStreams = _Callbacks.StreamReceivedAsync != null;
+
+            if (!usingMessages && !usingSyncStreams && !usingAsyncStreams)
+            {
+                throw new InvalidOperationException("One of either 'MessageReceived', 'StreamReceived', or 'Callbacks.StreamReceivedAsync' must first be set.");
+            }
+
+            if (usingMessages && usingAsyncStreams)
+            {
+                _Settings.Logger?.Invoke(Severity.Warn, _Header + "MessageReceived and Callbacks.StreamReceivedAsync are both configured; MessageReceived will be used.");
+            }
+
+            if (usingMessages && usingSyncStreams)
+            {
+                _Settings.Logger?.Invoke(Severity.Warn, _Header + "MessageReceived and StreamReceived are both configured; MessageReceived will be used.");
+            }
+
+            if (!usingMessages && usingAsyncStreams && usingSyncStreams)
+            {
+                _Settings.Logger?.Invoke(Severity.Warn, _Header + "Callbacks.StreamReceivedAsync and StreamReceived are both configured; Callbacks.StreamReceivedAsync will be used.");
+            }
+        }
+
+        private async Task HandleStreamPayloadAsync(ClientMetadata client, WatsonMessage msg, CancellationToken token)
+        {
+            if (msg == null) throw new ArgumentNullException(nameof(msg));
+
+            bool useAsyncCallback = _Callbacks.StreamReceivedAsync != null;
+            bool useSyncEvent = _Events.IsUsingStreams;
+
+            if (!useAsyncCallback && !useSyncEvent)
+            {
+                throw new InvalidOperationException("Receive handler not set for MessageReceived, StreamReceived, or Callbacks.StreamReceivedAsync.");
+            }
+
+            bool useBufferedStream = msg.ContentLength < _Settings.MaxProxiedStreamSize;
+            Stream payloadStream = msg.DataStream;
+
+            if (useBufferedStream)
+            {
+                payloadStream = await WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
+            }
+
+            WatsonStream watsonStream = new WatsonStream(msg.ContentLength, payloadStream);
+            StreamReceivedEventArgs args = new StreamReceivedEventArgs(client, msg.Metadata, msg.ContentLength, watsonStream);
+            bool preserveOriginalException = false;
+
+            try
+            {
+                if (useAsyncCallback)
+                {
+                    await _Callbacks.StreamReceivedAsync(args, token).ConfigureAwait(false);
+                }
+                else if (useBufferedStream)
+                {
+                    await Task.Run(() => _Events.HandleStreamReceived(this, args), token).ConfigureAwait(false);
+                }
+                else
+                {
+                    _Events.HandleStreamReceived(this, args);
+                }
+            }
+            catch (Exception e) when (!(e is OperationCanceledException))
+            {
+                preserveOriginalException = true;
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "stream receive handler exception for " + client.ToString() + ": " + e.Message);
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                throw;
+            }
+            finally
+            {
+                if (watsonStream.RemainingBytes > 0 && !token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await watsonStream.DrainAsync(_Settings.StreamBufferSize, token).ConfigureAwait(false);
+                    }
+                    catch (Exception e) when (preserveOriginalException)
+                    {
+                        _Settings.Logger?.Invoke(Severity.Error, _Header + "failed draining unread stream bytes from " + client.ToString() + " after handler exception: " + e.Message);
+                    }
+                }
+            }
+        }
+
         private static bool IsClientConnected(ClientMetadata client)
         {
             if (client != null && client.TcpClient != null)
@@ -1439,28 +1527,13 @@
                             MessageReceivedEventArgs mr = new MessageReceivedEventArgs(client, msg.Metadata, msgData);
                             await Task.Run(() => _Events.HandleMessageReceived(this, mr), token);
                         }
-                        else if (_Events.IsUsingStreams)
+                        else if (_Callbacks.StreamReceivedAsync != null || _Events.IsUsingStreams)
                         {
-                            StreamReceivedEventArgs sr = null;
-                            WatsonStream ws = null;
-
-                            if (msg.ContentLength >= _Settings.MaxProxiedStreamSize)
-                            {
-                                ws = new WatsonStream(msg.ContentLength, msg.DataStream);
-                                sr = new StreamReceivedEventArgs(client, msg.Metadata, msg.ContentLength, ws);
-                                _Events.HandleStreamReceived(this, sr);
-                            }
-                            else
-                            {
-                                MemoryStream ms = await WatsonCommon.DataStreamToMemoryStream(msg.ContentLength, msg.DataStream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
-                                ws = new WatsonStream(msg.ContentLength, ms);
-                                sr = new StreamReceivedEventArgs(client, msg.Metadata, msg.ContentLength, ws);
-                                await Task.Run(() => _Events.HandleStreamReceived(this, sr), token);
-                            }
+                            await HandleStreamPayloadAsync(client, msg, token).ConfigureAwait(false);
                         }
                         else
                         {
-                            _Settings.Logger?.Invoke(Severity.Error, _Header + "event handler not set for either MessageReceived or StreamReceived");
+                            _Settings.Logger?.Invoke(Severity.Error, _Header + "receive handler not set for MessageReceived, StreamReceived, or Callbacks.StreamReceivedAsync");
                             break;
                         }
                     }

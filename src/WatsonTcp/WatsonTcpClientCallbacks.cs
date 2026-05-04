@@ -62,6 +62,23 @@
             }
         }
 
+        /// <summary>
+        /// Callback to invoke when receiving a stream payload that should be consumed asynchronously.
+        /// WatsonTcp retains ownership of the underlying connection stream and will not read the next
+        /// message on that connection until this callback returns.
+        /// </summary>
+        public Func<StreamReceivedEventArgs, CancellationToken, Task> StreamReceivedAsync
+        {
+            get
+            {
+                return _StreamReceivedAsync;
+            }
+            set
+            {
+                _StreamReceivedAsync = value;
+            }
+        }
+
         #endregion
 
         #region Private-Members
@@ -69,6 +86,7 @@
         private Func<SyncRequest, SyncResponse> _SyncRequestReceived = null;
         private Func<SyncRequest, Task<SyncResponse>> _SyncRequestReceivedAsync = null;
         private Func<ClientHandshakeSession, CancellationToken, Task<HandshakeResult>> _HandshakeAsync = null;
+        private Func<StreamReceivedEventArgs, CancellationToken, Task> _StreamReceivedAsync = null;
 
         #endregion
 
