@@ -36,13 +36,13 @@
 
         /// <summary>  
         /// This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload.
-        /// MessageReceived takes precedence over Callbacks.StreamReceivedAsync and StreamReceived.
+        /// Events.MessageReceived takes precedence over Callbacks.StreamReceivedAsync and Events.StreamReceived.
         /// </summary>
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
 
         /// <summary>
         /// This event is fired when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application.
-        /// This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over this event, and
+        /// This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over Events.StreamReceived, and
         /// large proxied streams should be fully consumed before the handler returns.
         /// </summary>
         public event EventHandler<StreamReceivedEventArgs> StreamReceived;

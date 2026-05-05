@@ -43,6 +43,10 @@ jobs:
       - name: Build NUnit host (Release)
         run: dotnet build src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-restore
 
+      - name: Create test results directory
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path ./test-results | Out-Null
+
       - name: Run Touchstone CLI host
         run: dotnet run --project src/Test.Automated/Test.Automated.csproj --configuration Release --framework net8.0 --no-build -- --results ./test-results/cli-results.json
 

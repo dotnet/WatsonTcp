@@ -959,14 +959,6 @@
             <param name="cancellationToken">Cancellation token.</param>
             <returns>Number of bytes read.</returns>
         </member>
-        <member name="M:WatsonTcp.WatsonStream.ReadAsync(System.Memory{System.Byte},System.Threading.CancellationToken)">
-            <summary>
-            Read data asynchronously from the stream.
-            </summary>
-            <param name="buffer">The buffer to which the data should be read.</param>
-            <param name="cancellationToken">Cancellation token.</param>
-            <returns>Number of bytes read.</returns>
-        </member>
         <member name="M:WatsonTcp.WatsonStream.Seek(System.Int64,System.IO.SeekOrigin)">
             <summary>
             Not supported.
@@ -1226,13 +1218,13 @@
         <member name="E:WatsonTcp.WatsonTcpClientEvents.MessageReceived">
             <summary>  
             This event is fired when a message is received from the server and it is desired that WatsonTcp pass the byte array containing the message payload.
-            MessageReceived takes precedence over Callbacks.StreamReceivedAsync and StreamReceived.
+            Events.MessageReceived takes precedence over Callbacks.StreamReceivedAsync and Events.StreamReceived.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpClientEvents.StreamReceived">
             <summary>
             This event is fired when a stream is received from the server and it is desired that WatsonTcp pass the stream containing the message payload to your application.
-            This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over this event, and
+            This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over Events.StreamReceived, and
             large proxied streams should be fully consumed before the handler returns.
             </summary>
         </member>
@@ -1733,13 +1725,13 @@
         <member name="E:WatsonTcp.WatsonTcpServerEvents.MessageReceived">
             <summary>
             This event is fired when a message is received from a client and it is desired that WatsonTcp pass the byte array containing the message payload.
-            MessageReceived takes precedence over Callbacks.StreamReceivedAsync and StreamReceived.
+            Events.MessageReceived takes precedence over Callbacks.StreamReceivedAsync and Events.StreamReceived.
             </summary>
         </member>
         <member name="E:WatsonTcp.WatsonTcpServerEvents.StreamReceived">
             <summary>
             This event is fired when a stream is received from a client and it is desired that WatsonTcp pass the stream containing the message payload to your application.
-            This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over this event, and
+            This is the legacy synchronous stream API. Callbacks.StreamReceivedAsync takes precedence over Events.StreamReceived, and
             large proxied streams should be fully consumed before the handler returns.
             </summary>
         </member>

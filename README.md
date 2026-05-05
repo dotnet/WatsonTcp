@@ -209,7 +209,7 @@ It is important to note the following:
 - When using `Events.StreamReceived`
   - Large proxied streams are still synchronous and should be fully consumed before the handler returns
   - This is the legacy stream API; prefer `Callbacks.StreamReceivedAsync` for new work
-- Receive-mode precedence is `MessageReceived` > `Callbacks.StreamReceivedAsync` > `StreamReceived`
+- Receive-mode precedence is `Events.MessageReceived` > `Callbacks.StreamReceivedAsync` > `Events.StreamReceived`
 - Precedence warnings are logged through `Settings.Logger`
 
 Example:

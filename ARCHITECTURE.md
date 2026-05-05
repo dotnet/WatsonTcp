@@ -75,12 +75,12 @@ Each message on the wire has this structure:
 
 ```
 +--------------------------------------------------+
-| JSON header (UTF-8 encoded, no pretty printing)   |
-| {"len":N,"status":"Normal","syncreq":false,...}   |
+| JSON header (UTF-8 encoded, no pretty printing)  |
+| {"len":N,"status":"Normal","syncreq":false,...}  |
 +--------------------------------------------------+
 | \r\n\r\n  (bytes: 13, 10, 13, 10)                |
 +--------------------------------------------------+
-| Raw data bytes (exactly N bytes)                  |
+| Raw data bytes (exactly N bytes)                 |
 +--------------------------------------------------+
 ```
 
@@ -109,7 +109,7 @@ Process by MessageStatus:
   +-- RegisterClient --> GUID registration
   +-- Normal + SyncRequest --> invoke SyncRequestReceived callback, send response
   +-- Normal + SyncResponse --> resolve matching TaskCompletionSource
-  +-- Normal --> read data, dispatch MessageReceived, StreamReceivedAsync, or StreamReceived
+  +-- Normal --> read data, dispatch Events.MessageReceived, Callbacks.StreamReceivedAsync, or Events.StreamReceived
 ```
 
 ### Stream vs. Byte Array Delivery
@@ -139,7 +139,7 @@ Configuration conflicts are reported through `Settings.Logger` warnings rather t
 ## 3. Component Diagram
 
 ```
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 |                    WatsonTcpClient                        |
 |  Settings, Events, Callbacks, Keepalive, SslConfiguration |
 |  _WriteLock (SemaphoreSlim)                               |
@@ -148,39 +148,39 @@ Configuration conflicts are reported through `Settings.Logger` warnings rather t
 |  _IdleServerMonitor (Task)                                |
 |  _SyncRequests (ConcurrentDictionary<Guid, TCS>)          |
 |  _DataStream (NetworkStream or SslStream)                 |
-+---------------------------+------------------------------+
++---------------------------+-------------------------------+
                             |
                             | uses
                             v
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 |                  WatsonMessageBuilder                     |
 |  ConstructNew() --> WatsonMessage                         |
 |  BuildFromStream() --> WatsonMessage (from wire)          |
 |  GetHeaderBytes() --> byte[] (JSON + \r\n\r\n)            |
 |  SerializationHelper, ReadStreamBuffer, MaxHeaderSize     |
-+---------------------------+------------------------------+
++---------------------------+-------------------------------+
                             |
                             | creates / parses
                             v
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 |                     WatsonMessage                         |
 |  ContentLength, Status, Metadata, SyncRequest,            |
 |  SyncResponse, ConversationGuid, ExpirationUtc,           |
 |  TimestampUtc, PresharedKey, SenderGuid, DataStream       |
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 |                    WatsonTcpServer                        |
 |  Settings, Events, Callbacks, Keepalive, SslConfiguration |
 |  _AcceptConnections (Task)                                |
 |  _MonitorClients (Task)                                   |
 |  _SyncRequests (ConcurrentDictionary<Guid, TCS>)          |
 |  _Listener (TcpListener)                                  |
-+---------------------------+------------------------------+
++---------------------------+-------------------------------+
                             |
                             | manages clients via
                             v
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 |                 ClientMetadataManager                     |
 |  _Lock (ReaderWriterLockSlim)                             |
 |  _Clients (Dictionary<Guid, ClientMetadata>)              |
@@ -188,37 +188,37 @@ Configuration conflicts are reported through `Settings.Logger` warnings rather t
 |  _ClientsLastSeen (Dictionary<Guid, DateTime>)            |
 |  _ClientsKicked (Dictionary<Guid, DateTime>)              |
 |  _ClientsTimedout (Dictionary<Guid, DateTime>)            |
-+---------------------------+------------------------------+
++---------------------------+-------------------------------+
                             |
                             | stores
                             v
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 |                    ClientMetadata                         |
 |  Guid, IpPort, Name, Metadata (user-defined)              |
 |  TcpClient, NetworkStream, SslStream, DataStream          |
-|  WriteLock (SemaphoreSlim), ReadLock (SemaphoreSlim)       |
+|  WriteLock (SemaphoreSlim), ReadLock (SemaphoreSlim)      |
 |  TokenSource / Token (CancellationToken)                  |
 |  DataReceiver (Task)                                      |
 |  SendBuffer (byte[])                                      |
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 |                      WatsonStream                         |
 |  Read-only Stream wrapper with length tracking            |
 |  Wraps the underlying TCP/SSL stream or a MemoryStream    |
 |  Tracks _Position and _BytesRemaining                     |
 |  CanRead=true, CanSeek=false, CanWrite=false              |
-+----------------------------------------------------------+
++-----------------------------------------------------------+
 
-+----------------------------------------------------------+
++------------------------------------------------------------+
 |                     WatsonCommon                           |
-|  DataStreamToMemoryStream() - buffered stream copy        |
-|  ReadFromStreamAsync() - read N bytes from stream         |
-|  ReadMessageDataAsync() - read message payload            |
-|  BytesToStream() - byte[] to Stream + contentLength       |
-|  GetExpirationTimestamp() - clock-skew adjusted expiration|
-|  ByteArrayToHex(), AppendBytes() - utilities              |
-+----------------------------------------------------------+
+|  DataStreamToMemoryStream() - buffered stream copy         |
+|  ReadFromStreamAsync() - read N bytes from stream          |
+|  ReadMessageDataAsync() - read message payload             |
+|  BytesToStream() - byte[] to Stream + contentLength        |
+|  GetExpirationTimestamp() - clock-skew adjusted expiration |
+|  ByteArrayToHex(), AppendBytes() - utilities               |
++------------------------------------------------------------+
 ```
 
 ## 4. Client Architecture
@@ -443,7 +443,7 @@ Server                                  Client
   |   (MessageStatus.AuthRequired)        |
   |                                       |-- check Settings.PresharedKey
   |                                       |   or invoke Callbacks.AuthenticationRequested
-  |<-- AuthRequested --------------------|
+  |<-- AuthRequested ---------------------|
   |   (MessageStatus.AuthRequested,       |
   |    PresharedKey = 16-byte key)        |
   |                                       |
@@ -481,7 +481,7 @@ Key details:
 
 **`WatsonTcpServerEvents`**: `ClientConnected`, `ClientDisconnected`, `MessageReceived`, `StreamReceived`, `ExceptionEncountered`, `ServerStarted`, `ServerStopped`, `AuthenticationSucceeded`, `AuthenticationFailed`
 
-`MessageReceived` takes precedence over both stream receive modes. `Callbacks.StreamReceivedAsync` takes precedence over `Events.StreamReceived`.
+`Events.MessageReceived` takes precedence over both stream receive modes. `Callbacks.StreamReceivedAsync` takes precedence over `Events.StreamReceived`.
 
 ### Callbacks Classes
 
