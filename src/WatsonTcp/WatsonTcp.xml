@@ -959,6 +959,14 @@
             <param name="cancellationToken">Cancellation token.</param>
             <returns>Number of bytes read.</returns>
         </member>
+        <member name="M:WatsonTcp.WatsonStream.ReadAsync(System.Memory{System.Byte},System.Threading.CancellationToken)">
+            <summary>
+            Read data asynchronously from the stream.
+            </summary>
+            <param name="buffer">The buffer to which the data should be read.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>Number of bytes read.</returns>
+        </member>
         <member name="M:WatsonTcp.WatsonStream.Seek(System.Int64,System.IO.SeekOrigin)">
             <summary>
             Not supported.
