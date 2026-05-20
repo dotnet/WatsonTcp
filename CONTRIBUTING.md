@@ -24,7 +24,7 @@ Please ensure that the code in your PR follows a style similar to that of the pr
 Automated regression coverage now lives in `src/Test.Shared` as Touchstone descriptors.
 
 - Add new unattended automated scenarios in `src/Test.Shared`
-- Keep `src/Test.Automated`, `src/Test.XUnit`, and `src/Test.Nunit` thin host/adapters only
+- Keep `src/Test.Automated`, `src/Test.XUnit`, and `src/Test.NUnit` thin host/adapters only
 - Do not duplicate the same automated test logic across the CLI, xUnit, and NUnit hosts
 - Keep Touchstone dependencies as NuGet package references; do not add a project reference to a local `Touchstone` checkout
 
@@ -33,7 +33,7 @@ Useful commands:
 ```bash
 dotnet run --project src/Test.Automated --framework net8.0 -- --results test-results/cli-results.json
 dotnet test src/Test.XUnit/Test.XUnit.csproj --framework net8.0
-dotnet test src/Test.Nunit/Test.Nunit.csproj --framework net8.0
+dotnet test src/Test.NUnit/Test.NUnit.csproj --framework net8.0
 ```
 
 ## Asking Questions

@@ -46,7 +46,7 @@ These scenarios run through:
 
 - `Test.Automated`
 - `Test.XUnit`
-- `Test.Nunit`
+- `Test.NUnit`
 
 ## What This Archive Means
 
@@ -69,7 +69,7 @@ The feature and shared test hosts were verified with:
 dotnet build src/WatsonTcp.sln -c Debug
 dotnet run --project src/Test.Automated/Test.Automated.csproj --framework net8.0 -- --results cli-results.json
 dotnet test src/Test.XUnit/Test.XUnit.csproj -c Debug --framework net8.0
-dotnet test src/Test.Nunit/Test.Nunit.csproj -c Debug --framework net8.0
+dotnet test src/Test.NUnit/Test.NUnit.csproj -c Debug --framework net8.0
 ```
 
 ## Conclusion

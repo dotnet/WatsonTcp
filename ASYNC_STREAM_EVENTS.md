@@ -207,7 +207,7 @@ All automated coverage should live in `src/Test.Shared/WatsonTcpScenarios.cs` an
 
 - `src/Test.Automated`
 - `src/Test.XUnit`
-- `src/Test.Nunit`
+- `src/Test.NUnit`
 
 Also:
 
@@ -482,7 +482,7 @@ Use these after implementation:
 dotnet build src/WatsonTcp.sln -c Debug
 dotnet run --project src/Test.Automated/Test.Automated.csproj --framework net8.0 -- --results test-results/cli-results.json
 dotnet test src/Test.XUnit/Test.XUnit.csproj -c Debug --framework net8.0
-dotnet test src/Test.Nunit/Test.Nunit.csproj -c Debug --framework net8.0
+dotnet test src/Test.NUnit/Test.NUnit.csproj -c Debug --framework net8.0
 dotnet build src/WatsonTcp.sln -c Release
 ```
 

@@ -41,7 +41,7 @@ jobs:
         run: dotnet build src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-restore
 
       - name: Build NUnit host (Release)
-        run: dotnet build src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-restore
+        run: dotnet build src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-restore
 
       - name: Create test results directory
         shell: pwsh
@@ -55,16 +55,16 @@ jobs:
         run: |
           dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=test-results-net8.0.trx" --results-directory ./test-results
           dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=test-results-net10.0.trx" --results-directory ./test-results
-          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=nunit-results-net8.0.trx" --results-directory ./test-results
-          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=nunit-results-net10.0.trx" --results-directory ./test-results
+          dotnet test src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=nunit-results-net8.0.trx" --results-directory ./test-results
+          dotnet test src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=nunit-results-net10.0.trx" --results-directory ./test-results
 
       - name: Run xUnit and NUnit tests (Windows)
         if: runner.os == 'Windows'
         run: |
           dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=test-results-net8.0.trx" --results-directory ./test-results
           dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=test-results-net10.0.trx" --results-directory ./test-results
-          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=nunit-results-net8.0.trx" --results-directory ./test-results
-          dotnet test src/Test.Nunit/Test.Nunit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=nunit-results-net10.0.trx" --results-directory ./test-results
+          dotnet test src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=nunit-results-net8.0.trx" --results-directory ./test-results
+          dotnet test src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=nunit-results-net10.0.trx" --results-directory ./test-results
 
       - name: Upload test results
         if: always()
