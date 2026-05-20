@@ -103,6 +103,22 @@ namespace Test.Shared
             return messages;
         }
 
+        private static string GetSslTestCertificatePath()
+        {
+            string[] candidates = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "test.pfx"),
+                Path.Combine(Environment.CurrentDirectory, "test.pfx")
+            };
+
+            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (File.Exists(candidate)) return candidate;
+            }
+
+            throw new FileNotFoundException("Unable to locate the SSL test certificate.", "test.pfx");
+        }
+
         private static bool LogContains(IEnumerable<string> messages, string fragment)
         {
             if (messages == null) return false;
@@ -2415,12 +2431,7 @@ namespace Test.Shared
         #region v6.1.0-SSL-Tests
         public static async Task SslConnectivity()
         {
-            string pfxFile = "test.pfx";
-            if (!File.Exists(pfxFile))
-            {
-                // Skip if no certificate available
-                return;
-            }
+            string pfxFile = GetSslTestCertificatePath();
 
             int port = GetNextPort();
             var server = new WatsonTcpServer(_hostname, port, pfxFile, "password");
@@ -2448,8 +2459,7 @@ namespace Test.Shared
         }
         public static async Task SslMessageExchange()
         {
-            string pfxFile = "test.pfx";
-            if (!File.Exists(pfxFile)) return;
+            string pfxFile = GetSslTestCertificatePath();
 
             int port = GetNextPort();
             string receivedData = null;
@@ -2481,8 +2491,7 @@ namespace Test.Shared
         }
         public static async Task SslSyncRequestResponse()
         {
-            string pfxFile = "test.pfx";
-            if (!File.Exists(pfxFile)) return;
+            string pfxFile = GetSslTestCertificatePath();
 
             int port = GetNextPort();
             var server = new WatsonTcpServer(_hostname, port, pfxFile, "password");
