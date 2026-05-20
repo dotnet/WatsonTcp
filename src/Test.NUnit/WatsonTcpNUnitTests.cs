@@ -1,15 +1,15 @@
-namespace Test.Nunit
+namespace Test.NUnit
 {
     using System.Collections;
     using System.Threading;
     using System.Threading.Tasks;
-    using NUnit.Framework;
+    using global::NUnit.Framework;
     using Test.Shared;
     using Touchstone.Core;
     using Touchstone.NunitAdapter;
 
     [NonParallelizable]
-    public sealed class WatsonTcpNunitTests
+    public sealed class WatsonTcpNUnitTests
     {
         public static IEnumerable TestCases()
         {

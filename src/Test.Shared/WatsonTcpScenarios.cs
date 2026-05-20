@@ -2479,6 +2479,41 @@ namespace Test.Shared
                 SafeDispose(server);
             }
         }
+        public static async Task SslSyncRequestResponse()
+        {
+            string pfxFile = "test.pfx";
+            if (!File.Exists(pfxFile)) return;
+
+            int port = GetNextPort();
+            var server = new WatsonTcpServer(_hostname, port, pfxFile, "password");
+            SetupDefaultServerHandlers(server);
+            server.Settings.AcceptInvalidCertificates = true;
+            server.Callbacks.SyncRequestReceivedAsync = async (req) =>
+            {
+                await Task.Delay(10).ConfigureAwait(false);
+                return new SyncResponse(req, "Response from SSL server");
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server, timeoutMs: 5000).ConfigureAwait(false);
+
+            var client = new WatsonTcpClient(_hostname, port, pfxFile, "password");
+            SetupDefaultClientHandlers(client);
+            client.Settings.AcceptInvalidCertificates = true;
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1, timeoutMs: 5000).ConfigureAwait(false);
+
+            try
+            {
+                SyncResponse response = await client.SendAndWaitAsync(5000, "Request from SSL client").ConfigureAwait(false);
+                TestAssert.NotNull(response);
+                TestAssert.Equal("Response from SSL server", Encoding.UTF8.GetString(response.Data));
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
 
         #endregion
 

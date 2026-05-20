@@ -81,7 +81,7 @@ Before landing any P0 or P1 item:
 ## PERF-01: Replace Byte-At-A-Time Header Parsing With A Buffered Framed Reader
 
 Owner:
-Status: Not started
+Status: Done
 API impact: None
 Primary goals: faster response times, higher throughput, better connection scale
 
@@ -121,7 +121,7 @@ Expected payoff:
 ## PERF-02: Remove Avoidable Copies And Memory Materialization In Send/Receive Hot Paths
 
 Owner:
-Status: Not started
+Status: Done
 API impact: None
 Primary goals: faster response times, higher throughput, lower allocation rate
 
@@ -162,7 +162,7 @@ Expected payoff:
 ## PERF-03: Coalesce Header And Payload Writes And Remove Per-Message Flushes
 
 Owner:
-Status: Not started
+Status: Done
 API impact: None
 Primary goals: faster response times, higher throughput
 
@@ -199,7 +199,7 @@ Expected payoff:
 ## PERF-04: Remove Proactive Socket Liveness Polling From The Server Receive Loop
 
 Owner:
-Status: Not started
+Status: Done
 API impact: None
 Primary goals: higher throughput, higher connection counts, lower per-message overhead
 
@@ -235,7 +235,7 @@ Expected payoff:
 ## PERF-05: Make The Client Connection Pipeline Fully Async Internally
 
 Owner:
-Status: Not started
+Status: In progress (phase 1 complete)
 API impact: None in phase 1
 Primary goals: faster connection setup, better client-side scale during concurrent connects
 
@@ -271,7 +271,7 @@ Expected payoff:
 ## PERF-06: Cache Serializer State And Emit Headers Directly As UTF-8
 
 Owner:
-Status: Not started
+Status: Done
 API impact: None
 Primary goals: faster response times, higher throughput, faster connection setup for control-plane messages
 
@@ -307,7 +307,7 @@ Expected payoff:
 ## PERF-07: Replace Per-Message `Task.Run` Dispatch With Bounded Message Dispatchers
 
 Owner:
-Status: Not started
+Status: In progress (07a complete)
 API impact: None
 Primary goals: faster response times, higher throughput, higher connection counts
 
@@ -343,7 +343,7 @@ Expected payoff:
 ## PERF-08: Reduce Connection Manager Lock Contention And Snapshot Copying
 
 Owner:
-Status: Not started
+Status: Done
 API impact: None
 Primary goals: higher throughput, higher connection counts, faster connection admission
 

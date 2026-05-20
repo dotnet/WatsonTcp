@@ -5,9 +5,7 @@
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using System.Net;
-    using System.Net.NetworkInformation;
     using System.Net.Security;
     using System.Net.Sockets;
 #if NET5_0_OR_GREATER
@@ -183,6 +181,8 @@
 
         private int _Connections = 0;
         private bool _IsListening = false;
+        private HashSet<string> _PermittedIpsSnapshot = null;
+        private HashSet<string> _BlockedIpsSnapshot = null;
 
         private Mode _Mode;
         private TlsVersion _TlsVersion = TlsVersion.Tls12;
@@ -398,9 +398,12 @@
             }
 
             _MessageBuilder.MaxHeaderSize = _Settings.MaxHeaderSize;
+            _MessageBuilder.ReadStreamBuffer = _Settings.StreamBufferSize;
+            _PermittedIpsSnapshot = _Settings.PermittedIPs.Count > 0 ? new HashSet<string>(_Settings.PermittedIPs) : null;
+            _BlockedIpsSnapshot = _Settings.BlockedIPs.Count > 0 ? new HashSet<string>(_Settings.BlockedIPs) : null;
             _Listener.Start();
-            _AcceptConnections = Task.Run(() => AcceptConnections(_Token), _Token); // sets _IsListening
-            _MonitorClients = Task.Run(() => MonitorForIdleClients(_Token), _Token);
+            _AcceptConnections = AcceptConnections(_Token); // sets _IsListening
+            _MonitorClients = MonitorForIdleClients(_Token);
             _Events.HandleServerStarted(this, EventArgs.Empty);
         }
 
@@ -559,13 +562,9 @@
         /// <returns>An enumerable collection of client metadata.</returns>
         public IEnumerable<ClientMetadata> ListClients()
         {
-            Dictionary<Guid, ClientMetadata> clients = _ClientManager.AllClients();
-            if (clients != null && clients.Count > 0)
+            foreach (ClientMetadata client in _ClientManager.EnumerateClients())
             {
-                foreach (KeyValuePair<Guid, ClientMetadata> client in clients)
-                {
-                    yield return client.Value;
-                }
+                yield return client;
             }
         }
 
@@ -608,22 +607,14 @@
         /// <param name="token">Cancellation token to cancel the request.</param>
         public async Task DisconnectClientsAsync(MessageStatus status = MessageStatus.Removed, bool sendNotice = true, CancellationToken token = default)
         {
-            Dictionary<Guid, ClientMetadata> clients = _ClientManager.AllClients();
-            if (clients != null && clients.Count > 0)
+            foreach (ClientMetadata client in _ClientManager.EnumerateClients())
             {
-                foreach (KeyValuePair<Guid, ClientMetadata> client in clients)
-                {
-                    await DisconnectClientAsync(client.Key, status, sendNotice, token).ConfigureAwait(false);
-                }
+                await DisconnectClientAsync(client.Guid, status, sendNotice, token).ConfigureAwait(false);
             }
 
-            Dictionary<Guid, ClientMetadata> pendingClients = _ClientManager.AllPendingClients();
-            if (pendingClients != null && pendingClients.Count > 0)
+            foreach (ClientMetadata client in _ClientManager.EnumeratePendingClients())
             {
-                foreach (KeyValuePair<Guid, ClientMetadata> client in pendingClients)
-                {
-                    await DisconnectClientAsync(client.Key, status, sendNotice, token).ConfigureAwait(false);
-                }
+                await DisconnectClientAsync(client.Guid, status, sendNotice, token).ConfigureAwait(false);
             }
         }
 
@@ -776,14 +767,14 @@
                     if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives(tcpClient);
 
                     string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
-                    if (_Settings.PermittedIPs.Count > 0 && !_Settings.PermittedIPs.Contains(clientIp))
+                    if (_PermittedIpsSnapshot != null && !_PermittedIpsSnapshot.Contains(clientIp))
                     {
                         _Settings.Logger?.Invoke(Severity.Info, _Header + "rejecting connection from " + clientIp + " (not permitted)");
                         tcpClient.Close();
                         continue;
                     }
 
-                    if (_Settings.BlockedIPs.Count > 0 && _Settings.BlockedIPs.Contains(clientIp))
+                    if (_BlockedIpsSnapshot != null && _BlockedIpsSnapshot.Contains(clientIp))
                     {
                         _Settings.Logger?.Invoke(Severity.Info, _Header + "rejecting connection from " + clientIp + " (blocked)");
                         tcpClient.Close();
@@ -815,11 +806,9 @@
 
                     #region Initialize-Client
 
-                    Task unawaited = null;
-
                     if (_Mode == Mode.Tcp)
                     {
-                        unawaited = Task.Run(() => ProcessAcceptedClientAsync(client, linkedCts.Token), linkedCts.Token);
+                        _ = ProcessAcceptedClientAsync(client, linkedCts.Token);
                     }
                     else if (_Mode == Mode.Ssl)
                     {
@@ -832,15 +821,7 @@
                             client.SslStream = new SslStream(client.NetworkStream, false);
                         }
 
-                        unawaited = Task.Run(async () =>
-                        {
-                            bool success = await StartTls(client, linkedCts.Token).ConfigureAwait(false);
-                            if (success)
-                            {
-                                client.Phase = ConnectionPhase.TlsEstablished;
-                                await ProcessAcceptedClientAsync(client, linkedCts.Token).ConfigureAwait(false);
-                            }
-                        }, linkedCts.Token);
+                        _ = Task.Run(() => InitializeAcceptedSslClientAsync(client, linkedCts.Token), linkedCts.Token);
                     }
                     else
                     {
@@ -865,6 +846,16 @@
                     _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
                     break;
                 }
+            }
+        }
+
+        private async Task InitializeAcceptedSslClientAsync(ClientMetadata client, CancellationToken token)
+        {
+            bool success = await StartTls(client, token).ConfigureAwait(false);
+            if (success)
+            {
+                client.Phase = ConnectionPhase.TlsEstablished;
+                await ProcessAcceptedClientAsync(client, token).ConfigureAwait(false);
             }
         }
 
@@ -998,7 +989,7 @@
             client.ServerHandshakeSession = new ServerHandshakeSession(client, client.HandshakeTransport);
 
             await SendStatusMessageAsync(client, MessageStatus.HandshakeBegin, "Handshake required", token).ConfigureAwait(false);
-            client.HandshakeTask = Task.Run(() => RunHandshakePhaseAsync(client, token), token);
+            client.HandshakeTask = RunHandshakePhaseAsync(client, token);
         }
 
         private async Task RunHandshakePhaseAsync(ClientMetadata client, CancellationToken token)
@@ -1118,7 +1109,7 @@
             if (client == null) throw new ArgumentNullException(nameof(client));
             if (handshakeMessage == null) throw new ArgumentNullException(nameof(handshakeMessage));
 
-            byte[] data = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(handshakeMessage, false));
+            byte[] data = WatsonCommon.SerializeJsonBytes(SerializationHelper, handshakeMessage, false);
             WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, null);
             msg.Status = MessageStatus.HandshakeData;
@@ -1230,94 +1221,6 @@
             }
         }
 
-        private static bool IsClientConnected(ClientMetadata client)
-        {
-            if (client != null && client.TcpClient != null)
-            {
-                var state = IPGlobalProperties.GetIPGlobalProperties()
-                    .GetActiveTcpConnections()
-                        .FirstOrDefault(x =>
-                            x.LocalEndPoint.Equals(client.TcpClient.Client.LocalEndPoint)
-                            && x.RemoteEndPoint.Equals(client.TcpClient.Client.RemoteEndPoint));
-
-                if (state == default(TcpConnectionInformation)
-                    || state.State == TcpState.Unknown
-                    || state.State == TcpState.FinWait1
-                    || state.State == TcpState.FinWait2
-                    || state.State == TcpState.Closed
-                    || state.State == TcpState.Closing
-                    || state.State == TcpState.CloseWait)
-                {
-                    return false;
-                }
-
-                byte[] tmp = new byte[1];
-                bool success = false;
-
-                try
-                {
-                    client.WriteLock.Wait();
-                    client.TcpClient.Client.Send(tmp, 0, 0);
-                    success = true;
-                }
-                catch (SocketException se)
-                {
-                    if (se.NativeErrorCode.Equals(10035)) success = true;
-                }
-                catch (Exception)
-                {
-                }
-                finally
-                {
-                    if (client != null)
-                    {
-                        client.WriteLock.Release();
-                    }
-                }
-
-                if (success) return true;
-
-                try
-                {
-                    client.WriteLock.Wait();
-
-                    if ((client.TcpClient.Client.Poll(0, SelectMode.SelectWrite))
-                        && (!client.TcpClient.Client.Poll(0, SelectMode.SelectError)))
-                    {
-                        byte[] buffer = new byte[1];
-                        if (client.TcpClient.Client.Receive(buffer, SocketFlags.Peek) == 0)
-                        {
-                            return false;
-                        }
-                        else
-                        {
-                            return true;
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-                finally
-                {
-                    if (client != null) client.WriteLock.Release();
-                }
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        #endregion
-
-        #region Read
-
         private async Task DataReceiver(ClientMetadata client, CancellationToken token)
         {
             while (true)
@@ -1325,17 +1228,7 @@
                 try
                 {
                     token.ThrowIfCancellationRequested();
-
-                    if (!IsClientConnected(client)) break;
-
-#pragma warning disable CA2016 // token intentionally not forwarded - stream closure is the proper disconnect signal
-                    WatsonMessage msg = await _MessageBuilder.BuildFromStream(client.DataStream);
-#pragma warning restore CA2016
-                    if (msg == null)
-                    {
-                        await Task.Delay(30, token).ConfigureAwait(false);
-                        continue;
-                    }
+                    WatsonMessage msg = await _MessageBuilder.BuildFromStream(client.ReceiveStream, token).ConfigureAwait(false);
 
                     if (!String.IsNullOrEmpty(_Settings.PresharedKey))
                     {
@@ -1616,9 +1509,14 @@
                 }
             }
 
+            CancellationTokenSource linkedCts = null;
             if (token == default(CancellationToken))
             {
-                CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _Token);
+                token = _Token;
+            }
+            else if (_Token.CanBeCanceled)
+            {
+                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _Token);
                 token = linkedCts.Token;
             }
 
@@ -1626,8 +1524,7 @@
 
             try
             {
-                await SendHeadersAsync(client, msg, token).ConfigureAwait(false);
-                await SendDataStreamAsync(client, contentLength, stream, token).ConfigureAwait(false);
+                await SendMessageAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1651,6 +1548,7 @@
             }
             finally
             {
+                linkedCts?.Dispose();
                 if (client != null) client.WriteLock.Release();
             }
         }
@@ -1676,8 +1574,7 @@
 
             try
             {
-                await SendHeadersAsync(client, msg, token);
-                await SendDataStreamAsync(client, contentLength, stream, token);
+                await SendMessageAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + client.ToString() + " synchronous request sent: " + msg.ConversationGuid);
 
                 _Statistics.IncrementSentMessages();
@@ -1722,41 +1619,10 @@
             }
         }
 
-        private async Task SendHeadersAsync(ClientMetadata client, WatsonMessage msg, CancellationToken token)
+        private async Task SendMessageAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream, CancellationToken token)
         {
             byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
-            await client.DataStream.WriteAsync(headerBytes, 0, headerBytes.Length, token).ConfigureAwait(false);
-            await client.DataStream.FlushAsync(token).ConfigureAwait(false);
-        }
-
-        private async Task SendDataStreamAsync(ClientMetadata client, long contentLength, Stream stream, CancellationToken token)
-        {
-            if (contentLength <= 0) return;
-
-            long bytesRemaining = contentLength;
-            int bytesRead = 0;
-            int bufferSize = _Settings.StreamBufferSize;
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
-
-            try
-            {
-                while (bytesRemaining > 0)
-                {
-                    int toRead = (int)Math.Min(bufferSize, bytesRemaining);
-                    bytesRead = await stream.ReadAsync(buffer, 0, toRead, token).ConfigureAwait(false);
-                    if (bytesRead > 0)
-                    {
-                        await client.DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
-                        bytesRemaining -= bytesRead;
-                    }
-                }
-
-                await client.DataStream.FlushAsync(token).ConfigureAwait(false);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
+            await WatsonCommon.WriteMessageAsync(client.DataStream, headerBytes, contentLength, stream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
         }
 
         #endregion
@@ -1769,8 +1635,6 @@
 
             try
             {
-                Dictionary<Guid, DateTime> lastSeen = null;
-
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
@@ -1779,20 +1643,15 @@
 
                     if (_Settings.IdleClientTimeoutSeconds > 0)
                     {
-                        lastSeen = _ClientManager.AllClientsLastSeen();
+                        long idleCutoffTicks = DateTime.UtcNow.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds).Ticks;
 
-                        if (lastSeen != null && lastSeen.Count > 0)
+                        foreach (ClientMetadata client in _ClientManager.EnumerateClients())
                         {
-                            DateTime idleTimestamp = DateTime.UtcNow.AddSeconds(-1 * _Settings.IdleClientTimeoutSeconds);
-
-                            foreach (KeyValuePair<Guid, DateTime> curr in lastSeen)
+                            if (client.LastSeenUtcTicks > 0 && client.LastSeenUtcTicks < idleCutoffTicks)
                             {
-                                if (curr.Value < idleTimestamp)
-                                {
-                                    _ClientManager.AddClientTimedout(curr.Key);
-                                    _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + curr.Key + " due to idle timeout");
-                                    await DisconnectClientAsync(curr.Key, MessageStatus.Timeout, true, token);
-                                }
+                                _ClientManager.AddClientTimedout(client.Guid);
+                                _Settings.Logger?.Invoke(Severity.Debug, _Header + "disconnecting client " + client.Guid + " due to idle timeout");
+                                await DisconnectClientAsync(client.Guid, MessageStatus.Timeout, true, token).ConfigureAwait(false);
                             }
                         }
                     }

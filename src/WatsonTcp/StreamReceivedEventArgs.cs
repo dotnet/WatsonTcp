@@ -90,36 +90,19 @@
         private byte[] ReadFromStream(Stream stream, long count)
         {
             if (count <= 0) return Array.Empty<byte>();
+            if (count > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(count), "Content length must fit within a byte array.");
 
-#if NET7_0_OR_GREATER
-            MemoryStream ms = new MemoryStream();
-            byte[] buffer = new byte[_BufferSize];
+            byte[] data = new byte[(int)count];
+            int offset = 0;
             long bytesRemaining = count;
 
             while (bytesRemaining > 0)
             {
-                int toRead = (int)Math.Min(_BufferSize, bytesRemaining);
-                stream.ReadExactly(buffer, 0, toRead);
-                ms.Write(buffer, 0, toRead);
-                bytesRemaining -= toRead;
-            }
-
-            return ms.ToArray();
-#else
-            byte[] buffer = new byte[_BufferSize];
-
-            int read = 0;
-            long bytesRemaining = count;
-            MemoryStream ms = new MemoryStream();
-
-            while (bytesRemaining > 0)
-            {
-                if (_BufferSize > bytesRemaining) buffer = new byte[bytesRemaining];
-
-                read = stream.Read(buffer, 0, buffer.Length);
+                int toRead = (int)Math.Min((long)_BufferSize, bytesRemaining);
+                int read = stream.Read(data, offset, toRead);
                 if (read > 0)
                 {
-                    ms.Write(buffer, 0, read);
+                    offset += read;
                     bytesRemaining -= read;
                 }
                 else
@@ -128,9 +111,7 @@
                 }
             }
 
-            byte[] data = ms.ToArray();
             return data;
-#endif
         }
 
         #endregion

@@ -1,4 +1,4 @@
-﻿namespace WatsonTcp
+namespace WatsonTcp
 {
     using System;
     using System.IO;
@@ -38,7 +38,7 @@
         /// <summary>
         /// Metadata for the client, managed by the developer (you).
         /// </summary>
-        public object Metadata { get; set; } = null; 
+        public object Metadata { get; set; } = null;
 
         #endregion
 
@@ -46,9 +46,9 @@
 
         internal TcpClient TcpClient
         {
-            get 
-            { 
-                return _TcpClient; 
+            get
+            {
+                return _TcpClient;
             }
         }
 
@@ -62,8 +62,9 @@
             {
                 _NetworkStream = value;
                 if (_NetworkStream != null)
-                { 
+                {
                     _DataStream = _NetworkStream;
+                    ReceiveStream = new BufferedReadStream(_DataStream, SendBuffer.Length);
                 }
             }
         }
@@ -78,8 +79,9 @@
             {
                 _SslStream = value;
                 if (_SslStream != null)
-                { 
+                {
                     _DataStream = _SslStream;
+                    ReceiveStream = new BufferedReadStream(_DataStream, SendBuffer.Length);
                 }
             }
         }
@@ -91,9 +93,11 @@
                 return _DataStream;
             }
         }
-         
+
+        internal BufferedReadStream ReceiveStream { get; private set; } = null;
         internal byte[] SendBuffer { get; set; } = new byte[65536];
         internal Task DataReceiver { get; set; } = null;
+        internal long LastSeenUtcTicks { get; set; } = 0;
 
         internal SemaphoreSlim WriteLock = new SemaphoreSlim(1, 1);
         internal SemaphoreSlim ReadLock = new SemaphoreSlim(1, 1);
@@ -172,7 +176,6 @@
                 }
                 catch (AggregateException)
                 {
-                    // Task may have been cancelled
                 }
                 catch (ObjectDisposedException)
                 {
@@ -192,10 +195,6 @@
             ret += "]";
             return ret;
         }
-
-        #endregion
-
-        #region Private-Methods
 
         #endregion
     }

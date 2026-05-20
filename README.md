@@ -28,6 +28,35 @@ Special thanks to the following people for their support and contributions to th
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
+## New in v6.3.1
+
+### Performance
+
+WatsonTcp now includes a performance-focused maintenance release aimed at lower latency, higher throughput, and faster steady-state operation without changing the public API surface for normal usage.
+
+Key improvements include:
+
+- buffered header parsing with pushback support instead of allocation-heavy framing reads
+- lower-copy send and receive paths for array-backed payloads and stream-backed message handling
+- reduced hot-path disconnect overhead by relying on real read and write failures instead of proactive liveness polling
+- internal async connection setup and lower-overhead collection and serialization paths
+
+### Benchmarking
+
+The repository now includes `src/Test.PerformanceBenchmark`, a console benchmark suite that measures:
+
+- response time
+- throughput
+- connection setup time
+
+Run it from the repository root with:
+
+```bash
+RunBenchmarks.bat
+```
+
+The benchmark writes timestamped summaries to `benchmarks/`.
+
 ## New in v6.3.0
 
 ### Async Stream Receive
@@ -124,14 +153,14 @@ Automated tests are now defined once in `src/Test.Shared` and exposed through:
 
 - `src/Test.Automated` for the Touchstone CLI runner
 - `src/Test.XUnit` for `dotnet test` via xUnit
-- `src/Test.Nunit` for `dotnet test` via NUnit
+- `src/Test.NUnit` for `dotnet test` via NUnit
 
 Run them with:
 
 ```bash
 dotnet run --project src/Test.Automated --framework net8.0 -- --results test-results/cli-results.json
 dotnet test src/Test.XUnit/Test.XUnit.csproj --framework net8.0
-dotnet test src/Test.Nunit/Test.Nunit.csproj --framework net8.0
+dotnet test src/Test.NUnit/Test.NUnit.csproj --framework net8.0
 ```
 
 ## New in v6.1.0
@@ -183,7 +212,7 @@ For the wire protocol specification (header format, delimiter, payload layout), 
 
 ## Test Applications
 
-Test projects for both client and server are included which will help you understand and exercise the class library.  Shared automated coverage lives in `Test.Shared`, while `Test.Automated`, `Test.XUnit`, and `Test.Nunit` are the supported unattended test hosts.
+Test projects for both client and server are included which will help you understand and exercise the class library.  Shared automated coverage lives in `Test.Shared`, while `Test.Automated`, `Test.XUnit`, and `Test.NUnit` are the supported unattended test hosts.
 
 ## SSL
 

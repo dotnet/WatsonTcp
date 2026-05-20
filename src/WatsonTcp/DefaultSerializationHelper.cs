@@ -1,6 +1,7 @@
-﻿namespace WatsonTcp
+namespace WatsonTcp
 {
     using System;
+    using System.Buffers;
     using System.Collections.Specialized;
     using System.Linq;
     using System.Text.Json;
@@ -11,14 +12,12 @@
     /// </summary>
     public class DefaultSerializationHelper : ISerializationHelper
     {
-        #region Public-Members
-
-        #endregion
-
         #region Private-Members
 
-        private ExceptionConverter<Exception> _ExceptionConverter = new ExceptionConverter<Exception>();
-        private NameValueCollectionConverter _NameValueCollectionConverter = new NameValueCollectionConverter();
+        private readonly ExceptionConverter<Exception> _ExceptionConverter = new ExceptionConverter<Exception>();
+        private readonly NameValueCollectionConverter _NameValueCollectionConverter = new NameValueCollectionConverter();
+        private readonly JsonSerializerOptions _CompactJsonOptions = null;
+        private readonly JsonSerializerOptions _PrettyJsonOptions = null;
 
         #endregion
 
@@ -30,6 +29,8 @@
         public DefaultSerializationHelper()
         {
             InstantiateConverter();
+            _CompactJsonOptions = CreateJsonSerializerOptions(false);
+            _PrettyJsonOptions = CreateJsonSerializerOptions(true);
         }
 
         #endregion
@@ -44,7 +45,7 @@
         /// <returns>Instance.</returns>
         public T DeserializeJson<T>(string json)
         {
-            return JsonSerializer.Deserialize<T>(json);
+            return JsonSerializer.Deserialize<T>(json, _CompactJsonOptions);
         }
 
         /// <summary>
@@ -56,24 +57,7 @@
         public string SerializeJson(object obj, bool pretty = true)
         {
             if (obj == null) return null;
-
-            JsonSerializerOptions options = new JsonSerializerOptions();
-            options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-
-            // see https://github.com/dotnet/runtime/issues/43026
-            options.Converters.Add(_ExceptionConverter);
-            options.Converters.Add(_NameValueCollectionConverter);
-
-            if (!pretty)
-            {
-                options.WriteIndented = false;
-                return JsonSerializer.Serialize(obj, options);
-            }
-            else
-            {
-                options.WriteIndented = true;
-                return JsonSerializer.Serialize(obj, options);
-            }
+            return JsonSerializer.Serialize(obj, obj.GetType(), pretty ? _PrettyJsonOptions : _CompactJsonOptions);
         }
 
         /// <summary>
@@ -87,13 +71,54 @@
             }
             catch (Exception)
             {
+            }
+        }
 
+        #endregion
+
+        #region Internal-Methods
+
+        internal T DeserializeJson<T>(ReadOnlySpan<byte> json)
+        {
+            return JsonSerializer.Deserialize<T>(json, _CompactJsonOptions);
+        }
+
+        internal byte[] SerializeJsonBytes(object obj, bool pretty = true)
+        {
+            if (obj == null) return Array.Empty<byte>();
+            return JsonSerializer.SerializeToUtf8Bytes(obj, obj.GetType(), pretty ? _PrettyJsonOptions : _CompactJsonOptions);
+        }
+
+        internal void SerializeJson(object obj, IBufferWriter<byte> bufferWriter, bool pretty = true)
+        {
+            if (obj == null) return;
+            if (bufferWriter == null) throw new ArgumentNullException(nameof(bufferWriter));
+
+            using (Utf8JsonWriter writer = new Utf8JsonWriter(bufferWriter))
+            {
+                JsonSerializer.Serialize(writer, obj, obj.GetType(), pretty ? _PrettyJsonOptions : _CompactJsonOptions);
+                writer.Flush();
             }
         }
 
         #endregion
 
         #region Private-Methods
+
+        private JsonSerializerOptions CreateJsonSerializerOptions(bool pretty)
+        {
+            JsonSerializerOptions options = new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                WriteIndented = pretty
+            };
+
+            // see https://github.com/dotnet/runtime/issues/43026
+            options.Converters.Add(_ExceptionConverter);
+            options.Converters.Add(_NameValueCollectionConverter);
+
+            return options;
+        }
 
         #endregion
 
@@ -127,7 +152,6 @@
 
                 if (propList.Count == 0)
                 {
-                    // Nothing to write
                     return;
                 }
 
@@ -151,7 +175,7 @@
             {
                 var val = value.Keys.Cast<string>()
                     .ToDictionary(k => k, k => string.Join(", ", value.GetValues(k)));
-                System.Text.Json.JsonSerializer.Serialize(writer, val);
+                JsonSerializer.Serialize(writer, val);
             }
         }
 

@@ -1,6 +1,7 @@
 namespace WatsonTcp
 {
     using System;
+    using System.Buffers;
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
@@ -55,7 +56,6 @@ namespace WatsonTcp
 
         internal WatsonMessageBuilder()
         {
-
         }
 
         #endregion
@@ -71,7 +71,7 @@ namespace WatsonTcp
         /// <param name="syncResponse">Indicate if the message is a synchronous message response.</param>
         /// <param name="expirationUtc">The UTC time at which the message should expire (only valid for synchronous message requests).</param>
         /// <param name="metadata">Metadata to attach to the message.</param>
-#pragma warning disable CA1822 // Mark members as static - called as instance method via _MessageBuilder.ConstructNew(...)
+#pragma warning disable CA1822
         internal WatsonMessage ConstructNew(
             long contentLength,
             Stream stream,
@@ -89,13 +89,15 @@ namespace WatsonTcp
                 }
             }
 
-            WatsonMessage msg = new WatsonMessage();
-            msg.ContentLength = contentLength;
-            msg.DataStream = stream;
-            msg.SyncRequest = syncRequest;
-            msg.SyncResponse = syncResponse;
-            msg.ExpirationUtc = expirationUtc;
-            msg.Metadata = metadata;
+            WatsonMessage msg = new WatsonMessage
+            {
+                ContentLength = contentLength,
+                DataStream = stream,
+                SyncRequest = syncRequest,
+                SyncResponse = syncResponse,
+                ExpirationUtc = expirationUtc,
+                Metadata = metadata
+            };
 
             return msg;
         }
@@ -106,75 +108,73 @@ namespace WatsonTcp
         /// </summary>
         /// <param name="stream">Stream.</param>
         /// <param name="token">Cancellation token.</param>
-        internal async Task<WatsonMessage> BuildFromStream(Stream stream, CancellationToken token = default)
+        internal async Task<WatsonMessage> BuildFromStream(BufferedReadStream stream, CancellationToken token = default)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (!stream.CanRead) throw new ArgumentException("Cannot read from stream.");
 
-            // Read header bytes until \r\n\r\n delimiter is found.
-            // Uses a MemoryStream accumulator instead of array concatenation,
-            // and direct byte comparison instead of LINQ, to avoid O(n^2)
-            // allocations and per-iteration LINQ overhead.
-            byte[] headerBuffer = new byte[1];
-            int totalRead = 0;
+            int initialHeaderCapacity = Math.Min(Math.Max(_ReadStreamBuffer, 256), _MaxHeaderSize);
+            byte[] readBuffer = ArrayPool<byte>.Shared.Rent(_ReadStreamBuffer);
+            byte[] headerBuffer = ArrayPool<byte>.Shared.Rent(initialHeaderCapacity);
+            int headerLength = 0;
+            int searchStart = 0;
 
-            // Track the last 4 bytes for delimiter detection
-            // Initialize to non-matching values
-            byte prev3 = 0xFF, prev2 = 0xFF, prev1 = 0xFF, prev0 = 0xFF;
-            bool hasNonZero = false;
-
-            using (MemoryStream headerStream = new MemoryStream(256))
+            try
             {
                 while (true)
                 {
-                    int read = await stream.ReadAsync(headerBuffer, 0, 1, token).ConfigureAwait(false);
+                    int read = await stream.ReadAsync(readBuffer, 0, readBuffer.Length, token).ConfigureAwait(false);
                     if (read <= 0)
                     {
-                        return null;
+                        throw new IOException("Peer disconnected.");
                     }
 
-                    byte b = headerBuffer[0];
-                    headerStream.WriteByte(b);
-                    totalRead++;
+                    EnsureHeaderCapacity(ref headerBuffer, headerLength + read);
+                    Buffer.BlockCopy(readBuffer, 0, headerBuffer, headerLength, read);
+                    int totalRead = headerLength + read;
 
-                    if (b != 0) hasNonZero = true;
-
-                    // Shift the trailing 4-byte window
-                    prev3 = prev2;
-                    prev2 = prev1;
-                    prev1 = prev0;
-                    prev0 = b;
-
-                    // Check for null header (all zeros) at byte 4
-                    if (totalRead == 4 && !hasNonZero)
+                    if (totalRead >= 4
+                        && headerBuffer[0] == 0
+                        && headerBuffer[1] == 0
+                        && headerBuffer[2] == 0
+                        && headerBuffer[3] == 0)
                     {
                         throw new IOException("Null header data indicates peer disconnected.");
                     }
 
-                    // Check for \r\n\r\n delimiter (13, 10, 13, 10)
-                    if (totalRead >= 4
-                        && prev3 == 13
-                        && prev2 == 10
-                        && prev1 == 13
-                        && prev0 == 10)
+                    int delimiterIndex = FindHeaderDelimiter(headerBuffer, searchStart, totalRead);
+                    if (delimiterIndex >= 0)
                     {
-                        break;
+                        if (delimiterIndex > _MaxHeaderSize)
+                        {
+                            throw new IOException("Header size exceeds maximum allowed size of " + _MaxHeaderSize + " bytes.");
+                        }
+
+                        int payloadOffset = delimiterIndex + 4;
+                        int bufferedPayloadBytes = totalRead - payloadOffset;
+                        if (bufferedPayloadBytes > 0)
+                        {
+                            stream.PushBack(headerBuffer, payloadOffset, bufferedPayloadBytes);
+                        }
+
+                        WatsonMessage msg = DeserializeWatsonMessage(headerBuffer, delimiterIndex);
+                        msg.DataStream = stream;
+                        return msg;
                     }
 
-                    // Enforce maximum header size
-                    if (totalRead >= _MaxHeaderSize)
+                    headerLength = totalRead;
+                    if (headerLength >= _MaxHeaderSize)
                     {
                         throw new IOException("Header size exceeds maximum allowed size of " + _MaxHeaderSize + " bytes.");
                     }
+
+                    searchStart = Math.Max(0, headerLength - 3);
                 }
-
-                // Return header bytes without the trailing \r\n\r\n delimiter
-                byte[] allBytes = headerStream.ToArray();
-                int headerLength = allBytes.Length - 4;
-
-                WatsonMessage msg = _SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(allBytes, 0, headerLength));
-                msg.DataStream = stream;
-                return msg;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(readBuffer);
+                ArrayPool<byte>.Shared.Return(headerBuffer);
             }
         }
 
@@ -185,20 +185,77 @@ namespace WatsonTcp
         /// <returns>Header bytes.</returns>
         internal byte[] GetHeaderBytes(WatsonMessage msg)
         {
+            if (_SerializationHelper is DefaultSerializationHelper defaultHelper)
+            {
+                byte[] jsonBytes = defaultHelper.SerializeJsonBytes(msg, false);
+                byte[] result = new byte[jsonBytes.Length + 4];
+                Buffer.BlockCopy(jsonBytes, 0, result, 0, jsonBytes.Length);
+                result[jsonBytes.Length] = 13;
+                result[jsonBytes.Length + 1] = 10;
+                result[jsonBytes.Length + 2] = 13;
+                result[jsonBytes.Length + 3] = 10;
+                return result;
+            }
+
             string jsonStr = _SerializationHelper.SerializeJson(msg, false);
-            byte[] jsonBytes = Encoding.UTF8.GetBytes(jsonStr);
-            byte[] result = new byte[jsonBytes.Length + 4];
-            Buffer.BlockCopy(jsonBytes, 0, result, 0, jsonBytes.Length);
-            result[jsonBytes.Length] = 13;     // \r
-            result[jsonBytes.Length + 1] = 10; // \n
-            result[jsonBytes.Length + 2] = 13; // \r
-            result[jsonBytes.Length + 3] = 10; // \n
-            return result;
+            byte[] encodedJson = Encoding.UTF8.GetBytes(jsonStr);
+            byte[] headerBytes = new byte[encodedJson.Length + 4];
+            Buffer.BlockCopy(encodedJson, 0, headerBytes, 0, encodedJson.Length);
+            headerBytes[encodedJson.Length] = 13;
+            headerBytes[encodedJson.Length + 1] = 10;
+            headerBytes[encodedJson.Length + 2] = 13;
+            headerBytes[encodedJson.Length + 3] = 10;
+            return headerBytes;
         }
 
         #endregion
 
         #region Private-Methods
+
+        private WatsonMessage DeserializeWatsonMessage(byte[] headerBytes, int headerLength)
+        {
+            if (_SerializationHelper is DefaultSerializationHelper defaultHelper)
+            {
+                return defaultHelper.DeserializeJson<WatsonMessage>(new ReadOnlySpan<byte>(headerBytes, 0, headerLength));
+            }
+
+            return _SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(headerBytes, 0, headerLength));
+        }
+
+        private void EnsureHeaderCapacity(ref byte[] buffer, int requiredLength)
+        {
+            if (buffer.Length >= requiredLength) return;
+
+            int newLength = buffer.Length;
+            while (newLength < requiredLength)
+            {
+                newLength *= 2;
+            }
+
+            byte[] resized = ArrayPool<byte>.Shared.Rent(newLength);
+            Buffer.BlockCopy(buffer, 0, resized, 0, buffer.Length);
+            ArrayPool<byte>.Shared.Return(buffer);
+            buffer = resized;
+        }
+
+        private static int FindHeaderDelimiter(byte[] buffer, int start, int count)
+        {
+            if (count < 4) return -1;
+            if (start < 0) start = 0;
+
+            for (int i = start; i <= (count - 4); i++)
+            {
+                if (buffer[i] == 13
+                    && buffer[i + 1] == 10
+                    && buffer[i + 2] == 13
+                    && buffer[i + 3] == 10)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
 
         #endregion
     }

@@ -1,6 +1,7 @@
 namespace TestPerformanceBenchmark
 {
     using System;
+    using System.Buffers;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
@@ -16,7 +17,7 @@ namespace TestPerformanceBenchmark
     {
         private const string Host = "127.0.0.1";
         private const string CertificatePassword = "password";
-        private const int DrainBufferSize = 65536;
+        private const int DrainBufferSize = 1024 * 1024;
         private const int MinBenchmarkPort = 20000;
         private const int MaxBenchmarkPort = 60000;
         private const int MaxPortSelectionAttempts = 32;
@@ -34,7 +35,7 @@ namespace TestPerformanceBenchmark
         {
             new PayloadBenchmarkCase("64B", 64, 250, 2000, new[] { 1, 4 }, 30000, 120000),
             new PayloadBenchmarkCase("64KB", 64 * 1024, 40, 96, new[] { 1, 4 }, 90000, 180000),
-            new PayloadBenchmarkCase("64MB", 64 * 1024 * 1024, 3, 2, new[] { 1, 2 }, 300000, 600000)
+            new PayloadBenchmarkCase("64MB", 64 * 1024 * 1024, 5, 4, new[] { 1, 2 }, 300000, 900000)
         };
 
         private static readonly ConnectionSetupCase[] SetupCases =
@@ -193,7 +194,7 @@ namespace TestPerformanceBenchmark
 
         private static async Task<int> SendLatencyProbeAsync(WatsonTcpClient client, byte[] payload, PayloadBenchmarkCase payloadCase)
         {
-            using (MemoryStream stream = new MemoryStream(payload, false))
+            using (MemoryStream stream = new MemoryStream(payload, 0, payload.Length, false, true))
             {
                 SyncResponse response = await client
                     .SendAndWaitAsync(payloadCase.ResponseTimeoutMs, payload.LongLength, stream)
@@ -374,7 +375,7 @@ namespace TestPerformanceBenchmark
         {
             for (int i = 0; i < messageCount; i++)
             {
-                using (MemoryStream stream = new MemoryStream(payload, false))
+                using (MemoryStream stream = new MemoryStream(payload, 0, payload.Length, false, true))
                 {
                     bool success = await client.SendAsync(payload.LongLength, stream).ConfigureAwait(false);
                     if (!success)
@@ -387,17 +388,25 @@ namespace TestPerformanceBenchmark
 
         private static async Task<long> DrainStreamAsync(Stream stream, CancellationToken token)
         {
-            byte[] buffer = new byte[DrainBufferSize];
-            long total = 0;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(DrainBufferSize);
 
-            while (true)
+            try
             {
-                int read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
-                if (read <= 0) break;
-                total += read;
-            }
+                long total = 0;
 
-            return total;
+                while (true)
+                {
+                    int read = await stream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
+                    if (read <= 0) break;
+                    total += read;
+                }
+
+                return total;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         private static async Task<List<ConnectionSetupBenchmarkResult>> RunConnectionSetupSuiteAsync()

@@ -2,6 +2,35 @@
 
 ## Current Version
 
+v6.3.1
+
+### Performance
+
+- Reworked framed message parsing to use buffered header reads with pushback support instead of allocation-heavy incremental header assembly
+- Reduced copies and transient allocations in send and receive paths for array-backed payloads, stream buffering, and direct byte reads
+- Coalesced header and payload writes more aggressively for array-backed sends, including large-transfer first-chunk coalescing
+- Removed proactive socket liveness polling from the hot receive path and now rely on normal read and write failures for disconnect detection
+- Reduced contention and repeated copying in internal client tracking, serialization, and stream receive handling
+
+### Connection And Lifecycle
+
+- Moved the client connect pipeline to an internal async implementation while preserving the existing public API shape
+- Preserved real-time disconnect detection for active sockets without keeping the old pre-read socket polling overhead
+- Retained SSL initialization compatibility fixes for buffered receive handling
+
+### Benchmarking And Validation
+
+- Added `src/Test.PerformanceBenchmark`, a non-interactive console benchmark suite for response time, throughput, and connection setup time
+- Added randomized benchmark port selection and end-of-run summary tables for easier comparison of benchmark runs
+- Expanded shared automated coverage with SSL synchronous request-response regression coverage exercised through the Touchstone runners
+
+### Compatibility Notes
+
+- This is a patch release focused on internal performance and benchmarking improvements
+- Public APIs remain compatible; behavior-sensitive liveness probing changes were limited to internal hot-path detection strategy
+
+## Previous Version
+
 v6.3.0
 
 ### Async Stream Receive
@@ -32,7 +61,7 @@ v6.3.0
 - This is a minor release because the new async stream path is opt-in
 - Legacy `Events.StreamReceived` remains supported
 
-## Previous Version
+## Earlier Version
 
 v6.2.0
 
@@ -61,7 +90,7 @@ v6.2.0
 - Migrated automated coverage into `Test.Shared` using Touchstone descriptors
 - Rewrote `Test.Automated` as a Touchstone CLI host
 - Rewrote `Test.XUnit` as a thin Touchstone xUnit host
-- Added `Test.Nunit` as a thin Touchstone NUnit host
+- Added `Test.NUnit` as a thin Touchstone NUnit host
 - Added shared authorization and API-key handshake success/failure coverage exercised through all three hosts
 
 ### Compatibility Notes

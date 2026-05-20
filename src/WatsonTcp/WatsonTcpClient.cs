@@ -160,6 +160,7 @@
 
         private TcpClient _Client = null;
         private Stream _DataStream = null;
+        private BufferedReadStream _ReceiveStream = null;
         private NetworkStream _TcpStream = null;
         private SslStream _SslStream = null;
 
@@ -321,174 +322,7 @@
         /// </summary>
         public void Connect()
         {
-            if (Connected || _TransportConnected) throw new InvalidOperationException("Already connected to the server.");
-
-            if (_Settings.LocalPort == 0)
-            {
-                _Client = new TcpClient();
-            }
-            else
-            {
-                IPEndPoint ipe = new IPEndPoint(IPAddress.Any, _Settings.LocalPort);
-                _Client = new TcpClient(ipe);
-            }
-
-            _Client.NoDelay = _Settings.NoDelay;
-            _Statistics = new WatsonTcpStatistics();
-
-            IAsyncResult asyncResult = null;
-            WaitHandle waitHandle = null;
-            bool connectSuccess = false;
-
-            ValidateReceiveHandlerConfiguration();
-
-            if (_Mode == Mode.Tcp)
-            {
-                #region TCP
-
-                _Settings.Logger?.Invoke(Severity.Info, _Header + "connecting to " + _ServerIp + ":" + _ServerPort);
-
-                _Client.LingerState = new LingerOption(true, 0);
-                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
-                waitHandle = asyncResult.AsyncWaitHandle;
-
-                try
-                {
-                    connectSuccess = waitHandle.WaitOne(TimeSpan.FromSeconds(_Settings.ConnectTimeoutSeconds), false);
-                    if (!connectSuccess)
-                    {
-                        _Client.Close();
-                        _Settings.Logger?.Invoke(Severity.Error, _Header + "timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                    }
-
-                    _Client.EndConnect(asyncResult);
-
-                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
-                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
-                    _TcpStream = _Client.GetStream();
-                    _DataStream = _TcpStream;
-                    _SslStream = null;
-
-                    if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
-                }
-                catch (Exception e)
-                {
-                    _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + e.Message);
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                    throw;
-                }
-                finally
-                {
-                    waitHandle.Close();
-                }
-
-                #endregion TCP
-            }
-            else if (_Mode == Mode.Ssl)
-            {
-                #region SSL
-
-                _Settings.Logger?.Invoke(Severity.Info, _Header + "connecting with SSL to " + _ServerIp + ":" + _ServerPort);
-
-                _Client.LingerState = new LingerOption(true, 0);
-                asyncResult = _Client.BeginConnect(_ServerIp, _ServerPort, null, null);
-                waitHandle = asyncResult.AsyncWaitHandle;
-
-                try
-                {
-                    connectSuccess = waitHandle.WaitOne(TimeSpan.FromSeconds(_Settings.ConnectTimeoutSeconds), false);
-                    if (!connectSuccess)
-                    {
-                        _Client.Close();
-                        _Settings.Logger?.Invoke(Severity.Error, _Header + "timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                        throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
-                    }
-
-                    _Client.EndConnect(asyncResult);
-
-                    _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
-                    _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
-
-                    if (_Settings.AcceptInvalidCertificates)
-                        _SslStream = new SslStream(_Client.GetStream(), false, _SslConfiguration.ServerCertificateValidationCallback, _SslConfiguration.ClientCertificateSelectionCallback);
-                    else
-                        _SslStream = new SslStream(_Client.GetStream(), false);
-
-                    _SslStream.AuthenticateAsClient(_ServerIp, _SslCertificateCollection, _TlsVersion.ToSslProtocols(), !_Settings.AcceptInvalidCertificates);
-
-                    if (!_SslStream.IsEncrypted)
-                    {
-                        _Settings.Logger?.Invoke(Severity.Error, _Header + "stream to " + _ServerIp + ":" + _ServerPort + " is not encrypted");
-                        throw new AuthenticationException("Stream is not encrypted");
-                    }
-
-                    if (!_SslStream.IsAuthenticated)
-                    {
-                        _Settings.Logger?.Invoke(Severity.Error, _Header + "stream to " + _ServerIp + ":" + _ServerPort + " is not authenticated");
-                        throw new AuthenticationException("Stream is not authenticated");
-                    }
-
-                    if (_Settings.MutuallyAuthenticate && !_SslStream.IsMutuallyAuthenticated)
-                    {
-                        _Settings.Logger?.Invoke(Severity.Error, _Header + "mutual authentication with " + _ServerIp + ":" + _ServerPort + " failed");
-                        throw new AuthenticationException("Mutual authentication failed");
-                    }
-
-                    _DataStream = _SslStream;
-
-                    if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
-                }
-                catch (Exception e)
-                {
-                    _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + e.Message);
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
-                    throw;
-                }
-                finally
-                {
-                    waitHandle.Close();
-                }
-
-                #endregion SSL
-            }
-            else
-            {
-                throw new ArgumentException("Unknown mode: " + _Mode.ToString());
-            }
-
-            _TransportConnected = true;
-            ResetInitializationState();
-
-            _TokenSource = new CancellationTokenSource();
-            _Token = _TokenSource.Token;
-            _MessageBuilder.MaxHeaderSize = _Settings.MaxHeaderSize;
-
-            _LastActivity = DateTime.UtcNow;
-            _IsTimeout = false;
-
-            _DataReceiver = Task.Run(() => DataReceiver(_Token), _Token);
-            _IdleServerMonitor = Task.Run(() => IdleServerMonitor(_Token), _Token);
-
-            WatsonMessage msg = new WatsonMessage();
-            msg.Status = MessageStatus.RegisterClient;
-
-            if (!SendInternalAsync(msg, 0, null, default(CancellationToken), true).Result)
-            {
-                Exception initException = null;
-                if (_InitializationFailure.Task.IsCompleted && !_InitializationFailure.Task.IsCanceled && !_InitializationFailure.Task.IsFaulted)
-                {
-                    initException = _InitializationFailure.Task.Result;
-                }
-
-                CloseTransport(false);
-                if (initException != null) throw initException;
-
-                _Settings.Logger?.Invoke(Severity.Alert, _Header + "unable to register GUID " + _Settings.Guid + " with the server");
-                throw new ArgumentException("Server rejected GUID " + _Settings.Guid);
-            }
-
-            CompleteConnectionInitialization();
+            ConnectCoreAsync().GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -505,7 +339,7 @@
             {
                 WatsonMessage msg = new WatsonMessage();
                 msg.Status = MessageStatus.Shutdown;
-                SendInternalAsync(msg, 0, null, default(CancellationToken), true).Wait();
+                SendInternalAsync(msg, 0, null, default(CancellationToken), true).GetAwaiter().GetResult();
             }
 
             CloseTransport(true);
@@ -673,6 +507,7 @@
 
                 _Client = null;
                 _DataStream = null;
+                _ReceiveStream = null;
                 _TcpStream = null;
                 _SslStream = null;
 
@@ -699,37 +534,189 @@
             _ClientHandshakeTask = null;
         }
 
-        private void CompleteConnectionInitialization()
+        private async Task ConnectCoreAsync()
+        {
+            if (Connected || _TransportConnected) throw new InvalidOperationException("Already connected to the server.");
+
+            if (_Settings.LocalPort == 0)
+            {
+                _Client = new TcpClient();
+            }
+            else
+            {
+                IPEndPoint ipe = new IPEndPoint(IPAddress.Any, _Settings.LocalPort);
+                _Client = new TcpClient(ipe);
+            }
+
+            _Client.NoDelay = _Settings.NoDelay;
+            _Statistics = new WatsonTcpStatistics();
+
+            ValidateReceiveHandlerConfiguration();
+
+            try
+            {
+                if (_Mode == Mode.Tcp)
+                {
+                    await ConnectTcpTransportAsync().ConfigureAwait(false);
+                }
+                else if (_Mode == Mode.Ssl)
+                {
+                    await ConnectSslTransportAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new ArgumentException("Unknown mode: " + _Mode.ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + e.Message);
+                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                throw;
+            }
+
+            _TransportConnected = true;
+            ResetInitializationState();
+
+            _TokenSource = new CancellationTokenSource();
+            _Token = _TokenSource.Token;
+            _MessageBuilder.MaxHeaderSize = _Settings.MaxHeaderSize;
+            _MessageBuilder.ReadStreamBuffer = _Settings.StreamBufferSize;
+
+            _LastActivity = DateTime.UtcNow;
+            _IsTimeout = false;
+
+            _DataReceiver = DataReceiver(_Token);
+            _IdleServerMonitor = IdleServerMonitor(_Token);
+
+            WatsonMessage msg = new WatsonMessage();
+            msg.Status = MessageStatus.RegisterClient;
+
+            if (!await SendInternalAsync(msg, 0, null, default(CancellationToken), true).ConfigureAwait(false))
+            {
+                Exception initException = null;
+                if (_InitializationFailure.Task.IsCompleted
+                    && !_InitializationFailure.Task.IsCanceled
+                    && !_InitializationFailure.Task.IsFaulted)
+                {
+                    initException = await _InitializationFailure.Task.ConfigureAwait(false);
+                }
+
+                CloseTransport(false);
+                if (initException != null) throw initException;
+
+                _Settings.Logger?.Invoke(Severity.Alert, _Header + "unable to register GUID " + _Settings.Guid + " with the server");
+                throw new ArgumentException("Server rejected GUID " + _Settings.Guid);
+            }
+
+            await CompleteConnectionInitializationAsync().ConfigureAwait(false);
+        }
+
+        private async Task ConnectTcpTransportAsync()
+        {
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "connecting to " + _ServerIp + ":" + _ServerPort);
+
+            _Client.LingerState = new LingerOption(true, 0);
+            await ConnectSocketAsync().ConfigureAwait(false);
+
+            _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
+            _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
+            _TcpStream = _Client.GetStream();
+            _DataStream = _TcpStream;
+            _ReceiveStream = new BufferedReadStream(_DataStream, _Settings.StreamBufferSize);
+            _SslStream = null;
+
+            if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
+        }
+
+        private async Task ConnectSslTransportAsync()
+        {
+            _Settings.Logger?.Invoke(Severity.Info, _Header + "connecting with SSL to " + _ServerIp + ":" + _ServerPort);
+
+            _Client.LingerState = new LingerOption(true, 0);
+            await ConnectSocketAsync().ConfigureAwait(false);
+
+            _SourceIp = ((IPEndPoint)_Client.Client.LocalEndPoint).Address.ToString();
+            _SourcePort = ((IPEndPoint)_Client.Client.LocalEndPoint).Port;
+
+            if (_Settings.AcceptInvalidCertificates)
+                _SslStream = new SslStream(_Client.GetStream(), false, _SslConfiguration.ServerCertificateValidationCallback, _SslConfiguration.ClientCertificateSelectionCallback);
+            else
+                _SslStream = new SslStream(_Client.GetStream(), false);
+
+            await _SslStream.AuthenticateAsClientAsync(_ServerIp, _SslCertificateCollection, _TlsVersion.ToSslProtocols(), !_Settings.AcceptInvalidCertificates).ConfigureAwait(false);
+
+            if (!_SslStream.IsEncrypted)
+            {
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "stream to " + _ServerIp + ":" + _ServerPort + " is not encrypted");
+                throw new AuthenticationException("Stream is not encrypted");
+            }
+
+            if (!_SslStream.IsAuthenticated)
+            {
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "stream to " + _ServerIp + ":" + _ServerPort + " is not authenticated");
+                throw new AuthenticationException("Stream is not authenticated");
+            }
+
+            if (_Settings.MutuallyAuthenticate && !_SslStream.IsMutuallyAuthenticated)
+            {
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "mutual authentication with " + _ServerIp + ":" + _ServerPort + " failed");
+                throw new AuthenticationException("Mutual authentication failed");
+            }
+
+            _DataStream = _SslStream;
+            _ReceiveStream = new BufferedReadStream(_DataStream, _Settings.StreamBufferSize);
+
+            if (_Keepalive.EnableTcpKeepAlives) EnableKeepalives();
+        }
+
+        private async Task ConnectSocketAsync()
+        {
+            Task connectTask = _Client.ConnectAsync(_ServerIp, _ServerPort);
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(_Settings.ConnectTimeoutSeconds));
+            Task completedTask = await Task.WhenAny(connectTask, timeoutTask).ConfigureAwait(false);
+
+            if (!ReferenceEquals(completedTask, connectTask))
+            {
+                _Client.Close();
+                _Settings.Logger?.Invoke(Severity.Error, _Header + "timeout connecting to " + _ServerIp + ":" + _ServerPort);
+                throw new TimeoutException("Timeout connecting to " + _ServerIp + ":" + _ServerPort);
+            }
+
+            await connectTask.ConfigureAwait(false);
+        }
+
+        private async Task CompleteConnectionInitializationAsync()
         {
             Task negotiationWindow = Task.Delay(50);
-            int winner = Task.WaitAny(
+            Task winner = await Task.WhenAny(
                 _InitializationFailure.Task,
                 _InitializationReady.Task,
                 _InitializationStarted.Task,
-                negotiationWindow);
+                negotiationWindow).ConfigureAwait(false);
 
-            if (winner == 0)
+            if (ReferenceEquals(winner, _InitializationFailure.Task))
             {
                 CloseTransport(false);
-                throw _InitializationFailure.Task.Result;
+                throw await _InitializationFailure.Task.ConfigureAwait(false);
             }
 
-            if (winner == 1)
+            if (ReferenceEquals(winner, _InitializationReady.Task))
             {
                 MarkConnected();
                 return;
             }
 
-            if (winner == 2)
+            if (ReferenceEquals(winner, _InitializationStarted.Task))
             {
-                int result = Task.WaitAny(_InitializationFailure.Task, _InitializationReady.Task, Task.Delay(_Settings.HandshakeTimeoutMs));
-                if (result == 0)
+                Task result = await Task.WhenAny(_InitializationFailure.Task, _InitializationReady.Task, Task.Delay(_Settings.HandshakeTimeoutMs)).ConfigureAwait(false);
+                if (ReferenceEquals(result, _InitializationFailure.Task))
                 {
                     CloseTransport(false);
-                    throw _InitializationFailure.Task.Result;
+                    throw await _InitializationFailure.Task.ConfigureAwait(false);
                 }
 
-                if (result == 1)
+                if (ReferenceEquals(result, _InitializationReady.Task))
                 {
                     MarkConnected();
                     return;
@@ -848,7 +835,7 @@
         {
             if (handshakeMessage == null) throw new ArgumentNullException(nameof(handshakeMessage));
 
-            byte[] data = Encoding.UTF8.GetBytes(SerializationHelper.SerializeJson(handshakeMessage, false));
+            byte[] data = WatsonCommon.SerializeJsonBytes(SerializationHelper, handshakeMessage, false);
             WatsonCommon.BytesToStream(data, 0, out int contentLength, out Stream stream);
             WatsonMessage msg = _MessageBuilder.ConstructNew(contentLength, stream, false, false, null, null);
             msg.Status = MessageStatus.HandshakeData;
@@ -880,7 +867,7 @@
                 async (reason, status, innerToken) => await SendStatusMessageAsync(status, reason, innerToken).ConfigureAwait(false),
                 token);
             _ClientHandshakeSession = new ClientHandshakeSession(_ClientHandshakeTransport);
-            _ClientHandshakeTask = Task.Run(() => RunClientHandshakeAsync(token), token);
+            _ClientHandshakeTask = RunClientHandshakeAsync(token);
         }
 
         private async Task RunClientHandshakeAsync(CancellationToken token)
@@ -1065,29 +1052,20 @@
 
             while (true)
             {
+                bool readLockHeld = false;
+
                 try
                 {
                     token.ThrowIfCancellationRequested();
 
                     #region Check-for-Connection
-
-                    if (_Client == null || !_Client.Connected)
-                    {
-                        _Settings?.Logger?.Invoke(Severity.Debug, _Header + "disconnect detected");
-                        break;
-                    }
-
                     #endregion
 
                     #region Read-Message
 
-                    await _ReadLock.WaitAsync(token);
-                    WatsonMessage msg = await _MessageBuilder.BuildFromStream(_DataStream, token);
-                    if (msg == null)
-                    {
-                        await Task.Delay(30, token).ConfigureAwait(false);
-                        continue;
-                    }
+                    await _ReadLock.WaitAsync(token).ConfigureAwait(false);
+                    readLockHeld = true;
+                    WatsonMessage msg = await _MessageBuilder.BuildFromStream(_ReceiveStream, token).ConfigureAwait(false);
 
                     _LastActivity = DateTime.UtcNow;
 
@@ -1375,7 +1353,7 @@
                 }
                 finally
                 {
-                    if (_ReadLock != null) _ReadLock.Release();
+                    if (_ReadLock != null && readLockHeld) _ReadLock.Release();
                 }
             }
 
@@ -1429,16 +1407,22 @@
                 throw new ArgumentException("Cannot read from supplied stream.");
             }
 
+            CancellationTokenSource linkedCts = null;
             if (token == default(CancellationToken))
             {
-                CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _Token);
+                token = _Token;
+            }
+            else if (_Token.CanBeCanceled)
+            {
+                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _Token);
                 token = linkedCts.Token;
             }
 
             bool disconnectDetected = false;
 
-            if (_Client == null || !_Client.Connected)
+            if (_Client == null || _DataStream == null)
             {
+                linkedCts?.Dispose();
                 return false;
             }
 
@@ -1446,8 +1430,7 @@
 
             try
             {
-                await SendHeadersAsync(msg, token).ConfigureAwait(false);
-                await SendDataStreamAsync(contentLength, stream, token).ConfigureAwait(false);
+                await SendMessageAsync(msg, contentLength, stream, token).ConfigureAwait(false);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
@@ -1477,6 +1460,7 @@
             finally
             {
                 _WriteLock.Release();
+                linkedCts?.Dispose();
 
                 if (disconnectDetected)
                 {
@@ -1497,7 +1481,7 @@
 
             bool disconnectDetected = false;
 
-            if (_Client == null || !_Client.Connected)
+            if (_Client == null || _DataStream == null)
             {
                 disconnectDetected = true;
                 throw new InvalidOperationException("Client is not connected to the server.");
@@ -1511,8 +1495,7 @@
 
             try
             {
-                await SendHeadersAsync(msg, token).ConfigureAwait(false);
-                await SendDataStreamAsync(contentLength, stream, token).ConfigureAwait(false);
+                await SendMessageAsync(msg, contentLength, stream, token).ConfigureAwait(false);
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous request sent: " + msg.ConversationGuid);
 
                 _Statistics.IncrementSentMessages();
@@ -1573,42 +1556,11 @@
             }
         }
 
-        private async Task SendHeadersAsync(WatsonMessage msg, CancellationToken token)
+        private async Task SendMessageAsync(WatsonMessage msg, long contentLength, Stream stream, CancellationToken token)
         {
             msg.SenderGuid = _Settings.Guid;
             byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
-            await _DataStream.WriteAsync(headerBytes, 0, headerBytes.Length, token).ConfigureAwait(false);
-            await _DataStream.FlushAsync(token).ConfigureAwait(false);
-        }
-
-        private async Task SendDataStreamAsync(long contentLength, Stream stream, CancellationToken token)
-        {
-            if (contentLength <= 0) return;
-
-            long bytesRemaining = contentLength;
-            int bytesRead = 0;
-            int bufferSize = _Settings.StreamBufferSize;
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
-
-            try
-            {
-                while (bytesRemaining > 0)
-                {
-                    int toRead = (int)Math.Min(bufferSize, bytesRemaining);
-                    bytesRead = await stream.ReadAsync(buffer, 0, toRead, token).ConfigureAwait(false);
-                    if (bytesRead > 0)
-                    {
-                        await _DataStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
-                        bytesRemaining -= bytesRead;
-                    }
-                }
-
-                await _DataStream.FlushAsync(token).ConfigureAwait(false);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
+            await WatsonCommon.WriteMessageAsync(_DataStream, headerBytes, contentLength, stream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
         }
 
         #endregion

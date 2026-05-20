@@ -53,7 +53,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.XUnit", "Test.XUnit\Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Shared", "Test.Shared\Test.Shared.csproj", "{052879DB-A6AB-4E3E-AA2C-B14C20571F37}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Nunit", "Test.Nunit\Test.Nunit.csproj", "{95842639-6816-4F39-8013-E53A65EC7F1F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.NUnit", "Test.NUnit\Test.NUnit.csproj", "{95842639-6816-4F39-8013-E53A65EC7F1F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.PerformanceBenchmark", "Test.PerformanceBenchmark\Test.PerformanceBenchmark.csproj", "{20CE1DB0-C8CB-4E38-9514-65BA9A0E1564}"
 EndProject

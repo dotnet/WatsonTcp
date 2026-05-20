@@ -1,0 +1,87 @@
+WatsonTcp Performance Improvements Summary
+==========================================
+
+Comparison inputs
+- Original baseline before performance work: `benchmarks/Benchmark-20260519-135305.txt`
+- Final after-state on current code: `benchmarks/Benchmark-20260519-165356.txt`
+
+What is included in the final after-state
+- PERF-01, PERF-02, PERF-03, revised PERF-04, PERF-05 phase 1, PERF-06, PERF-07a, PERF-08
+- `Test.PerformanceBenchmark` now uses:
+  - `5` latency iterations for `64MB`
+  - `4` throughput messages per client for `64MB`
+  - exposable `MemoryStream` payload wrappers so the direct-buffer path is actually exercised
+  - a `1MiB` drain buffer in the throughput harness
+- Final low-risk library optimization from this pass:
+  - for array-backed large payloads, coalesce the header with the first payload chunk before continuing the direct segment write path
+- Additional chunk-size tuning experiments were tested and intentionally not kept because they produced unstable or worse results.
+
+Validation
+- `dotnet build src\WatsonTcp.sln -c Debug -p:GenerateDocumentationFile=false`
+- `dotnet run --project src\Test.Automated\Test.Automated.csproj -c Debug -f net8.0`
+- `dotnet run --project src\Test.Automated\Test.Automated.csproj -c Debug -f net10.0`
+- Result: `108/108` passing on both targets
+
+Overall before vs after
+-----------------------
+
+Response time
+- TCP `64B avg`: `0.625ms -> 0.117ms`
+- TCP `64KB avg`: `0.640ms -> 0.110ms`
+- TCP `64MB avg`: `110.665ms -> 46.666ms`
+- SSL `64B avg`: `0.520ms -> 0.078ms`
+- SSL `64KB avg`: `0.729ms -> 0.158ms`
+- SSL `64MB avg`: `86.793ms -> 65.119ms`
+
+Interpretation
+- Response latency is materially better across all tested sizes.
+- The large-payload latency improvement remains strong even with more `64MB` samples than the original run.
+
+Throughput
+- TCP `64B x1`: `0.10 -> 6.13 MiB/s`
+- TCP `64B x4`: `0.30 -> 5.59 MiB/s`
+- TCP `64KB x1`: `111.28 -> 1616.03 MiB/s`
+- TCP `64KB x4`: `283.40 -> 1190.88 MiB/s`
+- TCP `64MB x1`: `2566.31 -> 2869.70 MiB/s`
+- TCP `64MB x2`: `4954.30 -> 4401.59 MiB/s`
+
+- SSL `64B x1`: `0.12 -> 5.65 MiB/s`
+- SSL `64B x4`: `0.31 -> 4.01 MiB/s`
+- SSL `64KB x1`: `115.98 -> 794.03 MiB/s`
+- SSL `64KB x4`: `274.96 -> 918.99 MiB/s`
+- SSL `64MB x1`: `953.58 -> 1046.35 MiB/s`
+- SSL `64MB x2`: `1710.87 -> 1436.05 MiB/s`
+
+Interpretation
+- Small and medium message throughput is dramatically better than the original baseline.
+- Large TCP single-client throughput is now above the original baseline.
+- Large TCP two-client throughput is still below the original baseline, but much closer than the earlier post-improvement runs.
+- Large SSL single-client throughput is now above the original baseline in the final run.
+- Large SSL two-client throughput is still below the original baseline.
+
+Connection setup
+- TCP sequential avg: `62.636ms -> 62.625ms`
+- TCP burst `x4` avg: `65.170ms -> 77.347ms`
+- SSL sequential avg: `113.922ms -> 94.300ms`
+- SSL burst `x4` avg: `111.987ms -> 111.186ms`
+
+Interpretation
+- Sequential connection setup is flat for TCP and better for SSL.
+- SSL burst setup is essentially flat to slightly better.
+- TCP burst setup was noisier in later runs even when the code change under test was in the send path, so treat that single number cautiously.
+
+Important caveat
+----------------
+- The final after-state benchmark is not a pure apples-to-apples rerun of the original harness:
+  - the `64MB` cases use more samples
+  - the throughput harness now exercises the direct-buffer path correctly
+- That means the final benchmark is a better measurement of the optimized code, but some of the exact “before vs after” deltas include benchmark-quality improvements as well as library improvements.
+
+Bottom line
+-----------
+- The codebase is materially faster overall than the original baseline.
+- The biggest consistent wins are response latency and small/medium throughput.
+- Large-message throughput is no longer broadly regressed:
+  - TCP `64MB x1` is better than original
+  - SSL `64MB x1` is better than original in the final run
+- The remaining gap is sustained multi-client very large transfers, especially SSL `64MB x2`.
