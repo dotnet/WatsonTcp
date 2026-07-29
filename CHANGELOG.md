@@ -2,6 +2,15 @@
 
 ## Current Version
 
+v6.3.2
+
+### Listener Reliability
+
+- Continued accepting new clients after transient accept-time `SocketError.ConnectionReset` or `SocketError.ConnectionAborted` exceptions
+- Added regression coverage for accept-loop recovery after a reset before a client is fully established
+
+## Previous Version
+
 v6.3.1
 
 ### Performance
@@ -29,7 +38,7 @@ v6.3.1
 - This is a patch release focused on internal performance and benchmarking improvements
 - Public APIs remain compatible; behavior-sensitive liveness probing changes were limited to internal hot-path detection strategy
 
-## Previous Version
+## Earlier Version
 
 v6.3.0
 

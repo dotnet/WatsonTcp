@@ -125,6 +125,39 @@ namespace Test.Shared
             return messages.Any(msg => msg != null && msg.IndexOf(fragment, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
+        private sealed class TransientAcceptFailureServer : WatsonTcpServer
+        {
+            private readonly SocketException _exception;
+            private int _remainingFailures;
+            private int _injectedFailures;
+
+            internal TransientAcceptFailureServer(string listenerIp, int listenerPort, SocketException exception, int failureCount = 1)
+                : base(listenerIp, listenerPort)
+            {
+                _exception = exception ?? throw new ArgumentNullException(nameof(exception));
+                _remainingFailures = failureCount;
+            }
+
+            internal int InjectedFailures
+            {
+                get
+                {
+                    return _injectedFailures;
+                }
+            }
+
+            protected override async Task<TcpClient> AcceptTcpClientAsync(CancellationToken token)
+            {
+                if (Interlocked.Decrement(ref _remainingFailures) >= 0)
+                {
+                    Interlocked.Increment(ref _injectedFailures);
+                    throw _exception;
+                }
+
+                return await base.AcceptTcpClientAsync(token).ConfigureAwait(false);
+            }
+        }
+
         private static async Task WaitForConditionAsync(Func<bool> condition, int timeoutMs = DefaultConditionTimeoutMs, string failureMessage = null)
         {
             if (condition == null) throw new ArgumentNullException(nameof(condition));
@@ -212,6 +245,47 @@ namespace Test.Shared
             try
             {
                 TestAssert.True(client.Connected);
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+            }
+        }
+        public static async Task ServerContinuesAcceptingAfterConnectionResetDuringAccept()
+        {
+            int port = GetNextPort();
+            List<string> logs = CreateLogCapture(out Action<Severity, string> logger);
+            var server = new TransientAcceptFailureServer(_hostname, port, new SocketException((int)SocketError.ConnectionReset));
+            server.Settings.Logger = logger;
+            SetupDefaultServerHandlers(server);
+
+            int exceptionCount = 0;
+            server.Events.ExceptionEncountered += (s, e) =>
+            {
+                if (e.Exception is SocketException socketException
+                    && socketException.SocketErrorCode == SocketError.ConnectionReset)
+                {
+                    Interlocked.Increment(ref exceptionCount);
+                }
+            };
+
+            WatsonTcpClient client = null;
+
+            try
+            {
+                server.Start();
+                await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+                client = new WatsonTcpClient(_hostname, port);
+                SetupDefaultClientHandlers(client);
+                client.Connect();
+                await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+                TestAssert.True(client.Connected);
+                TestAssert.Equal(1, server.InjectedFailures, "Expected the accept loop test server to inject one transient failure.");
+                TestAssert.Equal(1, exceptionCount, "Expected the transient accept exception to be reported once.");
+                TestAssert.True(LogContains(logs, "transient listener exception while accepting connection"), "Expected a warning log for the transient accept failure.");
             }
             finally
             {

@@ -28,6 +28,18 @@ Special thanks to the following people for their support and contributions to th
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
+## New in v6.3.2
+
+### Listener Reliability
+
+WatsonTcp now keeps the server listener running when the underlying TCP accept call hits a transient connection reset or abort before a client is fully established.
+
+Key improvements include:
+
+- recover from accept-time `SocketError.ConnectionReset` and `SocketError.ConnectionAborted` without stopping the accept loop
+- preserve exception reporting through `ExceptionEncountered` and add warning-level listener logging
+- add regression coverage for accept-loop recovery after a reset
+
 ## New in v6.3.1
 
 ### Performance

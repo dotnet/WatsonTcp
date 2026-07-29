@@ -721,6 +721,21 @@
             }
         }
 
+        /// <summary>
+        /// Accept a TCP client from the listener.
+        /// </summary>
+        /// <param name="token">Cancellation token used to stop accepting clients.</param>
+        /// <returns>The accepted TCP client.</returns>
+        protected virtual async Task<TcpClient> AcceptTcpClientAsync(CancellationToken token)
+        {
+#if NET6_0_OR_GREATER
+            return await _Listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
+#else
+            _ = token;
+            return await _Listener.AcceptTcpClientAsync().ConfigureAwait(false);
+#endif
+        }
+
         private async Task AcceptConnections(CancellationToken token)
         {
             _IsListening = true;
@@ -748,11 +763,18 @@
 
                     #region Accept-and-Validate
 
-#if NET6_0_OR_GREATER
-                    TcpClient tcpClient = await _Listener.AcceptTcpClientAsync(token).ConfigureAwait(false);
-#else
-                    TcpClient tcpClient = await _Listener.AcceptTcpClientAsync().ConfigureAwait(false);
-#endif
+                    TcpClient tcpClient;
+                    try
+                    {
+                        tcpClient = await AcceptTcpClientAsync(token).ConfigureAwait(false);
+                    }
+                    catch (SocketException e) when (_IsListening && !token.IsCancellationRequested && IsTransientAcceptSocketException(e))
+                    {
+                        _Settings.Logger?.Invoke(Severity.Warn, _Header + "transient listener exception while accepting connection, continuing: " + e.SocketErrorCode + " (" + e.Message + ")");
+                        _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                        continue;
+                    }
+
                     tcpClient.LingerState.Enabled = false;
                     tcpClient.NoDelay = _Settings.NoDelay;
 
@@ -847,6 +869,13 @@
                     break;
                 }
             }
+        }
+
+        private static bool IsTransientAcceptSocketException(SocketException e)
+        {
+            return e != null
+                && (e.SocketErrorCode == SocketError.ConnectionReset
+                    || e.SocketErrorCode == SocketError.ConnectionAborted);
         }
 
         private async Task InitializeAcceptedSslClientAsync(ClientMetadata client, CancellationToken token)

@@ -1635,6 +1635,13 @@
             </summary>
             <param name="disposing">Indicate if resources should be disposed.</param>
         </member>
+        <member name="M:WatsonTcp.WatsonTcpServer.AcceptTcpClientAsync(System.Threading.CancellationToken)">
+            <summary>
+            Accept a TCP client from the listener.
+            </summary>
+            <param name="token">Cancellation token used to stop accepting clients.</param>
+            <returns>The accepted TCP client.</returns>
+        </member>
         <member name="T:WatsonTcp.WatsonTcpServerCallbacks">
             <summary>
             Watson TCP server callbacks.
