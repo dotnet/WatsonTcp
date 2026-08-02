@@ -2,6 +2,21 @@
 
 ## Current Version
 
+v6.4.0
+
+### Telemetry and Observability
+
+- Added vendor-neutral telemetry emitted through `System.Diagnostics.Metrics` (a `Meter` named `WatsonTcp`) and `System.Diagnostics.ActivitySource` (an `ActivitySource` named `WatsonTcp`), consumable by Radiant, the OpenTelemetry SDK, Prometheus, and others with no dependency on any telemetry backend
+- Added the public `WatsonTcpMetrics` class exposing stable source names, metric names, units, and tag keys as the consumer contract
+- Added 24 metrics spanning messages, bytes, connection lifecycle, disconnections by reason, handshakes, authentication, authorization, synchronous request/response, exceptions, transient listener errors, and uptime
+- Added six tracing spans (`watsontcp.connect`, `watsontcp.session`, `watsontcp.handshake`, `watsontcp.send`, `watsontcp.receive`, `watsontcp.sync`) that carry high-cardinality identifiers kept off metric tags
+- Added `Settings.EnableMetrics` and `Settings.EnableTracing` (both default `true`) to `WatsonTcpClientSettings` and `WatsonTcpServerSettings`
+- Added the `System.Diagnostics.DiagnosticSource` package reference for the down-level target frameworks only; it is in-box on net8.0 and net10.0
+- Added an exhaustive positive/negative telemetry test suite exercised through the Touchstone runners
+- Public API changes are additive; this is a minor release with no breaking changes
+
+## Previous Version
+
 v6.3.2
 
 ### Listener Reliability

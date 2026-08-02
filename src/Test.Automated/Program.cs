@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Test.Shared;
+using Touchstone.Core;
 using Touchstone.Cli;
 
 namespace Test.Automated
@@ -11,6 +13,7 @@ namespace Test.Automated
         private static async Task<int> Main(string[] args)
         {
             string resultsPath = null;
+            string suiteId = null;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -25,9 +28,16 @@ namespace Test.Automated
 
                     i++;
                 }
+                else if (String.Equals(args[i], "--suite", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    suiteId = args[i + 1];
+                    i++;
+                }
             }
 
-            return await ConsoleRunner.RunAsync(WatsonTcpSuites.All, resultsPath: resultsPath).ConfigureAwait(false);
+            IReadOnlyList<TestSuiteDescriptor> suites = WatsonTcpSuites.WithId(suiteId);
+
+            return await ConsoleRunner.RunAsync(suites, resultsPath: resultsPath).ConfigureAwait(false);
         }
     }
 }

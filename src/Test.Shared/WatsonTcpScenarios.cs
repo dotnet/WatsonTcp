@@ -3380,6 +3380,636 @@ namespace Test.Shared
         }
 
         #endregion
+
+        #region Telemetry-Tests
+
+        public static async Task TelemetryMessageAndByteCountersRecorded()
+        {
+            int port = GetNextPort();
+            byte[] payload = CreatePatternedPayload(100);
+            ManualResetEvent serverReceived = new ManualResetEvent(false);
+            ManualResetEvent clientReceived = new ManualResetEvent(false);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Events.MessageReceived += (s, e) => serverReceived.Set();
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            client.Events.MessageReceived += (s, e) => clientReceived.Set();
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                await client.SendAsync(payload).ConfigureAwait(false);
+                WaitForSignal(serverReceived);
+                await server.SendAsync(clientGuid, payload).ConfigureAwait(false);
+                WaitForSignal(clientReceived);
+
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.MessagesSent, WatsonTcpMetrics.TagRole, "client") >= 1).ConfigureAwait(false);
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.MessagesReceived, WatsonTcpMetrics.TagRole, "server") >= 1).ConfigureAwait(false);
+
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.BytesSent, WatsonTcpMetrics.TagRole, "client") >= 100, "Client should record at least the payload bytes sent.");
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.BytesReceived, WatsonTcpMetrics.TagRole, "server") >= 100, "Server should record at least the payload bytes received.");
+                TestAssert.True(collector.Count(WatsonTcpMetrics.MessageReceivedSize, WatsonTcpMetrics.TagRole, "server") >= 1, "Server received-size histogram should record.");
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.MessagesReceived, WatsonTcpMetrics.TagRole, "client") >= 1, "Client should record a received message.");
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.MessagesSent, WatsonTcpMetrics.TagProtocol, "tcp") >= 1, "Sent-message protocol tag should be tcp.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryConnectionGaugesAndOutcomesRecorded()
+        {
+            int port = GetNextPort();
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.ConnectionsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "accepted") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.ConnectionsTotal, WatsonTcpMetrics.TagRole, "client", WatsonTcpMetrics.TagOutcome, "connected") >= 1, "Client should record a connected outcome.");
+
+                collector.CollectObservable();
+                TestAssert.Equal(1.0, collector.Latest(WatsonTcpMetrics.ConnectionsActive, WatsonTcpMetrics.TagRole, "server"), "Server active-connection gauge should read 1.");
+                TestAssert.Equal(1.0, collector.Latest(WatsonTcpMetrics.ConnectionsActive, WatsonTcpMetrics.TagRole, "client"), "Client active-connection gauge should read 1.");
+
+                client.Disconnect();
+                await WaitForServerClientCountAsync(server, 0).ConfigureAwait(false);
+
+                collector.CollectObservable();
+                TestAssert.Equal(0.0, collector.Latest(WatsonTcpMetrics.ConnectionsActive, WatsonTcpMetrics.TagRole, "server"), "Server active-connection gauge should return to 0.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryDisconnectionReasonRemovedRecorded()
+        {
+            int port = GetNextPort();
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                Guid clientGuid = server.ListClients().First().Guid;
+                await server.DisconnectClientAsync(clientGuid).ConfigureAwait(false);
+                await WaitForServerClientCountAsync(server, 0).ConfigureAwait(false);
+
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.DisconnectionsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagReason, "Removed") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.DisconnectionsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagReason, "Removed") >= 1, "Server should record a Removed disconnection.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetrySyncRoundTripCompletedRecorded()
+        {
+            int port = GetNextPort();
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Events.MessageReceived += (s, e) => { };
+            server.Callbacks.SyncRequestReceivedAsync = async (req) => { await Task.Delay(10).ConfigureAwait(false); return new SyncResponse(req, "pong"); };
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                SyncResponse response = await client.SendAndWaitAsync(5000, "ping").ConfigureAwait(false);
+                TestAssert.NotNull(response);
+
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.SyncRequestsSent, WatsonTcpMetrics.TagRole, "client") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.SyncResponsesReceived, WatsonTcpMetrics.TagRole, "client") >= 1, "Client should record a matched sync response.");
+                TestAssert.True(collector.Count(WatsonTcpMetrics.SyncDuration, WatsonTcpMetrics.TagRole, "client", WatsonTcpMetrics.TagOutcome, "completed") >= 1, "Client should record a completed sync duration.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetrySyncTimeoutRecorded()
+        {
+            int port = GetNextPort();
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Events.MessageReceived += (s, e) => { };
+            server.Callbacks.SyncRequestReceivedAsync = async (req) => { await Task.Delay(3000).ConfigureAwait(false); return new SyncResponse(req, "too late"); };
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                await TestAssert.ThrowsAsync<TimeoutException>(() => client.SendAndWaitAsync(1000, "ping")).ConfigureAwait(false);
+
+                await WaitForConditionAsync(() => collector.Count(WatsonTcpMetrics.SyncDuration, WatsonTcpMetrics.TagRole, "client", WatsonTcpMetrics.TagOutcome, "timeout") >= 1).ConfigureAwait(false);
+                TestAssert.Equal(0.0, collector.Sum(WatsonTcpMetrics.SyncResponsesReceived, WatsonTcpMetrics.TagRole, "client"), "No sync response should be recorded on timeout.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryHandshakeSuccessRecorded()
+        {
+            int port = GetNextPort();
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Callbacks.HandshakeAsync = async (session, token) =>
+            {
+                await session.ReceiveAsync(token).ConfigureAwait(false);
+                return HandshakeResult.Succeed();
+            };
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Callbacks.HandshakeAsync = async (session, token) =>
+            {
+                await session.SendAsync(new HandshakeMessage { Type = "test", Data = Encoding.UTF8.GetBytes("hello") }, token).ConfigureAwait(false);
+                return HandshakeResult.Succeed();
+            };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1, timeoutMs: 5000).ConfigureAwait(false);
+
+            try
+            {
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.HandshakesTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "success") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.HandshakesTotal, WatsonTcpMetrics.TagRole, "client", WatsonTcpMetrics.TagOutcome, "success") >= 1, "Client should record a successful handshake.");
+                TestAssert.True(collector.Count(WatsonTcpMetrics.HandshakeDuration, WatsonTcpMetrics.TagRole, "server") >= 1, "Server should record a handshake duration.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryHandshakeFailureRecorded()
+        {
+            int port = GetNextPort();
+            ManualResetEvent serverHandshakeFailed = new ManualResetEvent(false);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Callbacks.HandshakeAsync = async (session, token) =>
+            {
+                await session.ReceiveAsync(token).ConfigureAwait(false);
+                return HandshakeResult.Fail("Rejected by test.");
+            };
+            server.Events.HandshakeFailed += (s, e) => serverHandshakeFailed.Set();
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Callbacks.HandshakeAsync = async (session, token) =>
+            {
+                await session.SendAsync(new HandshakeMessage { Type = "test", Data = Encoding.UTF8.GetBytes("hello") }, token).ConfigureAwait(false);
+                return HandshakeResult.Succeed();
+            };
+
+            try
+            {
+                try
+                {
+                    client.Connect();
+                }
+                catch
+                {
+                }
+
+                WaitForSignal(serverHandshakeFailed);
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.HandshakesTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "failure") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.HandshakesTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "failure") >= 1, "Server should record a failed handshake.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryAuthenticationSuccessRecorded()
+        {
+            int port = GetNextPort();
+            string presharedKey = "0000000000000000";
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Events.MessageReceived += (s, e) => { };
+            server.Settings.PresharedKey = presharedKey;
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            client.Events.MessageReceived += (s, e) => { };
+            client.Settings.PresharedKey = presharedKey;
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.AuthenticationsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "success") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.AuthenticationsTotal, WatsonTcpMetrics.TagRole, "client", WatsonTcpMetrics.TagOutcome, "success") >= 1, "Client should record a successful authentication.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryAuthenticationFailureRecorded()
+        {
+            int port = GetNextPort();
+            ManualResetEvent authFailed = new ManualResetEvent(false);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Events.MessageReceived += (s, e) => { };
+            server.Settings.PresharedKey = "correctkey123456";
+            server.Events.AuthenticationFailed += (s, e) => authFailed.Set();
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            client.Events.MessageReceived += (s, e) => { };
+            client.Settings.PresharedKey = "wrongkey12345678";
+
+            try
+            {
+                try
+                {
+                    client.Connect();
+                }
+                catch (ConnectionRejectedException)
+                {
+                }
+
+                WaitForSignal(authFailed);
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.AuthenticationsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "failure") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.AuthenticationsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "failure") >= 1, "Server should record a failed authentication.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryAuthorizationAllowRecorded()
+        {
+            int port = GetNextPort();
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Callbacks.AuthorizeConnectionAsync = (ctx, token) => Task.FromResult(ConnectionAuthorizationResult.Allow());
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.AuthorizationsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "success") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.AuthorizationsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "success") >= 1, "Server should record an allowed authorization.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryAuthorizationRejectRecorded()
+        {
+            int port = GetNextPort();
+            ManualResetEvent rejected = new ManualResetEvent(false);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Callbacks.AuthorizeConnectionAsync = (ctx, token) => Task.FromResult(ConnectionAuthorizationResult.Reject("no"));
+            server.Events.ConnectionRejected += (s, e) => rejected.Set();
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+
+            try
+            {
+                try
+                {
+                    client.Connect();
+                }
+                catch
+                {
+                }
+
+                WaitForSignal(rejected);
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.AuthorizationsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "failure") >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.ConnectionsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "rejected_authorization") >= 1, "Server should record a rejected_authorization outcome.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryBlockedIpRejectionRecorded()
+        {
+            int port = GetNextPort();
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            SetupDefaultServerHandlers(server);
+            server.Settings.BlockedIPs = new List<string> { "127.0.0.1" };
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+
+            try
+            {
+                try
+                {
+                    client.Connect();
+                }
+                catch
+                {
+                }
+
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.ConnectionsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "rejected_blocked") >= 1, timeoutMs: 5000).ConfigureAwait(false);
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.ConnectionsTotal, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagOutcome, "rejected_blocked") >= 1, "Server should record a rejected_blocked outcome.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryTransientAcceptErrorRecorded()
+        {
+            int port = GetNextPort();
+            SocketException injected = new SocketException((int)SocketError.ConnectionReset);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            TransientAcceptFailureServer server = new TransientAcceptFailureServer(_hostname, port, injected, failureCount: 1);
+            SetupDefaultServerHandlers(server);
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            try
+            {
+                await WaitForConditionAsync(() => collector.Sum(WatsonTcpMetrics.ListenerTransientErrors, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagSocketError, "ConnectionReset") >= 1, timeoutMs: 5000).ConfigureAwait(false);
+                TestAssert.True(server.InjectedFailures >= 1, "Server should have injected a transient accept failure.");
+                TestAssert.True(collector.Sum(WatsonTcpMetrics.ListenerTransientErrors, WatsonTcpMetrics.TagRole, "server", WatsonTcpMetrics.TagSocketError, "ConnectionReset") >= 1, "Server should record a transient accept error.");
+            }
+            finally
+            {
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryMetricsDisabledProducesNoMeasurements()
+        {
+            int port = GetNextPort();
+            byte[] payload = CreatePatternedPayload(64);
+            ManualResetEvent serverReceived = new ManualResetEvent(false);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Settings.EnableMetrics = false;
+            server.Events.MessageReceived += (s, e) => serverReceived.Set();
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            client.Settings.EnableMetrics = false;
+            client.Events.MessageReceived += (s, e) => { };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                // Allow any straggling measurements from prior tests to settle, then measure a delta so this
+                // assertion isolates this instance's behaviour from unrelated meters in the process.
+                await Task.Delay(200).ConfigureAwait(false);
+                int baseline = collector.TotalMeasurements();
+
+                await client.SendAsync(payload).ConfigureAwait(false);
+                WaitForSignal(serverReceived);
+                await Task.Delay(100).ConfigureAwait(false);
+
+                TestAssert.Equal(baseline, collector.TotalMeasurements(), "No new metric measurements should be recorded when metrics are disabled.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryTracingDisabledProducesNoSpans()
+        {
+            int port = GetNextPort();
+            byte[] payload = CreatePatternedPayload(64);
+            ManualResetEvent serverReceived = new ManualResetEvent(false);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Settings.EnableTracing = false;
+            server.Events.MessageReceived += (s, e) => serverReceived.Set();
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            client.Settings.EnableTracing = false;
+            client.Events.MessageReceived += (s, e) => { };
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                await client.SendAsync(payload).ConfigureAwait(false);
+                WaitForSignal(serverReceived);
+                await Task.Delay(100).ConfigureAwait(false);
+
+                TestAssert.Equal(0, collector.TotalSpans(), "No spans should be recorded when tracing is disabled.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetrySendAndReceiveSpansRecorded()
+        {
+            int port = GetNextPort();
+            byte[] payload = CreatePatternedPayload(64);
+            ManualResetEvent serverReceived = new ManualResetEvent(false);
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Events.MessageReceived += (s, e) => serverReceived.Set();
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                await client.SendAsync(payload).ConfigureAwait(false);
+                WaitForSignal(serverReceived);
+
+                await WaitForConditionAsync(() => collector.SpanCount(WatsonTcpMetrics.SpanSend) >= 1).ConfigureAwait(false);
+                await WaitForConditionAsync(() => collector.SpanCount(WatsonTcpMetrics.SpanReceive) >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.AnySpanHasTag(WatsonTcpMetrics.SpanSend, WatsonTcpMetrics.TagMessageBytes), "Send span should carry a message.bytes tag.");
+
+                client.Disconnect();
+                await WaitForServerClientCountAsync(server, 0).ConfigureAwait(false);
+                await WaitForConditionAsync(() => collector.SpanCount(WatsonTcpMetrics.SpanSession) >= 1).ConfigureAwait(false);
+                TestAssert.True(collector.AnySpanHasTag(WatsonTcpMetrics.SpanSession, WatsonTcpMetrics.TagClientGuid), "Session span should carry a client.guid tag.");
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        public static async Task TelemetryMetricsHaveNoHighCardinalityTags()
+        {
+            int port = GetNextPort();
+            byte[] payload = CreatePatternedPayload(48);
+            ManualResetEvent serverReceived = new ManualResetEvent(false);
+
+            HashSet<string> allowedKeys = new HashSet<string>(StringComparer.Ordinal)
+            {
+                WatsonTcpMetrics.TagRole,
+                WatsonTcpMetrics.TagProtocol,
+                WatsonTcpMetrics.TagOutcome,
+                WatsonTcpMetrics.TagReason,
+                WatsonTcpMetrics.TagMessageKind,
+                WatsonTcpMetrics.TagKind,
+                WatsonTcpMetrics.TagExceptionType,
+                WatsonTcpMetrics.TagSocketError
+            };
+
+            TelemetryCollector collector = new TelemetryCollector();
+            WatsonTcpServer server = new WatsonTcpServer(_hostname, port);
+            server.Events.MessageReceived += (s, e) => serverReceived.Set();
+            server.Callbacks.SyncRequestReceivedAsync = async (req) => { await Task.Delay(5).ConfigureAwait(false); return new SyncResponse(req, "pong"); };
+            server.Start();
+            await WaitForServerListeningAsync(server).ConfigureAwait(false);
+
+            WatsonTcpClient client = new WatsonTcpClient(_hostname, port);
+            SetupDefaultClientHandlers(client);
+            client.Connect();
+            await WaitForClientConnectedAsync(client, server, 1).ConfigureAwait(false);
+
+            try
+            {
+                await client.SendAsync(payload).ConfigureAwait(false);
+                WaitForSignal(serverReceived);
+                await client.SendAndWaitAsync(5000, "ping").ConfigureAwait(false);
+
+                client.Disconnect();
+                await WaitForServerClientCountAsync(server, 0).ConfigureAwait(false);
+                collector.CollectObservable();
+
+                foreach (string key in collector.AllTagKeys())
+                {
+                    TestAssert.True(allowedKeys.Contains(key), "Unexpected high-cardinality metric tag key: " + key);
+                }
+            }
+            finally
+            {
+                SafeDispose(client);
+                SafeDispose(server);
+                SafeDispose(collector);
+            }
+        }
+
+        #endregion
     }
 }
 
