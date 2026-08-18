@@ -7,7 +7,7 @@
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
 		<AnalysisLevel>latest-recommended</AnalysisLevel>
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-		<Version>6.3.1</Version>
+		<Version>6.4.0</Version>
 		<Authors>Joel Christner</Authors>
 		<Company>Joel Christner</Company>
 		<Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
@@ -17,7 +17,7 @@
 		<RepositoryUrl>https://github.com/dotnet/WatsonTcp</RepositoryUrl>
 		<RepositoryType>Github</RepositoryType>
 		<PackageLicenseUrl></PackageLicenseUrl>
-		<PackageReleaseNotes>Performance-focused release with lower-allocation framing and stream handling, buffered header parsing, reduced disconnect hot-path overhead, internal async connection setup, and an automated performance benchmark suite.</PackageReleaseNotes>
+		<PackageReleaseNotes>Adds vendor-neutral telemetry via System.Diagnostics.Metrics (Meter) and System.Diagnostics.ActivitySource, both named 'WatsonTcp', for consumption by Radiant, the OpenTelemetry SDK, Prometheus, and others. See TELEMETRY.md.</PackageReleaseNotes>
 		<PackageIconUrl></PackageIconUrl>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 		<PackageIcon>watson.png</PackageIcon>
@@ -45,6 +45,15 @@
 
 	<ItemGroup>
 		<PackageReference Include="System.Text.Json" Version="9.0.10" />
+	</ItemGroup>
+
+	<!--
+		System.Diagnostics.Metrics (Meter/Counter/Histogram/ObservableGauge/TagList) and
+		System.Diagnostics.ActivitySource are in-box on net8.0 and net10.0 but ship via the
+		System.Diagnostics.DiagnosticSource package for the down-level target frameworks.
+	-->
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'netstandard2.1' Or '$(TargetFramework)' == 'net462' Or '$(TargetFramework)' == 'net48'">
+		<PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -208,6 +208,23 @@
             }
         }
 
+        /// <summary>
+        /// Enable or disable emission of metrics into the <c>WatsonTcp</c>
+        /// <see cref="System.Diagnostics.Metrics.Meter"/>.  Default is true.
+        /// When true, the meter and its instruments are created; recording is a near-free no-op unless a
+        /// telemetry host subscribes to the meter by name.  When false, no meter is created and there is
+        /// zero overhead.  See <see cref="WatsonTcpMetrics"/> and TELEMETRY.md.
+        /// </summary>
+        public bool EnableMetrics { get; set; } = true;
+
+        /// <summary>
+        /// Enable or disable emission of distributed-tracing spans into the <c>WatsonTcp</c>
+        /// <see cref="System.Diagnostics.ActivitySource"/>.  Default is true.
+        /// When true, spans are created only if a tracing host subscribes to the activity source by name;
+        /// otherwise span creation is a near-free no-op.  See <see cref="WatsonTcpMetrics"/> and TELEMETRY.md.
+        /// </summary>
+        public bool EnableTracing { get; set; } = true;
+
         #endregion
 
         #region Private-Members

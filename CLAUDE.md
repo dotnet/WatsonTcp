@@ -153,6 +153,8 @@ src/WatsonTcp/          # Main library source
   WatsonMessageBuilder.cs # Message construction
   WatsonStream.cs       # Stream reading/writing
   ClientMetadata*.cs    # Client tracking for server
+  WatsonTcpMetrics.cs   # Public telemetry names/units/tag keys (Meter + ActivitySource "WatsonTcp")
+  WatsonTcpInstrumentation.cs # Internal per-instance metrics/spans recorder
   *Events.cs           # Event definitions
   *Callbacks.cs        # Callback definitions
   *Settings.cs         # Configuration classes
@@ -162,4 +164,8 @@ src/Test.*/            # Manual test projects (not unit tests)
 
 ## NuGet Package
 
-Version is defined in `src/WatsonTcp/WatsonTcp.csproj` (currently 6.0.11). Package builds automatically with `GeneratePackageOnBuild`.
+Version is defined in `src/WatsonTcp/WatsonTcp.csproj` (currently 6.4.0). Package builds automatically with `GeneratePackageOnBuild`.
+
+## Telemetry
+
+WatsonTcp emits vendor-neutral telemetry via `System.Diagnostics.Metrics` (a `Meter` named `WatsonTcp`) and `System.Diagnostics.ActivitySource` (an `ActivitySource` named `WatsonTcp`). Hosts (Radiant, OpenTelemetry, Prometheus) subscribe by name; WatsonTcp takes no telemetry-backend dependency. Public string contract lives in `WatsonTcpMetrics`. See `TELEMETRY.md`. Telemetry is on by default and can be disabled per instance via `Settings.EnableMetrics` / `Settings.EnableTracing`.

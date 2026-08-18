@@ -53,11 +53,51 @@ namespace Test.Shared
             nameof(WatsonTcpScenarios.StreamSendReceive)
         };
 
+        private static readonly string[] _TelemetryScenarioNames =
+        {
+            nameof(WatsonTcpScenarios.TelemetryMessageAndByteCountersRecorded),
+            nameof(WatsonTcpScenarios.TelemetryConnectionGaugesAndOutcomesRecorded),
+            nameof(WatsonTcpScenarios.TelemetryDisconnectionReasonRemovedRecorded),
+            nameof(WatsonTcpScenarios.TelemetrySyncRoundTripCompletedRecorded),
+            nameof(WatsonTcpScenarios.TelemetrySyncTimeoutRecorded),
+            nameof(WatsonTcpScenarios.TelemetryHandshakeSuccessRecorded),
+            nameof(WatsonTcpScenarios.TelemetryHandshakeFailureRecorded),
+            nameof(WatsonTcpScenarios.TelemetryAuthenticationSuccessRecorded),
+            nameof(WatsonTcpScenarios.TelemetryAuthenticationFailureRecorded),
+            nameof(WatsonTcpScenarios.TelemetryAuthorizationAllowRecorded),
+            nameof(WatsonTcpScenarios.TelemetryAuthorizationRejectRecorded),
+            nameof(WatsonTcpScenarios.TelemetryBlockedIpRejectionRecorded),
+            nameof(WatsonTcpScenarios.TelemetryTransientAcceptErrorRecorded),
+            nameof(WatsonTcpScenarios.TelemetryMetricsDisabledProducesNoMeasurements),
+            nameof(WatsonTcpScenarios.TelemetryTracingDisabledProducesNoSpans),
+            nameof(WatsonTcpScenarios.TelemetrySendAndReceiveSpansRecorded),
+            nameof(WatsonTcpScenarios.TelemetryMetricsHaveNoHighCardinalityTags)
+        };
+
         private static readonly IReadOnlyList<TestSuiteDescriptor> _All = BuildSuites();
+
+        private static readonly string[] _SuiteIds = { "regression", "auth-handshake", "streaming", "telemetry" };
 
         public static IReadOnlyList<TestSuiteDescriptor> All
         {
             get { return _All; }
+        }
+
+        /// <summary>
+        /// Return only the suite with the supplied identifier (regression, auth-handshake, streaming, telemetry),
+        /// or all suites when the identifier is null or empty.
+        /// </summary>
+        public static IReadOnlyList<TestSuiteDescriptor> WithId(string id)
+        {
+            if (String.IsNullOrEmpty(id)) return _All;
+
+            List<TestSuiteDescriptor> result = new List<TestSuiteDescriptor>();
+            for (int i = 0; i < _All.Count && i < _SuiteIds.Length; i++)
+            {
+                if (String.Equals(_SuiteIds[i], id, StringComparison.OrdinalIgnoreCase)) result.Add(_All[i]);
+            }
+
+            return result;
         }
 
         private static IReadOnlyList<TestSuiteDescriptor> BuildSuites()
@@ -75,13 +115,17 @@ namespace Test.Shared
                 new TestSuiteDescriptor(
                     "streaming",
                     "Streaming",
-                    BuildCases(includeOnlyStreamingScenarios: true))
+                    BuildCases(includeOnlyStreamingScenarios: true)),
+                new TestSuiteDescriptor(
+                    "telemetry",
+                    "Telemetry",
+                    BuildCases(includeOnlyTelemetryScenarios: true))
             };
 
             return suites;
         }
 
-        private static IReadOnlyList<TestCaseDescriptor> BuildCases(bool excludeAuthorizationScenarios = false, bool includeOnlyAuthorizationScenarios = false, bool includeOnlyStreamingScenarios = false)
+        private static IReadOnlyList<TestCaseDescriptor> BuildCases(bool excludeAuthorizationScenarios = false, bool includeOnlyAuthorizationScenarios = false, bool includeOnlyStreamingScenarios = false, bool includeOnlyTelemetryScenarios = false)
         {
             IEnumerable<MethodInfo> methods = typeof(WatsonTcpScenarios)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -90,7 +134,8 @@ namespace Test.Shared
 
             if (excludeAuthorizationScenarios)
             {
-                methods = methods.Where(m => !_AuthorizationScenarioNames.Contains(m.Name, StringComparer.Ordinal));
+                methods = methods.Where(m => !_AuthorizationScenarioNames.Contains(m.Name, StringComparer.Ordinal)
+                    && !_TelemetryScenarioNames.Contains(m.Name, StringComparer.Ordinal));
             }
 
             if (includeOnlyAuthorizationScenarios)
@@ -103,12 +148,17 @@ namespace Test.Shared
                 methods = methods.Where(m => _StreamingScenarioNames.Contains(m.Name, StringComparer.Ordinal));
             }
 
+            if (includeOnlyTelemetryScenarios)
+            {
+                methods = methods.Where(m => _TelemetryScenarioNames.Contains(m.Name, StringComparer.Ordinal));
+            }
+
             return methods
                 .OrderBy(m => m.Name, StringComparer.Ordinal)
                 .Select(m => new TestCaseDescriptor(
                     includeOnlyAuthorizationScenarios
                         ? "auth-handshake"
-                        : (includeOnlyStreamingScenarios ? "streaming" : "regression"),
+                        : (includeOnlyStreamingScenarios ? "streaming" : (includeOnlyTelemetryScenarios ? "telemetry" : "regression")),
                     m.Name,
                     ToDisplayName(m.Name),
                     token =>

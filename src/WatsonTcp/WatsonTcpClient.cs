@@ -4,6 +4,7 @@
     using System.Buffers;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Net;
     using System.Net.Security;
@@ -150,6 +151,8 @@
         private WatsonTcpKeepaliveSettings _Keepalive = new WatsonTcpKeepaliveSettings();
         private WatsonTcpClientSslConfiguration _SslConfiguration = new WatsonTcpClientSslConfiguration();
         private ISerializationHelper _SerializationHelper = new DefaultSerializationHelper();
+        private WatsonTcpInstrumentation _Instrumentation = null;
+        private Activity _ConnectActivity = null;
 
         private Mode _Mode = Mode.Tcp;
         private TlsVersion _TlsVersion = TlsVersion.Tls12;
@@ -486,6 +489,18 @@
 
                 if (Connected || _TransportConnected) CloseTransport(true);
 
+                if (_ConnectActivity != null)
+                {
+                    _ConnectActivity.Dispose();
+                    _ConnectActivity = null;
+                }
+
+                if (_Instrumentation != null)
+                {
+                    _Instrumentation.Dispose();
+                    _Instrumentation = null;
+                }
+
                 if (_SslCertificate != null)
                     _SslCertificate.Dispose();
 
@@ -551,6 +566,23 @@
             _Client.NoDelay = _Settings.NoDelay;
             _Statistics = new WatsonTcpStatistics();
 
+            _Instrumentation?.Dispose();
+            _Instrumentation = null;
+            if (_Settings.EnableMetrics || _Settings.EnableTracing)
+            {
+                _Instrumentation = new WatsonTcpInstrumentation(
+                    WatsonTcpInstrumentation.RoleClient,
+                    _Mode == Mode.Ssl ? WatsonTcpInstrumentation.ProtocolSsl : WatsonTcpInstrumentation.ProtocolTcp,
+                    _Settings.EnableMetrics,
+                    _Settings.EnableTracing,
+                    () => Connected ? 1L : 0L,
+                    null,
+                    () => _SyncRequests.Count,
+                    () => _Statistics != null ? _Statistics.UpTime.TotalSeconds : 0.0);
+            }
+
+            _ConnectActivity = _Instrumentation?.StartConnectSpan(_ServerIp, _ServerPort);
+
             ValidateReceiveHandlerConfiguration();
 
             try
@@ -571,7 +603,7 @@
             catch (Exception e)
             {
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "exception encountered: " + e.Message);
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                HandleException(e);
                 throw;
             }
 
@@ -736,6 +768,8 @@
             if (Connected) return;
 
             Connected = true;
+            _Instrumentation?.ConnectionOutcome(WatsonTcpInstrumentation.OutcomeConnected);
+            _ConnectActivity?.SetTag(WatsonTcpMetrics.TagOutcome, WatsonTcpInstrumentation.OutcomeConnected);
             _Events.HandleServerConnected(this, new ConnectionEventArgs());
             _ServerConnectedRaised = true;
             _Settings.Logger?.Invoke(Severity.Info, _Header + "connected to " + _ServerIp + ":" + _ServerPort);
@@ -858,6 +892,12 @@
             _InitializationFailure.TrySetResult(exception);
         }
 
+        private void HandleException(Exception e)
+        {
+            _Instrumentation?.ExceptionRecorded(e);
+            _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+        }
+
         private void StartClientHandshake(CancellationToken token)
         {
             if (_ClientHandshakeTask != null) return;
@@ -873,7 +913,10 @@
         private async Task RunClientHandshakeAsync(CancellationToken token)
         {
             HandshakeResult result = null;
+            long handshakeStartTimestamp = Stopwatch.GetTimestamp();
+            string handshakeOutcome = WatsonTcpInstrumentation.OutcomeSuccess;
 
+            using (Activity handshakeSpan = _Instrumentation?.StartHandshakeSpan())
             using (CancellationTokenSource timeoutCts = new CancellationTokenSource(_Settings.HandshakeTimeoutMs))
             using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token))
             {
@@ -885,23 +928,33 @@
                 {
                     if (timeoutCts.IsCancellationRequested)
                     {
+                        handshakeOutcome = WatsonTcpInstrumentation.OutcomeTimeout;
                         result = HandshakeResult.Fail("Handshake timed out.");
                     }
                     else
                     {
+                        handshakeOutcome = WatsonTcpInstrumentation.OutcomeCanceled;
                         result = HandshakeResult.Fail("Handshake canceled.");
                     }
                 }
                 catch (Exception e)
                 {
                     _Settings.Logger?.Invoke(Severity.Error, _Header + "handshake exception: " + e.Message);
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    HandleException(e);
+                    handshakeOutcome = WatsonTcpInstrumentation.OutcomeFailure;
                     result = HandshakeResult.Fail("Handshake failed: " + e.Message);
                 }
             }
 
             if (result == null) result = HandshakeResult.Succeed();
-            if (result.Success) return;
+            if (result.Success)
+            {
+                _Instrumentation?.HandshakeCompleted(WatsonTcpInstrumentation.OutcomeSuccess, handshakeStartTimestamp);
+                return;
+            }
+
+            if (handshakeOutcome == WatsonTcpInstrumentation.OutcomeSuccess) handshakeOutcome = WatsonTcpInstrumentation.OutcomeFailure;
+            _Instrumentation?.HandshakeCompleted(handshakeOutcome, handshakeStartTimestamp);
 
             HandshakeFailedException exception = new HandshakeFailedException(result.Reason, result.FailureStatus);
             _Events.HandleHandshakeFailed(this, new HandshakeFailedEventArgs(null, result.Reason, result.FailureStatus));
@@ -1023,16 +1076,18 @@
             {
                 preserveOriginalException = true;
                 _Settings.Logger?.Invoke(Severity.Error, _Header + "stream receive handler exception for " + _ServerIp + ":" + _ServerPort + ": " + e.Message);
-                _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                HandleException(e);
                 throw;
             }
             finally
             {
                 if (watsonStream.RemainingBytes > 0 && !token.IsCancellationRequested)
                 {
+                    long drained = watsonStream.RemainingBytes;
                     try
                     {
                         await watsonStream.DrainAsync(_Settings.StreamBufferSize, token).ConfigureAwait(false);
+                        _Instrumentation?.StreamDrained(drained);
                     }
                     catch (Exception e) when (preserveOriginalException)
                     {
@@ -1106,6 +1161,7 @@
                     {
                         await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
                         _Settings.Logger?.Invoke(Severity.Debug, _Header + "authentication successful");
+                        _Instrumentation?.Authentication(WatsonTcpInstrumentation.OutcomeSuccess);
                         _InitializationStarted.TrySetResult(true);
                         Task unawaited = Task.Run(() => _Events.HandleAuthenticationSucceeded(this, EventArgs.Empty), token);
                         await SendRegisterMessageAsync(token).ConfigureAwait(false);
@@ -1121,6 +1177,7 @@
                         string authFailureReason = await ReadStatusMessageAsync(msg, token).ConfigureAwait(false);
                         if (String.IsNullOrEmpty(authFailureReason)) authFailureReason = "Authentication failed.";
                         _Settings.Logger?.Invoke(Severity.Error, _Header + authFailureReason);
+                        _Instrumentation?.Authentication(WatsonTcpInstrumentation.OutcomeFailure);
                         reason = DisconnectReason.AuthFailure;
                         Task unawaited = Task.Run(() => _Events.HandleAuthenticationFailure(this, EventArgs.Empty), token);
                         FailInitialization(new ConnectionRejectedException(authFailureReason, MessageStatus.AuthFailure));
@@ -1264,6 +1321,7 @@
                         }
                         else
                         {
+                            _Instrumentation?.SyncExpiredMessage(WatsonTcpInstrumentation.KindRequest);
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous request received and discarded");
                         }
                     }
@@ -1279,6 +1337,7 @@
                             TaskCompletionSource<SyncResponse> tcs;
                             if (_SyncRequests.TryRemove(msg.ConversationGuid, out tcs))
                             {
+                                _Instrumentation?.SyncResponseReceived();
                                 SyncResponse syncResp = new SyncResponse(msg.ConversationGuid, msg.ExpirationUtc.Value, msg.Metadata, msgData);
                                 tcs.TrySetResult(syncResp);
                             }
@@ -1289,6 +1348,7 @@
                         }
                         else
                         {
+                            _Instrumentation?.SyncExpiredMessage(WatsonTcpInstrumentation.KindResponse);
                             _Settings.Logger?.Invoke(Severity.Debug, _Header + "expired synchronous response received and discarded");
                             TaskCompletionSource<SyncResponse> tcs;
                             _SyncRequests.TryRemove(msg.ConversationGuid, out tcs);
@@ -1296,22 +1356,25 @@
                     }
                     else
                     {
-                        byte[] msgData = null;
+                        using (Activity receiveSpan = _Instrumentation?.StartReceiveSpan(msg.ContentLength, null))
+                        {
+                            byte[] msgData = null;
 
-                        if (_Events.IsUsingMessages)
-                        {
-                            msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
-                            MessageReceivedEventArgs args = new MessageReceivedEventArgs(null, msg.Metadata, msgData);
-                            await Task.Run(() => _Events.HandleMessageReceived(this, args), token);
-                        }
-                        else if (_Callbacks.StreamReceivedAsync != null || _Events.IsUsingStreams)
-                        {
-                            await HandleStreamPayloadAsync(msg, token).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            _Settings.Logger?.Invoke(Severity.Error, _Header + "receive handler not set for MessageReceived, StreamReceived, or Callbacks.StreamReceivedAsync");
-                            break;
+                            if (_Events.IsUsingMessages)
+                            {
+                                msgData = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
+                                MessageReceivedEventArgs args = new MessageReceivedEventArgs(null, msg.Metadata, msgData);
+                                await Task.Run(() => _Events.HandleMessageReceived(this, args), token);
+                            }
+                            else if (_Callbacks.StreamReceivedAsync != null || _Events.IsUsingStreams)
+                            {
+                                await HandleStreamPayloadAsync(msg, token).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                _Settings.Logger?.Invoke(Severity.Error, _Header + "receive handler not set for MessageReceived, StreamReceived, or Callbacks.StreamReceivedAsync");
+                                break;
+                            }
                         }
                     }
 
@@ -1319,36 +1382,37 @@
 
                     _Statistics.IncrementReceivedMessages();
                     _Statistics.AddReceivedBytes(msg.ContentLength);
+                    _Instrumentation?.MessageReceived(msg, msg.ContentLength);
                 }
                 catch (ObjectDisposedException ode)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "object disposed exception encountered");
-                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(ode));
+                    HandleException(ode);
                     break;
                 }
                 catch (TaskCanceledException tce)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "task canceled exception encountered");
-                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(tce));
+                    HandleException(tce);
                     break;
                 }
                 catch (OperationCanceledException oce)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "operation canceled exception encountered");
-                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(oce));
+                    HandleException(oce);
                     break;
                 }
                 catch (IOException ioe)
                 {
                     _Settings?.Logger?.Invoke(Severity.Debug, _Header + "IO exception encountered");
-                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(ioe));
+                    HandleException(ioe);
                     break;
                 }
                 catch (Exception e)
                 {
                     _Settings?.Logger?.Invoke(Severity.Error,
                         _Header + "data receiver exception for " + _ServerIp + ":" + _ServerPort + ": " + e.Message + Environment.NewLine);
-                    _Events?.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    HandleException(e);
                     break;
                 }
                 finally
@@ -1386,9 +1450,18 @@
 
             if (_IsTimeout) reason = DisconnectReason.Timeout;
 
+            Activity connectActivity = _ConnectActivity;
+            _ConnectActivity = null;
+            if (connectActivity != null)
+            {
+                connectActivity.SetTag(WatsonTcpMetrics.TagReason, reason.ToString());
+                connectActivity.Dispose();
+            }
+
             _Settings?.Logger?.Invoke(Severity.Debug, _Header + "data receiver terminated for " + _ServerIp + ":" + _ServerPort);
             if (_ServerConnectedRaised)
             {
+                _Instrumentation?.Disconnection(reason);
                 _Events?.HandleServerDisconnected(this, new DisconnectionEventArgs(null, reason));
             }
         }
@@ -1430,10 +1503,15 @@
 
             try
             {
-                await SendMessageAsync(msg, contentLength, stream, token).ConfigureAwait(false);
+                long sendStartTimestamp = Stopwatch.GetTimestamp();
+                using (Activity sendSpan = _Instrumentation?.StartSendSpan(contentLength, msg.SyncRequest, null))
+                {
+                    await SendMessageAsync(msg, contentLength, stream, token).ConfigureAwait(false);
+                }
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
+                _Instrumentation?.MessageSent(msg, contentLength, sendStartTimestamp);
                 return true;
             }
             catch (TaskCanceledException)
@@ -1491,15 +1569,22 @@
             TaskCompletionSource<SyncResponse> tcs = new TaskCompletionSource<SyncResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
             _SyncRequests[msg.ConversationGuid] = tcs;
 
+            long syncStartTimestamp = Stopwatch.GetTimestamp();
+
+            using (Activity syncSpan = _Instrumentation?.StartSyncSpan(msg.ConversationGuid, contentLength))
+            {
             await _WriteLock.WaitAsync(token).ConfigureAwait(false);
 
             try
             {
+                long sendStartTimestamp = Stopwatch.GetTimestamp();
                 await SendMessageAsync(msg, contentLength, stream, token).ConfigureAwait(false);
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous request sent: " + msg.ConversationGuid);
 
                 _Statistics.IncrementSentMessages();
                 _Statistics.AddSentBytes(contentLength);
+                _Instrumentation?.MessageSent(msg, contentLength, sendStartTimestamp);
+                _Instrumentation?.SyncRequestSent();
             }
             catch (TaskCanceledException)
             {
@@ -1538,6 +1623,7 @@
                     {
                         linkedCts.Token.Register(() => tcs.TrySetCanceled());
                         SyncResponse ret = await tcs.Task.ConfigureAwait(false);
+                        _Instrumentation?.SyncCompleted(WatsonTcpInstrumentation.OutcomeCompleted, syncStartTimestamp);
                         return ret;
                     }
                     catch (TaskCanceledException)
@@ -1546,6 +1632,7 @@
 
                         if (timeoutCts.IsCancellationRequested)
                         {
+                            _Instrumentation?.SyncCompleted(WatsonTcpInstrumentation.OutcomeTimeout, syncStartTimestamp);
                             _Settings.Logger?.Invoke(Severity.Error, _Header + "synchronous response not received within the timeout window");
                             throw new TimeoutException("A response to a synchronous request was not received within the timeout window.");
                         }
@@ -1553,6 +1640,7 @@
                         throw;
                     }
                 }
+            }
             }
         }
 
@@ -1597,7 +1685,7 @@
                 catch (Exception e)
                 {
                     _Settings.Logger?.Invoke(Severity.Warn, _Header + "exception encountered while monitoring for idle server connection: " + e.Message);
-                    _Events.HandleExceptionEncountered(this, new ExceptionEventArgs(e));
+                    HandleException(e);
                 }
             }
         }

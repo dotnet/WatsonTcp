@@ -1,6 +1,7 @@
 namespace WatsonTcp
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
     using System.Net.Security;
     using System.Net.Sockets;
@@ -97,6 +98,7 @@ namespace WatsonTcp
         internal BufferedReadStream ReceiveStream { get; private set; } = null;
         internal byte[] SendBuffer { get; set; } = new byte[65536];
         internal Task DataReceiver { get; set; } = null;
+        internal Activity SessionActivity { get; set; } = null;
         internal long LastSeenUtcTicks { get; set; } = 0;
 
         internal SemaphoreSlim WriteLock = new SemaphoreSlim(1, 1);

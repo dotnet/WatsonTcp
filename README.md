@@ -24,9 +24,48 @@ Special thanks to the following people for their support and contributions to th
 @DuAell @syntacs @zsolt777 @broms95 @Antwns @MartyIX @Jyck @Memphizzz @nirajgenius 
 @cee-sharp @jeverz @cbarraco @DenisBalan @Markonius @Ahmed310 @markashleybell 
 @thechosensausage @JVemon @eatyouroats @bendablegears @Laiteux @fisherman6v6 @wesoos 
-@YorVeX @tovich37 @sancheolz @lunedis @ShayanFiroozi
+@YorVeX @tovich37 @sancheolz @lunedis @ShayanFiroozi @BrvSqr
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
+
+## New in v6.4.0
+
+### Telemetry and Observability
+
+WatsonTcp now emits standardized, vendor-neutral telemetry using only the .NET base class library, so it can be observed by [Radiant](https://github.com/jchristn), the OpenTelemetry SDK, Prometheus, or any compatible host with **no dependency on any telemetry backend**.
+
+- metrics are recorded into a `System.Diagnostics.Metrics.Meter` named `WatsonTcp`
+- distributed-tracing spans are started from a `System.Diagnostics.ActivitySource` named `WatsonTcp`
+- both names are exposed as public constants on the new `WatsonTcp.WatsonTcpMetrics` class and are stable across releases
+- 24 metrics cover messages, bytes, connections, disconnections (by reason), handshakes, authentication, authorization, synchronous request/response, exceptions, transient listener errors, and uptime
+- metric tags are low-cardinality only (`role`, `protocol`, `outcome`, `reason`); high-cardinality identifiers (client GUID, remote endpoint, conversation GUID) are placed on spans, never on metric tags
+- telemetry is on by default and is a near-free no-op when nobody subscribes; it can be turned off per instance via `Settings.EnableMetrics` and `Settings.EnableTracing`
+
+A telemetry host subscribes by name and nothing else changes in your WatsonTcp code:
+
+```csharp
+// Radiant host
+settings.Sources.AddMeter(WatsonTcp.WatsonTcpMetrics.MeterName);            // "WatsonTcp"
+settings.Sources.AddActivitySource(WatsonTcp.WatsonTcpMetrics.MeterName);   // "WatsonTcp"
+
+// or a raw OpenTelemetry host
+Sdk.CreateMeterProviderBuilder().AddMeter("WatsonTcp").AddPrometheusHttpListener().Build();
+Sdk.CreateTracerProviderBuilder().AddSource("WatsonTcp").AddOtlpExporter().Build();
+```
+
+See `TELEMETRY.md` for the full metric catalog, tag dictionaries, Prometheus series names, and integration walkthrough.
+
+## New in v6.3.2
+
+### Listener Reliability
+
+WatsonTcp now keeps the server listener running when the underlying TCP accept call hits a transient connection reset or abort before a client is fully established.
+
+Key improvements include:
+
+- recover from accept-time `SocketError.ConnectionReset` and `SocketError.ConnectionAborted` without stopping the accept loop
+- preserve exception reporting through `ExceptionEncountered` and add warning-level listener logging
+- add regression coverage for accept-loop recovery after a reset
 
 ## New in v6.3.1
 
