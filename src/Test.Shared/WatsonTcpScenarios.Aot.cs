@@ -829,10 +829,12 @@ namespace Test.Shared
 
             try
             {
+                // The client is marked connected when the server reports handshake success, which can precede the
+                // client's own callback returning, so wait for the callback to observe the reply.
                 TestAssert.True(client.Connected, "Client should be connected after handshake.");
                 TestAssert.Equal("admin", serverSawRole);
                 TestAssert.Equal(3, serverSawLevel);
-                TestAssert.True(clientSucceeded, "Client should observe the server's handshake reply metadata.");
+                await WaitForConditionAsync(() => Volatile.Read(ref clientSucceeded), 5000, "Client should observe the server's handshake reply metadata.");
             }
             finally
             {

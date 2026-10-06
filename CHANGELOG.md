@@ -21,6 +21,7 @@ v6.5.0
 
 - Message headers are now serialized before the transport write lock is taken; a header serialization failure (for example, an unsupported metadata value, or `double.NaN`) is thrown to the caller of `SendAsync`/`SendAndWaitAsync` instead of being treated as a transport failure that disconnected the client
 - A synchronous response whose metadata cannot be serialized is now logged and raised through `ExceptionEncountered` instead of faulting an unobserved task; the requester observes a timeout and the connection remains usable
+- Fixed a server race in which the data receiver started before preshared-key and handshake gating were established; a client's initial registration message could be processed before the gates were in place, after which its authentication request went unanswered and the client failed with "Connection initialization timed out"
 - Fixed SSL certificate loading on macOS: `X509KeyStorageFlags.EphemeralKeySet` is no longer requested on macOS, where it is unsupported and caused `PlatformNotSupportedException` when constructing a client or server with a PFX file
 
 ### Testing

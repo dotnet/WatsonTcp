@@ -970,14 +970,27 @@
             bool authorized = await AuthorizePendingClientAsync(client, token).ConfigureAwait(false);
             if (!authorized) return;
 
+            // Establish authentication and handshake gating state before the data receiver starts.  The client sends
+            // its registration message immediately after connecting; if the receiver processed it before the gates
+            // were in place, the client could be activated without authenticating or completing the handshake, and
+            // a subsequent AuthRequested message would go unanswered until the client's initialization timed out.
+            bool presharedKeyRequired = !String.IsNullOrEmpty(_Settings.PresharedKey);
+            if (presharedKeyRequired)
+            {
+                client.Phase = ConnectionPhase.PresharedKeyPending;
+                _ClientManager.AddUnauthenticatedClient(client.Guid);
+            }
+            else if (_Callbacks.HandshakeAsync != null)
+            {
+                client.HandshakeRequired = true;
+            }
+
             _Settings.Logger?.Invoke(Severity.Debug, _Header + "starting data receiver for " + client.ToString());
             client.DataReceiver = Task.Run(() => DataReceiver(client, token), token);
 
-            if (!String.IsNullOrEmpty(_Settings.PresharedKey))
+            if (presharedKeyRequired)
             {
-                client.Phase = ConnectionPhase.PresharedKeyPending;
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "requesting authentication material from " + client.ToString());
-                _ClientManager.AddUnauthenticatedClient(client.Guid);
                 WatsonMessage authMsg = new WatsonMessage();
                 authMsg.Status = MessageStatus.AuthRequired;
                 await SendInternalAsync(client, authMsg, 0, null, token).ConfigureAwait(false);
