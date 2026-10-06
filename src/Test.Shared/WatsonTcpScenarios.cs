@@ -16,7 +16,7 @@ namespace Test.Shared
     /// xUnit mirror of Test.Automated tests.
     /// Tests run sequentially within this collection to avoid port conflicts.
     /// </summary>
-    public static class WatsonTcpScenarios
+    public static partial class WatsonTcpScenarios
     {
         private static readonly string _hostname = "127.0.0.1";
         private const int DefaultConditionTimeoutMs = 3000;

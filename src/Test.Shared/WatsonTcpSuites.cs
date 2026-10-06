@@ -76,7 +76,9 @@ namespace Test.Shared
 
         private static readonly IReadOnlyList<TestSuiteDescriptor> _All = BuildSuites();
 
-        private static readonly string[] _SuiteIds = { "regression", "auth-handshake", "streaming", "telemetry" };
+        private const string AotScenarioPrefix = "Aot";
+
+        private static readonly string[] _SuiteIds = { "regression", "auth-handshake", "streaming", "telemetry", "aot" };
 
         public static IReadOnlyList<TestSuiteDescriptor> All
         {
@@ -84,7 +86,7 @@ namespace Test.Shared
         }
 
         /// <summary>
-        /// Return only the suite with the supplied identifier (regression, auth-handshake, streaming, telemetry),
+        /// Return only the suite with the supplied identifier (regression, auth-handshake, streaming, telemetry, aot),
         /// or all suites when the identifier is null or empty.
         /// </summary>
         public static IReadOnlyList<TestSuiteDescriptor> WithId(string id)
@@ -119,13 +121,17 @@ namespace Test.Shared
                 new TestSuiteDescriptor(
                     "telemetry",
                     "Telemetry",
-                    BuildCases(includeOnlyTelemetryScenarios: true))
+                    BuildCases(includeOnlyTelemetryScenarios: true)),
+                new TestSuiteDescriptor(
+                    "aot",
+                    "Native AOT And Trimming",
+                    BuildCases(includeOnlyAotScenarios: true))
             };
 
             return suites;
         }
 
-        private static IReadOnlyList<TestCaseDescriptor> BuildCases(bool excludeAuthorizationScenarios = false, bool includeOnlyAuthorizationScenarios = false, bool includeOnlyStreamingScenarios = false, bool includeOnlyTelemetryScenarios = false)
+        private static IReadOnlyList<TestCaseDescriptor> BuildCases(bool excludeAuthorizationScenarios = false, bool includeOnlyAuthorizationScenarios = false, bool includeOnlyStreamingScenarios = false, bool includeOnlyTelemetryScenarios = false, bool includeOnlyAotScenarios = false)
         {
             IEnumerable<MethodInfo> methods = typeof(WatsonTcpScenarios)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -135,7 +141,8 @@ namespace Test.Shared
             if (excludeAuthorizationScenarios)
             {
                 methods = methods.Where(m => !_AuthorizationScenarioNames.Contains(m.Name, StringComparer.Ordinal)
-                    && !_TelemetryScenarioNames.Contains(m.Name, StringComparer.Ordinal));
+                    && !_TelemetryScenarioNames.Contains(m.Name, StringComparer.Ordinal)
+                    && !IsAotScenario(m.Name));
             }
 
             if (includeOnlyAuthorizationScenarios)
@@ -153,12 +160,17 @@ namespace Test.Shared
                 methods = methods.Where(m => _TelemetryScenarioNames.Contains(m.Name, StringComparer.Ordinal));
             }
 
+            if (includeOnlyAotScenarios)
+            {
+                methods = methods.Where(m => IsAotScenario(m.Name));
+            }
+
             return methods
                 .OrderBy(m => m.Name, StringComparer.Ordinal)
                 .Select(m => new TestCaseDescriptor(
                     includeOnlyAuthorizationScenarios
                         ? "auth-handshake"
-                        : (includeOnlyStreamingScenarios ? "streaming" : (includeOnlyTelemetryScenarios ? "telemetry" : "regression")),
+                        : (includeOnlyStreamingScenarios ? "streaming" : (includeOnlyTelemetryScenarios ? "telemetry" : (includeOnlyAotScenarios ? "aot" : "regression"))),
                     m.Name,
                     ToDisplayName(m.Name),
                     token =>
@@ -175,6 +187,13 @@ namespace Test.Shared
                         }
                     }))
                 .ToList();
+        }
+
+        private static bool IsAotScenario(string methodName)
+        {
+            return methodName.StartsWith(AotScenarioPrefix, StringComparison.Ordinal)
+                && methodName.Length > AotScenarioPrefix.Length
+                && Char.IsUpper(methodName[AotScenarioPrefix.Length]);
         }
 
         private static string ToDisplayName(string methodName)

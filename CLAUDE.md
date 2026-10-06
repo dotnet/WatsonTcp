@@ -155,16 +155,23 @@ src/WatsonTcp/          # Main library source
   ClientMetadata*.cs    # Client tracking for server
   WatsonTcpMetrics.cs   # Public telemetry names/units/tag keys (Meter + ActivitySource "WatsonTcp")
   WatsonTcpInstrumentation.cs # Internal per-instance metrics/spans recorder
+  WatsonJsonContext.cs  # Source-generated JSON metadata (Native AOT)
+  DefaultSerializationHelper.cs # JSON serialization (resolver chain)
   *Events.cs           # Event definitions
   *Callbacks.cs        # Callback definitions
   *Settings.cs         # Configuration classes
 
+src/Test.Aot/          # Native AOT verification host (publish + run natively)
 src/Test.*/            # Manual test projects (not unit tests)
 ```
 
 ## NuGet Package
 
-Version is defined in `src/WatsonTcp/WatsonTcp.csproj` (currently 6.4.0). Package builds automatically with `GeneratePackageOnBuild`.
+Version is defined in `src/WatsonTcp/WatsonTcp.csproj` (currently 6.5.0). Package builds automatically with `GeneratePackageOnBuild`.
+
+## Native AOT
+
+The library is Native AOT and trimming compatible (`IsAotCompatible` on net8.0+; IL2xxx/IL3xxx warnings are build errors). All wire JSON goes through the source-generated `WatsonJsonContext`; `DefaultSerializationHelper` resolves caller resolver -> `WatsonJsonContext` -> reflection (only when `JsonSerializer.IsReflectionEnabledByDefault`). Never call reflection-based `JsonSerializer` overloads; use `JsonTypeInfo` via the helper. New wire or metadata types must be added to `WatsonJsonContext`. Verify with the `aot` suite and by publishing `src/Test.Aot` (`dotnet publish src/Test.Aot/Test.Aot.csproj -c Release -f net10.0 -r <rid>` then run the binary).
 
 ## Telemetry
 

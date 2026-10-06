@@ -6,7 +6,7 @@
     /// <summary>
     /// Reason why a client disconnected.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<DisconnectReason>))]
     public enum DisconnectReason
     {
         /// <summary>

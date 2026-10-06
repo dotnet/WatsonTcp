@@ -288,7 +288,8 @@
             X509KeyStorageFlags keyStorageFlags = X509KeyStorageFlags.Exportable;
 
 #if NET5_0_OR_GREATER
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            // macOS does not support EphemeralKeySet and throws PlatformNotSupportedException when it is requested.
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 keyStorageFlags = X509KeyStorageFlags.EphemeralKeySet;
             }
@@ -969,14 +970,27 @@
             bool authorized = await AuthorizePendingClientAsync(client, token).ConfigureAwait(false);
             if (!authorized) return;
 
+            // Establish authentication and handshake gating state before the data receiver starts.  The client sends
+            // its registration message immediately after connecting; if the receiver processed it before the gates
+            // were in place, the client could be activated without authenticating or completing the handshake, and
+            // a subsequent AuthRequested message would go unanswered until the client's initialization timed out.
+            bool presharedKeyRequired = !String.IsNullOrEmpty(_Settings.PresharedKey);
+            if (presharedKeyRequired)
+            {
+                client.Phase = ConnectionPhase.PresharedKeyPending;
+                _ClientManager.AddUnauthenticatedClient(client.Guid);
+            }
+            else if (_Callbacks.HandshakeAsync != null)
+            {
+                client.HandshakeRequired = true;
+            }
+
             _Settings.Logger?.Invoke(Severity.Debug, _Header + "starting data receiver for " + client.ToString());
             client.DataReceiver = Task.Run(() => DataReceiver(client, token), token);
 
-            if (!String.IsNullOrEmpty(_Settings.PresharedKey))
+            if (presharedKeyRequired)
             {
-                client.Phase = ConnectionPhase.PresharedKeyPending;
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "requesting authentication material from " + client.ToString());
-                _ClientManager.AddUnauthenticatedClient(client.Guid);
                 WatsonMessage authMsg = new WatsonMessage();
                 authMsg.Status = MessageStatus.AuthRequired;
                 await SendInternalAsync(client, authMsg, 0, null, token).ConfigureAwait(false);
@@ -1208,7 +1222,7 @@
 
             byte[] data = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
             if (data == null || data.Length < 1) return new HandshakeMessage();
-            return SerializationHelper.DeserializeJson<HandshakeMessage>(Encoding.UTF8.GetString(data));
+            return WatsonCommon.DeserializeHandshakeMessage(SerializationHelper, data);
         }
 
         private async Task DrainMessageAsync(WatsonMessage msg, CancellationToken token)
@@ -1464,7 +1478,15 @@
                                         syncResp.Metadata);
 
                                     respMsg.ConversationGuid = msg.ConversationGuid;
-                                    await SendInternalAsync(client, respMsg, contentLength, stream, token).ConfigureAwait(false);
+                                    try
+                                    {
+                                        await SendInternalAsync(client, respMsg, contentLength, stream, token).ConfigureAwait(false);
+                                    }
+                                    catch (Exception e) when (!(e is OperationCanceledException))
+                                    {
+                                        _Settings.Logger?.Invoke(Severity.Error, _Header + "failed to send synchronous response to " + client.ToString() + ": " + e.Message);
+                                        HandleException(e);
+                                    }
                                 }
                             }, token);
                         }
@@ -1614,6 +1636,11 @@
                 }
             }
 
+            // Serialize the header before acquiring the write lock so that a serialization failure (for example, a
+            // metadata value type with no JSON metadata under Native AOT) surfaces to the caller rather than being
+            // reported as a transport failure.
+            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
+
             CancellationTokenSource linkedCts = null;
             if (token == default(CancellationToken))
             {
@@ -1632,7 +1659,7 @@
                 long sendStartTimestamp = Stopwatch.GetTimestamp();
                 using (Activity sendSpan = _Instrumentation?.StartSendSpan(contentLength, msg.SyncRequest, client.Guid))
                 {
-                    await SendMessageAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
+                    await SendMessageAsync(client, headerBytes, contentLength, stream, token).ConfigureAwait(false);
                 }
 
                 _Statistics.IncrementSentMessages();
@@ -1676,6 +1703,8 @@
                 }
             }
 
+            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
+
             // Register a TaskCompletionSource for this conversation before sending
             TaskCompletionSource<SyncResponse> tcs = new TaskCompletionSource<SyncResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
             _SyncRequests[msg.ConversationGuid] = tcs;
@@ -1689,7 +1718,7 @@
                 try
                 {
                     long sendStartTimestamp = Stopwatch.GetTimestamp();
-                    await SendMessageAsync(client, msg, contentLength, stream, token).ConfigureAwait(false);
+                    await SendMessageAsync(client, headerBytes, contentLength, stream, token).ConfigureAwait(false);
                     _Settings.Logger?.Invoke(Severity.Debug, _Header + client.ToString() + " synchronous request sent: " + msg.ConversationGuid);
 
                     _Statistics.IncrementSentMessages();
@@ -1739,9 +1768,8 @@
             }
         }
 
-        private async Task SendMessageAsync(ClientMetadata client, WatsonMessage msg, long contentLength, Stream stream, CancellationToken token)
+        private async Task SendMessageAsync(ClientMetadata client, byte[] headerBytes, long contentLength, Stream stream, CancellationToken token)
         {
-            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
             await WatsonCommon.WriteMessageAsync(client.DataStream, headerBytes, contentLength, stream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
         }
 

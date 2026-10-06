@@ -216,7 +216,7 @@ namespace WatsonTcp
         {
             if (_SerializationHelper is DefaultSerializationHelper defaultHelper)
             {
-                return defaultHelper.DeserializeJson<WatsonMessage>(new ReadOnlySpan<byte>(headerBytes, 0, headerLength));
+                return defaultHelper.DeserializeWatsonMessage(new ReadOnlySpan<byte>(headerBytes, 0, headerLength));
             }
 
             return _SerializationHelper.DeserializeJson<WatsonMessage>(Encoding.UTF8.GetString(headerBytes, 0, headerLength));

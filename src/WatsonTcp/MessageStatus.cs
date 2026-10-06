@@ -6,7 +6,7 @@
     /// <summary>
     /// Message status.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<MessageStatus>))]
     public enum MessageStatus
     {
         /// <summary>
