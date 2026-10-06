@@ -2,6 +2,42 @@
 
 ## Current Version
 
+v6.5.0
+
+### Native AOT and Trimming
+
+- WatsonTcp is now Native AOT and trimming compatible; the package sets `IsAotCompatible` (implying `IsTrimmable`) for net8.0 and net10.0 and builds with zero trim/AOT analyzer warnings on every target framework
+- Trim and AOT analyzer warnings (IL2xxx/IL3xxx) are now build errors for the library so compatibility cannot silently regress
+- Added an internal source-generated `JsonSerializerContext` covering `WatsonMessage`, `HandshakeMessage`, the wire enums, and common metadata value types (primitives, `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `Uri`, common arrays/lists/dictionaries, `JsonElement`/`JsonDocument`/`JsonNode`)
+- `DefaultSerializationHelper` now resolves types in this order: caller-supplied resolver, built-in source-generated metadata, then reflection (only when reflection-based serialization is available)
+- Added `DefaultSerializationHelper(IJsonTypeInfoResolver)` and `DefaultSerializationHelper(IJsonTypeInfoResolver, bool enableReflectionFallback)` constructors, plus `TypeInfoResolver` and `ReflectionFallbackEnabled` properties
+- Serializing or deserializing a type with no available JSON metadata throws `NotSupportedException` naming the type and explaining how to register it
+- Wire enums (`MessageStatus`, `DisconnectReason`, `Mode`, `TlsVersion`) now use the AOT-safe `JsonStringEnumConverter<TEnum>`; output is unchanged and integer values are still accepted on input
+- Exception and `NameValueCollection` serialization no longer use reflection; exceptions are written with a fixed member set (`Type`, `Message`, `ParamName` for argument exceptions, `Data`, `InnerException`, `HelpLink`, `Source`, `HResult`, `StackTrace`)
+- System.Text.Json is now taken from the shared framework on net8.0 and net10.0; the out-of-band package (9.0.10) is referenced only by netstandard2.0, netstandard2.1, net462, and net48
+- The library now compiles with `LangVersion` latest, required by the System.Text.Json source generator on down-level targets
+
+### Behavior Fixes
+
+- Message headers are now serialized before the transport write lock is taken; a header serialization failure (for example, an unsupported metadata value, or `double.NaN`) is thrown to the caller of `SendAsync`/`SendAndWaitAsync` instead of being treated as a transport failure that disconnected the client
+- A synchronous response whose metadata cannot be serialized is now logged and raised through `ExceptionEncountered` instead of faulting an unobserved task; the requester observes a timeout and the connection remains usable
+- Fixed SSL certificate loading on macOS: `X509KeyStorageFlags.EphemeralKeySet` is no longer requested on macOS, where it is unsupported and caused `PlatformNotSupportedException` when constructing a client or server with a PFX file
+
+### Testing
+
+- Added the `aot` Touchstone suite (55 positive and negative scenarios) exercised through the CLI, xUnit, and NUnit hosts, including byte-for-byte wire-format equivalence with reflection-based output and raw non-WatsonTcp peer interoperability
+- Added `src/Test.Aot`, a Native AOT verification host published as a native binary with trim/AOT warnings treated as errors; 23 end-to-end scenarios run with reflection disabled
+- CI now publishes and runs the Native AOT host on Linux and Windows
+
+### Compatibility Notes
+
+- Wire format is unchanged; v6.5.0 interoperates with earlier WatsonTcp versions and with custom framing implementations
+- Public API changes are additive; this is a minor release
+- JIT applications keep reflection fallback, so arbitrary metadata types continue to work without changes
+- Under Native AOT, metadata values must be built-in supported types or registered via a caller-supplied `JsonSerializerContext`
+
+## Previous Version
+
 v6.4.0
 
 ### Telemetry and Observability

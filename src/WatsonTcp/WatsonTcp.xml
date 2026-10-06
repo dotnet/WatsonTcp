@@ -205,12 +205,45 @@
         <member name="T:WatsonTcp.DefaultSerializationHelper">
             <summary>
             Default serialization helper.
+            Serialization of WatsonTcp's own wire types (message headers and handshake messages) and of common
+            metadata value types uses source-generated metadata and is safe under Native AOT and trimming.
+            Other types are resolved, in order, by the optional caller-supplied <see cref="T:System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver"/>
+            and then by reflection, when reflection-based serialization is available and enabled.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.DefaultSerializationHelper.TypeInfoResolver">
+            <summary>
+            The caller-supplied type info resolver consulted before the built-in metadata, or null if none was supplied.
+            Supply a source-generated <see cref="T:System.Text.Json.Serialization.JsonSerializerContext"/> here to serialize custom metadata types under Native AOT.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.DefaultSerializationHelper.ReflectionFallbackEnabled">
+            <summary>
+            Indicates whether types unknown to the built-in and caller-supplied metadata fall back to reflection-based serialization.
+            This is false when reflection was disabled through the constructor, or when the application has disabled
+            reflection-based serialization (the default for Native AOT and trimmed applications).
             </summary>
         </member>
         <member name="M:WatsonTcp.DefaultSerializationHelper.#ctor">
             <summary>
             Instantiate.
             </summary>
+        </member>
+        <member name="M:WatsonTcp.DefaultSerializationHelper.#ctor(System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver)">
+            <summary>
+            Instantiate with an additional type info resolver, such as a source-generated <see cref="T:System.Text.Json.Serialization.JsonSerializerContext"/>,
+            used to serialize custom metadata types.
+            </summary>
+            <param name="typeInfoResolver">Resolver consulted before the built-in metadata; may be null.</param>
+        </member>
+        <member name="M:WatsonTcp.DefaultSerializationHelper.#ctor(System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver,System.Boolean)">
+            <summary>
+            Instantiate with an additional type info resolver and explicit control over reflection fallback.
+            Passing false for <paramref name="enableReflectionFallback"/> reproduces Native AOT serialization behavior
+            in a JIT application, which is useful for verifying AOT readiness before publishing.
+            </summary>
+            <param name="typeInfoResolver">Resolver consulted before the built-in metadata; may be null.</param>
+            <param name="enableReflectionFallback">True to allow reflection-based serialization for unknown types when the runtime supports it.</param>
         </member>
         <member name="M:WatsonTcp.DefaultSerializationHelper.DeserializeJson``1(System.String)">
             <summary>
@@ -219,6 +252,7 @@
             <typeparam name="T">Type.</typeparam>
             <param name="json">JSON string.</param>
             <returns>Instance.</returns>
+            <exception cref="T:System.NotSupportedException">No JSON metadata is available for <typeparamref name="T"/>.</exception>
         </member>
         <member name="M:WatsonTcp.DefaultSerializationHelper.SerializeJson(System.Object,System.Boolean)">
             <summary>
@@ -227,10 +261,18 @@
             <param name="obj">Object.</param>
             <param name="pretty">Pretty print.</param>
             <returns>JSON.</returns>
+            <exception cref="T:System.NotSupportedException">No JSON metadata is available for the runtime type of <paramref name="obj"/>.</exception>
         </member>
         <member name="M:WatsonTcp.DefaultSerializationHelper.InstantiateConverter">
             <summary>
             Instantiation method to support fixups for various environments, e.g. Unity.
+            Directly constructs the converters WatsonTcp relies on so that ahead-of-time compilers and linkers retain them.
+            </summary>
+        </member>
+        <member name="T:WatsonTcp.DefaultSerializationHelper.ExceptionConverter">
+            <summary>
+            Writes exceptions using a fixed set of members rather than reflecting over the runtime type,
+            so that exception serialization is safe under Native AOT and trimming.
             </summary>
         </member>
         <member name="T:WatsonTcp.DisconnectionEventArgs">
@@ -795,6 +837,264 @@
             Use TLS version 1.3 (only valid for .Net 5.0 or greater).
             </summary>
         </member>
+        <member name="T:WatsonTcp.WatsonJsonContext">
+            <summary>
+            Source-generated JSON metadata for every type WatsonTcp places on the wire, plus the common
+            metadata value types that callers are expected to use.  This is what allows WatsonTcp to
+            serialize without runtime reflection or code generation under Native AOT and trimming.
+            Serializer behavior (null handling, indentation, converters) is governed by the options
+            constructed in <see cref="T:WatsonTcp.DefaultSerializationHelper"/>, not by this context.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Boolean">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.BooleanArray">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Byte">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.ByteArray">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Char">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Decimal">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Double">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.DoubleArray">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Single">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.DictionaryStringObject">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.DictionaryStringString">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.ListInt32">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.ListInt64">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.ListObject">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.ListString">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.DateTime">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.NullableDateTime">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.DateTimeOffset">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Guid">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.GuidArray">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.JsonDocument">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.JsonElement">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.JsonArray">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.JsonNode">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.JsonObject">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.TimeSpan">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Uri">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.DisconnectReason">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.HandshakeMessage">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.MessageStatus">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Mode">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.TlsVersion">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.WatsonMessage">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Int32">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Int32Array">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Int64">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Int64Array">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Object">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.ObjectArray">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.SByte">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Int16">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.String">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.StringArray">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.UInt32">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.UInt64">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.UInt16">
+            <summary>
+            Defines the source generated JSON serialization contract metadata for a given type.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.Default">
+            <summary>
+            The default <see cref="T:System.Text.Json.Serialization.JsonSerializerContext"/> associated with a default <see cref="T:System.Text.Json.JsonSerializerOptions"/> instance.
+            </summary>
+        </member>
+        <member name="P:WatsonTcp.WatsonJsonContext.GeneratedSerializerOptions">
+            <summary>
+            The source-generated options associated with this context.
+            </summary>
+        </member>
+        <member name="M:WatsonTcp.WatsonJsonContext.#ctor">
+            <inheritdoc/>
+        </member>
+        <member name="M:WatsonTcp.WatsonJsonContext.#ctor(System.Text.Json.JsonSerializerOptions)">
+            <inheritdoc/>
+        </member>
+        <member name="M:WatsonTcp.WatsonJsonContext.GetTypeInfo(System.Type)">
+            <inheritdoc/>
+        </member>
         <member name="T:WatsonTcp.WatsonMessage">
             <summary>
             WatsonTcp message.
@@ -945,14 +1245,6 @@
             <param name="buffer">The buffer to which the data should be read.</param>
             <param name="offset">The offset within the buffer where data should begin.</param>
             <param name="count">The number of bytes to read.</param>
-            <param name="cancellationToken">Cancellation token.</param>
-            <returns>Number of bytes read.</returns>
-        </member>
-        <member name="M:WatsonTcp.WatsonStream.ReadAsync(System.Memory{System.Byte},System.Threading.CancellationToken)">
-            <summary>
-            Read data asynchronously from the stream.
-            </summary>
-            <param name="buffer">The buffer to which the data should be read.</param>
             <param name="cancellationToken">Cancellation token.</param>
             <returns>Number of bytes read.</returns>
         </member>

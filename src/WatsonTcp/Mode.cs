@@ -6,7 +6,7 @@
     /// <summary>
     /// Mode.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<Mode>))]
     internal enum Mode
     {
         /// <summary>

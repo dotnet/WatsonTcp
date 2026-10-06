@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Native AOT verification host.  Publish with:
+      dotnet publish src/Test.Aot/Test.Aot.csproj -c Release -f net10.0 -r <rid>
+    and run the produced native binary.  Any trim or AOT warning from WatsonTcp or this host fails the publish.
+    Running under the JIT with the "jit" switch (dotnet run, then the jit flag) exercises the same scenarios with reflection fallback disabled.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WatsonTcp\WatsonTcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\Test.Automated\test.pfx" Link="test.pfx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

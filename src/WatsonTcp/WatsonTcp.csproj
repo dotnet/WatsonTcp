@@ -7,17 +7,19 @@
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
 		<AnalysisLevel>latest-recommended</AnalysisLevel>
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-		<Version>6.4.0</Version>
+		<!-- C# 9+ is required by the System.Text.Json source generator on every target framework. -->
+		<LangVersion>latest</LangVersion>
+		<Version>6.5.0</Version>
 		<Authors>Joel Christner</Authors>
 		<Company>Joel Christner</Company>
 		<Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
 		<Copyright>(c)2025 Joel Christner</Copyright>
-		<PackageTags>tcp rpc ssl message messaging frame framing async api server bus queue mesh fabric</PackageTags>
+		<PackageTags>tcp rpc ssl aot message messaging frame framing async api server bus queue mesh fabric</PackageTags>
 		<PackageProjectUrl>https://github.com/dotnet/WatsonTcp</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/dotnet/WatsonTcp</RepositoryUrl>
 		<RepositoryType>Github</RepositoryType>
 		<PackageLicenseUrl></PackageLicenseUrl>
-		<PackageReleaseNotes>Adds vendor-neutral telemetry via System.Diagnostics.Metrics (Meter) and System.Diagnostics.ActivitySource, both named 'WatsonTcp', for consumption by Radiant, the OpenTelemetry SDK, Prometheus, and others. See TELEMETRY.md.</PackageReleaseNotes>
+		<PackageReleaseNotes>Native AOT and trimming compatibility: source-generated JSON for all wire types and common metadata values, IsAotCompatible on net8.0+, optional caller-supplied IJsonTypeInfoResolver for custom metadata types. See CHANGELOG.md.</PackageReleaseNotes>
 		<PackageIconUrl></PackageIconUrl>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 		<PackageIcon>watson.png</PackageIcon>
@@ -26,6 +28,16 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<IncludeSymbols>True</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+
+	<!--
+		Native AOT and trimming.  IsAotCompatible enables the trim, AOT, and single-file analyzers and marks the
+		assembly as trimmable; it applies only to target frameworks that support Native AOT.  Any trim or AOT
+		analyzer warning fails the build so that compatibility cannot silently regress.
+	-->
+	<PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+		<IsAotCompatible>true</IsAotCompatible>
+		<WarningsAsErrors>$(WarningsAsErrors);IL2026;IL2046;IL2057;IL2058;IL2059;IL2060;IL2062;IL2067;IL2070;IL2072;IL2075;IL2077;IL2080;IL2087;IL2090;IL2091;IL2104;IL2111;IL3050;IL3051;IL3053;SYSLIB1034;SYSLIB1037;SYSLIB1038</WarningsAsErrors>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -43,7 +55,11 @@
 		</None>
 	</ItemGroup>
 
-	<ItemGroup>
+	<!--
+		System.Text.Json is in-box on net8.0 and net10.0.  Referencing the out-of-band package there would replace the
+		in-box, AOT-validated assembly with one whose net8.0 build emits trim warnings under the .NET 8 ILC.
+	-->
+	<ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
 		<PackageReference Include="System.Text.Json" Version="9.0.10" />
 	</ItemGroup>
 

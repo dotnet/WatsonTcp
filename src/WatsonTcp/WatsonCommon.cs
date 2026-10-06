@@ -174,6 +174,18 @@ namespace WatsonTcp
             return Encoding.UTF8.GetBytes(json);
         }
 
+        internal static HandshakeMessage DeserializeHandshakeMessage(ISerializationHelper serializationHelper, byte[] data)
+        {
+            if (data == null || data.Length < 1) return new HandshakeMessage();
+
+            if (serializationHelper is DefaultSerializationHelper defaultHelper)
+            {
+                return defaultHelper.DeserializeHandshakeMessage(data);
+            }
+
+            return serializationHelper.DeserializeJson<HandshakeMessage>(Encoding.UTF8.GetString(data));
+        }
+
         internal static async Task WriteMessageAsync(Stream destination, byte[] headerBytes, long contentLength, Stream stream, int bufferSize, CancellationToken token)
         {
             if (destination == null) throw new ArgumentNullException(nameof(destination));

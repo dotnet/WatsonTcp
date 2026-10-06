@@ -43,6 +43,9 @@ jobs:
       - name: Build NUnit host (Release)
         run: dotnet build src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-restore
 
+      - name: Build Native AOT host under JIT (Release)
+        run: dotnet build src/Test.Aot/Test.Aot.csproj --configuration Release --no-restore
+
       - name: Create test results directory
         shell: pwsh
         run: New-Item -ItemType Directory -Force -Path ./test-results | Out-Null
@@ -65,6 +68,30 @@ jobs:
           dotnet test src/Test.XUnit/Test.XUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=test-results-net10.0.trx" --results-directory ./test-results
           dotnet test src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-build --framework net8.0 --logger "trx;LogFileName=nunit-results-net8.0.trx" --results-directory ./test-results
           dotnet test src/Test.NUnit/Test.NUnit.csproj --configuration Release --no-build --framework net10.0 --logger "trx;LogFileName=nunit-results-net10.0.trx" --results-directory ./test-results
+
+      - name: Publish Native AOT host (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          dotnet publish src/Test.Aot/Test.Aot.csproj --configuration Release --framework net8.0 --runtime linux-x64 --output ./aot/net8.0
+          dotnet publish src/Test.Aot/Test.Aot.csproj --configuration Release --framework net10.0 --runtime linux-x64 --output ./aot/net10.0
+
+      - name: Publish Native AOT host (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          dotnet publish src/Test.Aot/Test.Aot.csproj --configuration Release --framework net8.0 --runtime win-x64 --output ./aot/net8.0
+          dotnet publish src/Test.Aot/Test.Aot.csproj --configuration Release --framework net10.0 --runtime win-x64 --output ./aot/net10.0
+
+      - name: Run Native AOT host
+        shell: pwsh
+        run: |
+          foreach ($fw in @('net8.0', 'net10.0')) {
+            Push-Location ./aot/$fw
+            $exe = if ($IsWindows) { './Test.Aot.exe' } else { './Test.Aot' }
+            & $exe
+            $code = $LASTEXITCODE
+            Pop-Location
+            if ($code -ne 0) { throw "Native AOT host failed for $fw (exit $code)" }
+          }
 
       - name: Upload test results
         if: always()

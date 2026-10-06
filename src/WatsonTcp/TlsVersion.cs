@@ -5,7 +5,7 @@
     /// <summary>
     /// Supported TLS versions.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<TlsVersion>))]
     public enum TlsVersion
     {
         /// <summary>

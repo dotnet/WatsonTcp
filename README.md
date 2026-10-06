@@ -28,6 +28,75 @@ Special thanks to the following people for their support and contributions to th
 
 If you'd like to contribute, please jump right into the source code and create a pull request, or, file an issue with your enhancement request. 
 
+## New in v6.5.0
+
+### Native AOT and Trimming
+
+WatsonTcp is now Native AOT and trimming compatible.  The package is marked `IsAotCompatible` (and therefore `IsTrimmable`) for net8.0 and net10.0, builds with zero trim/AOT analyzer warnings, and is verified by publishing and running a native test binary.
+
+- all JSON that WatsonTcp places on the wire (message headers and handshake messages) is serialized with System.Text.Json **source generation** instead of runtime reflection
+- the wire format is unchanged and fully interoperable with earlier WatsonTcp versions and with custom non-WatsonTcp endpoints (see `FRAMING.md`)
+- common metadata value types work out of the box under Native AOT (see below)
+- custom metadata types can be registered by passing your own source-generated `JsonSerializerContext` to `DefaultSerializationHelper`
+- JIT applications are unaffected: types not covered by source generation still fall back to reflection exactly as before
+- a header serialization failure (for example, an unsupported metadata value) is now thrown to the caller of `SendAsync`/`SendAndWaitAsync` and no longer disconnects an otherwise healthy connection
+- fixed SSL certificate loading on macOS, which previously failed with `PlatformNotSupportedException` (EphemeralKeySet)
+
+#### Publishing a Native AOT application
+
+Nothing special is required; publish as usual:
+
+```
+dotnet publish -c Release -r linux-x64 -p:PublishAot=true
+```
+
+#### Metadata under Native AOT
+
+Under Native AOT, metadata values (`Dictionary<string, object>`) must be of a type that has source-generated JSON metadata.  The following are supported with no extra work:
+
+| Category | Types |
+|---|---|
+| Primitives | `string`, `bool`, `byte`, `sbyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `float`, `double`, `decimal`, `char` |
+| Common structs | `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `Uri` |
+| Arrays | `byte[]` (base64), `string[]`, `int[]`, `long[]`, `double[]`, `bool[]`, `Guid[]`, `object[]` |
+| Collections | `List<string>`, `List<int>`, `List<long>`, `List<object>`, `Dictionary<string, object>`, `Dictionary<string, string>` |
+| JSON | `JsonElement`, `JsonDocument`, `JsonNode`, `JsonObject`, `JsonArray` |
+| WatsonTcp enums | `MessageStatus`, `DisconnectReason`, `TlsVersion` |
+| Null | `null` values |
+
+To send your own types as metadata, declare a source-generated context and hand it to the serialization helper on both ends:
+
+```csharp
+using System.Text.Json.Serialization;
+
+public class Order { public int Id { get; set; } public string Sku { get; set; } }
+
+[JsonSerializable(typeof(Order))]
+internal partial class MyJsonContext : JsonSerializerContext { }
+
+server.SerializationHelper = new DefaultSerializationHelper(MyJsonContext.Default);
+client.SerializationHelper = new DefaultSerializationHelper(MyJsonContext.Default);
+
+await client.SendAsync("hello", new Dictionary<string, object> { { "order", new Order { Id = 42, Sku = "ABC" } } });
+```
+
+Sending a metadata value whose type has no JSON metadata under Native AOT throws `NotSupportedException` (naming the type) from `SendAsync`/`SendAndWaitAsync`; the connection remains usable.  Received metadata values continue to arrive as `JsonElement`.
+
+#### Verifying AOT readiness without publishing
+
+To reproduce Native AOT serialization behavior inside a normal JIT application or test (for example, to find unregistered metadata types before you publish), disable reflection fallback:
+
+```csharp
+client.SerializationHelper = new DefaultSerializationHelper(MyJsonContext.Default, enableReflectionFallback: false);
+```
+
+`DefaultSerializationHelper.ReflectionFallbackEnabled` reports whether reflection fallback is active; it is always `false` in Native AOT and trimmed applications.
+
+### Testing
+
+- added a new `aot` Touchstone suite (55 positive and negative scenarios) covering wire format byte-for-byte equivalence with reflection output, every wire enum, every built-in metadata type, custom resolvers, raw non-WatsonTcp peers, end-to-end plain/SSL/stream/sync/handshake exchanges, and failure behavior for unregistered types; it runs in the CLI, xUnit, and NUnit hosts
+- added `src/Test.Aot`, a Native AOT console host that is published as a native binary (with trim/AOT warnings treated as errors) and runs 23 end-to-end scenarios with reflection disabled
+
 ## New in v6.4.0
 
 ### Telemetry and Observability
@@ -302,6 +371,8 @@ MyClass instance = myVal.ToObject<MyClass>();
 ```
 
 This is not necessary if you are using simple types (int, string, etc).  Simply cast to the simple type.
+
+If your application is published with Native AOT or trimming, metadata values must be one of the built-in supported types or a type registered in a source-generated `JsonSerializerContext` supplied to `DefaultSerializationHelper`.  See "Metadata under Native AOT" in the v6.5.0 notes above.
 
 **IMPORTANT**
 

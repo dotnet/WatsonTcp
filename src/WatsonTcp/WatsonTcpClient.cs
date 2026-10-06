@@ -243,7 +243,8 @@
                 X509KeyStorageFlags keyStorageFlags = X509KeyStorageFlags.Exportable;
 
 #if NET5_0_OR_GREATER
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                // macOS does not support EphemeralKeySet and throws PlatformNotSupportedException when it is requested.
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     keyStorageFlags = X509KeyStorageFlags.EphemeralKeySet;
                 }
@@ -883,7 +884,7 @@
 
             byte[] data = await WatsonCommon.ReadMessageDataAsync(msg, _Settings.StreamBufferSize, token).ConfigureAwait(false);
             if (data == null || data.Length < 1) return new HandshakeMessage();
-            return SerializationHelper.DeserializeJson<HandshakeMessage>(Encoding.UTF8.GetString(data));
+            return WatsonCommon.DeserializeHandshakeMessage(SerializationHelper, data);
         }
 
         private void FailInitialization(Exception exception)
@@ -1315,7 +1316,15 @@
                                         syncResp.Metadata);
 
                                     respMsg.ConversationGuid = msg.ConversationGuid;
-                                    await SendInternalAsync(respMsg, contentLength, stream, token).ConfigureAwait(false);
+                                    try
+                                    {
+                                        await SendInternalAsync(respMsg, contentLength, stream, token).ConfigureAwait(false);
+                                    }
+                                    catch (Exception e) when (!(e is OperationCanceledException))
+                                    {
+                                        _Settings.Logger?.Invoke(Severity.Error, _Header + "failed to send synchronous response: " + e.Message);
+                                        HandleException(e);
+                                    }
                                 }
                             }, _Token);
                         }
@@ -1480,6 +1489,8 @@
                 throw new ArgumentException("Cannot read from supplied stream.");
             }
 
+            byte[] headerBytes = BuildHeaderBytes(msg);
+
             CancellationTokenSource linkedCts = null;
             if (token == default(CancellationToken))
             {
@@ -1506,7 +1517,7 @@
                 long sendStartTimestamp = Stopwatch.GetTimestamp();
                 using (Activity sendSpan = _Instrumentation?.StartSendSpan(contentLength, msg.SyncRequest, null))
                 {
-                    await SendMessageAsync(msg, contentLength, stream, token).ConfigureAwait(false);
+                    await SendMessageAsync(headerBytes, contentLength, stream, token).ConfigureAwait(false);
                 }
 
                 _Statistics.IncrementSentMessages();
@@ -1565,6 +1576,8 @@
                 throw new InvalidOperationException("Client is not connected to the server.");
             }
 
+            byte[] headerBytes = BuildHeaderBytes(msg);
+
             // Register a TaskCompletionSource for this conversation before sending
             TaskCompletionSource<SyncResponse> tcs = new TaskCompletionSource<SyncResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
             _SyncRequests[msg.ConversationGuid] = tcs;
@@ -1578,7 +1591,7 @@
             try
             {
                 long sendStartTimestamp = Stopwatch.GetTimestamp();
-                await SendMessageAsync(msg, contentLength, stream, token).ConfigureAwait(false);
+                await SendMessageAsync(headerBytes, contentLength, stream, token).ConfigureAwait(false);
                 _Settings.Logger?.Invoke(Severity.Debug, _Header + "synchronous request sent: " + msg.ConversationGuid);
 
                 _Statistics.IncrementSentMessages();
@@ -1644,10 +1657,17 @@
             }
         }
 
-        private async Task SendMessageAsync(WatsonMessage msg, long contentLength, Stream stream, CancellationToken token)
+        private byte[] BuildHeaderBytes(WatsonMessage msg)
         {
+            // Serialize the header before touching the transport so that a serialization failure (for example, a
+            // metadata value type with no JSON metadata under Native AOT) surfaces to the caller without being
+            // mistaken for a transport failure and tearing down an otherwise healthy connection.
             msg.SenderGuid = _Settings.Guid;
-            byte[] headerBytes = _MessageBuilder.GetHeaderBytes(msg);
+            return _MessageBuilder.GetHeaderBytes(msg);
+        }
+
+        private async Task SendMessageAsync(byte[] headerBytes, long contentLength, Stream stream, CancellationToken token)
+        {
             await WatsonCommon.WriteMessageAsync(_DataStream, headerBytes, contentLength, stream, _Settings.StreamBufferSize, token).ConfigureAwait(false);
         }
 
