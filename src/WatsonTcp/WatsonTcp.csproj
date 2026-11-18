@@ -9,18 +9,16 @@
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 		<!-- C# 9+ is required by the System.Text.Json source generator on every target framework. -->
 		<LangVersion>latest</LangVersion>
-		<Version>6.5.0</Version>
+		<Version>6.5.1</Version>
 		<Authors>Joel Christner</Authors>
 		<Company>Joel Christner</Company>
 		<Description>A simple C# async TCP server and client with integrated framing for reliable transmission and receipt of data</Description>
-		<Copyright>(c)2025 Joel Christner</Copyright>
+		<Copyright>(c)2026 Joel Christner</Copyright>
 		<PackageTags>tcp rpc ssl aot message messaging frame framing async api server bus queue mesh fabric</PackageTags>
 		<PackageProjectUrl>https://github.com/dotnet/WatsonTcp</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/dotnet/WatsonTcp</RepositoryUrl>
-		<RepositoryType>Github</RepositoryType>
-		<PackageLicenseUrl></PackageLicenseUrl>
+		<RepositoryType>git</RepositoryType>
 		<PackageReleaseNotes>Native AOT and trimming compatibility: source-generated JSON for all wire types and common metadata values, IsAotCompatible on net8.0+, optional caller-supplied IJsonTypeInfoResolver for custom metadata types. See CHANGELOG.md.</PackageReleaseNotes>
-		<PackageIconUrl></PackageIconUrl>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 		<PackageIcon>watson.png</PackageIcon>
 		<DocumentationFile>WatsonTcp.xml</DocumentationFile>
@@ -28,6 +26,8 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<IncludeSymbols>True</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
 	</PropertyGroup>
 
 	<!--
